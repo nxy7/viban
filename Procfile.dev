@@ -1,0 +1,4 @@
+db: docker compose up db
+backend: cd backend && mix deps.get && mix ash.setup && mix phx.server
+frontend: cd frontend && bun i && bun dev
+caddy: caddy run --config Caddyfile

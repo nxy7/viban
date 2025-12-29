@@ -1,0 +1,27 @@
+{
+  "name": "viban-docs",
+  "type": "module",
+  "scripts": {
+    "dev": "vinxi dev",
+    "build": "vinxi build",
+    "start": "vinxi start",
+    "preview": "bunx serve .output/public",
+    "clean": "rm -rf .output .vinxi node_modules/.vite"
+  },
+  "dependencies": {
+    "@solidjs/meta": "^0.29.4",
+    "@solidjs/router": "^0.15.3",
+    "@solidjs/start": "^1.0.14",
+    "marked": "^17.0.1",
+    "solid-js": "^1.9.5",
+    "vinxi": "^0.5.6"
+  },
+  "devDependencies": {
+    "@tailwindcss/typography": "^0.5.16",
+    "@types/node": "^22.10.3",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.5.1",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.2"
+  }
+}

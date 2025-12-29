@@ -1,0 +1,7 @@
+- task hooks with cleanup system (allows for cleaning up environments)
+- also onEntry / onLeave hooks (useful for things like formatting and maybe also cleanup depending on what user wants)
+- task concurrency control (agent columns can have concurrency set so only one task is executed at a time and the rest is queued up nicely)
+- request rate limiting protection (if agent is request rate limited or internet connection is stopped then agent will pick the job up again after some time, in other words it's retry policy)
+- periodic tasks (run some tasks at schedule)
+   - refactor task that suggests code improvements
+   - security tasks that's looking to find security vurnelabilities

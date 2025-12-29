@@ -1,0 +1,92 @@
+defmodule VibanWeb.Endpoint do
+  use Phoenix.Endpoint, otp_app: :viban
+  import Plug.Conn
+
+  # Session cookie options
+  # In dev, we're behind Caddy HTTPS proxy but backend receives HTTP
+  @session_options [
+    store: :cookie,
+    key: "_viban_key",
+    signing_salt: "viban_signing_salt",
+    same_site: "Lax",
+    http_only: true
+  ]
+
+  # Allowed origins for CORS
+  @allowed_origins [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://localhost:8000",
+    "https://127.0.0.1:8000"
+  ]
+
+  socket "/live", Phoenix.LiveView.Socket,
+    websocket: [connect_info: [session: @session_options]],
+    longpoll: [connect_info: [session: @session_options]]
+
+  # User socket for task chat and LLM streaming
+  socket "/socket", VibanWeb.UserSocket,
+    websocket: true,
+    longpoll: false
+
+  plug Plug.Static,
+    at: "/",
+    from: :viban,
+    gzip: false,
+    only: VibanWeb.static_paths()
+
+  if code_reloading? do
+    socket "/phoenix/live_reload/socket", Phoenix.LiveReloader.Socket
+    plug Phoenix.LiveReloader
+    plug Phoenix.CodeReloader
+  end
+
+  plug Phoenix.LiveDashboard.RequestLogger,
+    param_key: "request_logger",
+    cookie_key: "request_logger"
+
+  plug Plug.RequestId
+  plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
+
+  plug Plug.Parsers,
+    parsers: [:urlencoded, :multipart, :json],
+    pass: ["*/*"],
+    json_decoder: Phoenix.json_library()
+
+  plug Plug.MethodOverride
+  plug Plug.Head
+  plug Plug.Session, @session_options
+  plug :cors
+  plug VibanWeb.Router
+
+  # Custom CORS plug that properly handles credentials
+  defp cors(conn, _opts) do
+    origin = conn |> get_req_header("origin") |> List.first()
+
+    conn =
+      if origin in @allowed_origins do
+        conn
+        |> put_resp_header("access-control-allow-origin", origin)
+        |> put_resp_header("access-control-allow-credentials", "true")
+        |> put_resp_header(
+          "access-control-allow-methods",
+          "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+        )
+        |> put_resp_header(
+          "access-control-allow-headers",
+          "content-type, authorization, x-csrf-token, x-request-id"
+        )
+      else
+        conn
+      end
+
+    # Handle preflight OPTIONS requests
+    if conn.method == "OPTIONS" do
+      conn
+      |> send_resp(200, "")
+      |> halt()
+    else
+      conn
+    end
+  end
+end
