@@ -1,0 +1,92 @@
+defmodule Viban.Kanban.Task.Changes.CalculatePosition do
+  @moduledoc """
+  Ash change that calculates the fractional index position for a task (SQLite version).
+  """
+
+  use Ash.Resource.Change
+
+  require Logger
+
+  @impl true
+  def change(changeset, _opts, _context) do
+    before_task_id = Ash.Changeset.get_argument(changeset, :before_task_id)
+    after_task_id = Ash.Changeset.get_argument(changeset, :after_task_id)
+
+    target_column_id =
+      Ash.Changeset.get_attribute(changeset, :column_id) ||
+        Ash.Changeset.get_data(changeset, :column_id)
+
+    task_id = Ash.Changeset.get_data(changeset, :id)
+    current_position = Ash.Changeset.get_data(changeset, :position)
+
+    Logger.info(
+      "[CalculatePosition] task=#{task_id} before=#{inspect(before_task_id)} after=#{inspect(after_task_id)} column=#{target_column_id} current_pos=#{current_position}"
+    )
+
+    case calculate_position(before_task_id, after_task_id, target_column_id, task_id) do
+      {:ok, position} ->
+        Logger.info("[CalculatePosition] task=#{task_id} new_position=#{position}")
+        Ash.Changeset.force_change_attribute(changeset, :position, position)
+
+      {:error, reason} ->
+        Logger.error("CalculatePosition failed: #{inspect(reason)}")
+
+        Ash.Changeset.add_error(changeset,
+          field: :position,
+          message: "Failed to calculate position"
+        )
+    end
+  end
+
+  defp calculate_position(before_task_id, after_task_id, column_id, current_task_id) do
+    before_position = get_task_position(before_task_id)
+    after_position = get_task_position(after_task_id)
+
+    case {before_position, after_position} do
+      {nil, nil} ->
+        case get_last_task_position(column_id, current_task_id) do
+          nil ->
+            FractionalIndex.generate_key_between(nil, nil)
+
+          last_position ->
+            FractionalIndex.generate_key_between(last_position, nil)
+        end
+
+      {nil, after_pos} ->
+        FractionalIndex.generate_key_between(nil, after_pos)
+
+      {before_pos, nil} ->
+        FractionalIndex.generate_key_between(before_pos, nil)
+
+      {before_pos, after_pos} ->
+        FractionalIndex.generate_key_between(before_pos, after_pos)
+    end
+  end
+
+  defp get_task_position(nil), do: nil
+
+  defp get_task_position(task_id) do
+    case Viban.Kanban.Task.get(task_id) do
+      {:ok, task} -> task.position
+      _ -> nil
+    end
+  end
+
+  defp get_last_task_position(column_id, exclude_task_id) do
+    import Ecto.Query
+
+    "tasks"
+    |> from(
+      where: [column_id: ^column_id],
+      order_by: [desc: :position],
+      limit: 1,
+      select: [:position]
+    )
+    |> where([t], t.id != ^exclude_task_id)
+    |> Viban.RepoSqlite.one()
+    |> case do
+      nil -> nil
+      row -> row.position
+    end
+  end
+end
