@@ -1,0 +1,64 @@
+# Nix
+.direnv
+result
+
+# Elixir/Phoenix
+/_build/
+/deps/
+/cover/
+/.fetch
+*.ez
+/tmp/
+viban-*.tar
+/priv/static/assets/
+/priv/static/_build/
+/priv/static/index.html
+/priv/static/sounds/
+/priv/static/favicon.ico
+/priv/static/cache_manifest.json
+/priv/cert/
+/burrito_out/
+/doc/
+
+# SQLite databases (development/test)
+*.db
+*.db-shm
+*.db-wal
+/priv/*.db
+/priv/*.db-shm
+/priv/*.db-wal
+
+# Crash dumps
+erl_crash.dump
+
+# Node.js
+/assets/node_modules/
+npm-wrapper/node_modules/
+npm-debug.log
+
+# Docs
+docs/node_modules/
+docs/.vinxi/
+docs/.output/
+
+# Environment
+.env
+.env.local
+*.log
+
+# Secret config files
+config/dev.secret.exs
+config/prod.secret.exs
+
+# Runtime data
+/persistent/
+/test-results/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Playwright MCP
+.playwright-mcp

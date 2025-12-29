@@ -1,0 +1,4 @@
+# Ignore false positives for placeholder API tokens in documentation examples
+a83f663235472ab9b2b7834ecc6f03c28ec6f5ab:docs/.vinxi/prerender/chunks/build/api.mjs:curl-auth-header:18
+a83f663235472ab9b2b7834ecc6f03c28ec6f5ab:docs/.vinxi/prerender/chunks/build/api2.mjs:curl-auth-header:44
+a83f663235472ab9b2b7834ecc6f03c28ec6f5ab:docs/content/docs/api.md:curl-auth-header:15
