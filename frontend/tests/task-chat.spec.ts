@@ -37,8 +37,9 @@ test.describe("Task Chat E2E Tests (Unified Activity View)", () => {
     // Chat input should be visible at bottom (part of unified view)
     await expect(
       page
-        .getByPlaceholder("Type a message...")
-        .or(page.getByPlaceholder("Connecting...")),
+        .getByPlaceholder("Enter a prompt or paste an image (Ctrl+V)...")
+        .or(page.getByPlaceholder("Connecting..."))
+        .or(page.getByPlaceholder("Claude Code not available")),
     ).toBeVisible({ timeout: 10000 });
   });
 
@@ -177,7 +178,9 @@ test.describe("Task Chat E2E Tests (Unified Activity View)", () => {
     await expect(page.getByText("Task Created")).toBeVisible({ timeout: 5000 });
 
     // Wait for chat input to be available
-    const chatInput = page.getByPlaceholder("Type a message...");
+    const chatInput = page
+      .getByPlaceholder("Enter a prompt or paste an image (Ctrl+V)...")
+      .or(page.getByPlaceholder("Claude Code not available"));
     await expect(chatInput).toBeVisible({ timeout: 15000 });
 
     // Type a message
@@ -301,8 +304,9 @@ test.describe("Task Chat E2E Tests (Unified Activity View)", () => {
     // 3. Chat input at bottom
     await expect(
       page
-        .getByPlaceholder("Type a message...")
-        .or(page.getByPlaceholder("Connecting...")),
+        .getByPlaceholder("Enter a prompt or paste an image (Ctrl+V)...")
+        .or(page.getByPlaceholder("Connecting..."))
+        .or(page.getByPlaceholder("Claude Code not available")),
     ).toBeVisible({ timeout: 10000 });
   });
 });

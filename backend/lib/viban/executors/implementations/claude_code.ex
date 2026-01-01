@@ -131,8 +131,9 @@ defmodule Viban.Executors.Implementations.ClaudeCode do
       {:ok, parsed} ->
         {:ok, normalize_event(parsed)}
 
-      {:error, _} ->
-        # Not valid JSON, return as raw output
+      {:error, reason} ->
+        # Not valid JSON - log it for debugging
+        Logger.warning("[ClaudeCode] Failed to parse JSON: #{inspect(reason)}, raw: #{String.slice(raw, 0, 500)}")
         {:raw, raw}
     end
   end
@@ -201,6 +202,7 @@ defmodule Viban.Executors.Implementations.ClaudeCode do
   end
 
   defp normalize_event(event) do
+    Logger.warning("[ClaudeCode] Unknown event type, logging for future handling: #{inspect(event)}")
     %{
       type: :unknown,
       raw: event

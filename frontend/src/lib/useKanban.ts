@@ -120,6 +120,7 @@ export interface Task {
       | "failed"
       | "skipped";
     skip_reason?: "error" | "disabled";
+    inserted_at: string;
   }> | null;
   hook_history: Array<{
     id: string;
@@ -127,6 +128,7 @@ export interface Task {
     status: "completed" | "failed" | "cancelled" | "skipped";
     skip_reason?: "error" | "disabled";
     error_message?: string;
+    inserted_at: string;
     executed_at: string;
   }> | null;
   inserted_at: string;

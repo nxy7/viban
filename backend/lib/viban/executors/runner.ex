@@ -294,7 +294,7 @@ defmodule Viban.Executors.Runner do
       output_buffer: buffer
     } = state
 
-    Logger.debug("#{@log_prefix} Received data: #{String.slice(data, 0, 200)}")
+    Logger.info("#{@log_prefix} [#{task_id}] Received data (#{byte_size(data)} bytes): #{String.slice(data, 0, 200)}")
 
     data
     |> String.split("\n", trim: true)
@@ -306,9 +306,10 @@ defmodule Viban.Executors.Runner do
 
   @impl true
   def handle_info({port, {:exit_status, exit_code}}, %{port: port} = state) do
-    %{task_id: task_id, session_id: session_id} = state
+    %{task_id: task_id, session_id: session_id, output_buffer: buffer} = state
 
-    Logger.info("#{@log_prefix} Process exited with code #{exit_code} for task #{task_id}")
+    total_output_size = buffer |> Enum.map(fn {_, data} -> byte_size(data) end) |> Enum.sum()
+    Logger.info("#{@log_prefix} [#{task_id}] Process exited with code #{exit_code}, total output: #{total_output_size} bytes, #{length(buffer)} chunks")
 
     status = if exit_code == 0, do: :completed, else: :failed
     broadcast_completed(task_id, session_id, exit_code, status)
@@ -471,6 +472,15 @@ defmodule Viban.Executors.Runner do
       else
         {:raw, line}
       end
+
+    case parsed do
+      {:ok, %{type: type}} ->
+        Logger.debug("#{@log_prefix} [#{task_id}] Parsed output type: #{type}")
+      {:raw, _} ->
+        Logger.debug("#{@log_prefix} [#{task_id}] Raw output: #{String.slice(line, 0, 100)}")
+      _ ->
+        :ok
+    end
 
     handle_parsed_output(parsed, task_id, session_id)
   end
