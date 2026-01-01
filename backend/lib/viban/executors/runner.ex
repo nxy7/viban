@@ -505,13 +505,8 @@ defmodule Viban.Executors.Runner do
          task_id,
          session_id
        ) do
-    # Result event means the agent has finished responding and is waiting for user input
-    # NOTE: We do NOT save the result message here because the content was already
-    # saved via the :assistant_message event handler. Saving here would cause duplicates.
     broadcast_output(task_id, session_id, :parsed, event)
     PRDetector.process_output(task_id, content)
-
-    # Update task status to waiting_for_user since agent is done with this turn
     update_task_agent_status(task_id, :waiting_for_user, "Waiting for user input")
   end
 
@@ -631,15 +626,12 @@ defmodule Viban.Executors.Runner do
   defp update_task_status(task_id, status, exit_code, _stop_reason \\ nil) do
     executor_done = status in [:completed, :failed]
 
-    # Only broadcast completion for completed/failed - stopped is handled by TaskActor directly
     if executor_done do
       handle_executor_completion(task_id, exit_code)
     end
   end
 
   defp handle_executor_completion(task_id, exit_code) do
-    # Broadcast completion to PubSub so TaskActor can handle the rest
-    # (setting in_progress=false, notifying semaphore, and moving to To Review)
     Phoenix.PubSub.broadcast(
       Viban.PubSub,
       "executor:#{task_id}:completed",

@@ -18,11 +18,9 @@ import {
   TrashIcon,
 } from "~/components/ui/Icons";
 
-// LocalStorage keys for preferences
 const HIDE_DETAILS_KEY = "viban:hideDetails";
 const FULLSCREEN_KEY = "viban:fullscreen";
 
-// Helper to get localStorage value with default
 function getStoredBoolean(key: string, defaultValue: boolean): boolean {
   if (typeof window === "undefined") return defaultValue;
   const stored = localStorage.getItem(key);
@@ -30,7 +28,6 @@ function getStoredBoolean(key: string, defaultValue: boolean): boolean {
   return stored === "true";
 }
 
-// Helper to set localStorage value
 function setStoredBoolean(key: string, value: boolean): void {
   if (typeof window === "undefined") return;
   localStorage.setItem(key, String(value));
@@ -67,7 +64,6 @@ interface TaskDetailsPanelProps {
   columnName?: string;
 }
 
-// Activity item types for the unified view
 type TaskCreatedActivity = {
   type: "task_created";
   timestamp: string;
@@ -90,7 +86,6 @@ type HookExecutionActivity = {
   executed_at?: string;
 };
 
-// Grouped hooks activity - for collapsing consecutive hooks
 type GroupedHooksActivity = {
   type: "grouped_hooks";
   hooks: HookExecutionActivity[];
@@ -104,19 +99,13 @@ type ActivityItem =
   | HookExecutionActivity
   | GroupedHooksActivity;
 
-/** Image attachment for chat input - holds the file and its data URL for preview */
 interface ImageAttachment {
-  /** Unique identifier for the attachment (e.g., "img-1") */
   id: string;
-  /** Original file object */
   file: File;
-  /** Base64 data URL for preview and transmission */
   dataUrl: string;
-  /** Display name for the image */
   name: string;
 }
 
-/** Converts a File to a base64 data URL */
 function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -126,25 +115,18 @@ function fileToDataUrl(file: File): Promise<string> {
   });
 }
 
-// Filter function to determine which output lines to show
 const shouldShowOutput = (line: OutputLine): boolean => {
-  // Always show user messages
   if (line.type === "user" || line.role === "user") return true;
-
-  // Show tool usage events (role === "tool")
   if (line.role === "tool") return true;
 
-  // Show assistant messages, but filter out tool_use noise in string format
   if (line.type === "parsed" || line.role === "assistant") {
     const content = typeof line.content === "string" ? line.content : "";
-    // Filter out tool_use events that leaked through (they show as %{...} Elixir maps)
     if (
       content.includes('"type" => "tool_use"') ||
       content.includes('"type": "tool_use"')
     ) {
       return false;
     }
-    // Filter out tool_result events
     if (
       content.includes('"type" => "tool_result"') ||
       content.includes('"type": "tool_result"')
@@ -154,10 +136,8 @@ const shouldShowOutput = (line: OutputLine): boolean => {
     return true;
   }
 
-  // Show system messages only for important events (started, completed, errors)
   if (line.type === "system" || line.role === "system") {
     const content = typeof line.content === "string" ? line.content : "";
-    // Hide "Using tool:" messages as they're now shown via tool role
     if (content.startsWith("Using tool:")) return false;
     return (
       content.includes("Completed") ||
@@ -167,7 +147,6 @@ const shouldShowOutput = (line: OutputLine): boolean => {
     );
   }
 
-  // Hide raw output by default (noise from executor)
   return false;
 };
 
@@ -188,47 +167,36 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
   const [isRefining, setIsRefining] = createSignal(false);
   const [showDuplicateModal, setShowDuplicateModal] = createSignal(false);
 
-  // Image attachments for chat input
   const [attachedImages, setAttachedImages] = createSignal<ImageAttachment[]>(
     [],
   );
-
-  // Stopping executor state
   const [isStopping, setIsStopping] = createSignal(false);
-
-  // Hide details preference (persisted to localStorage)
-  // Hides: hooks, system messages (started/completed), timestamps
   const [hideDetails, setHideDetails] = createSignal(
     getStoredBoolean(HIDE_DETAILS_KEY, false)
   );
 
-  // Toggle hide details and persist to localStorage
   const toggleHideDetails = () => {
     const newValue = !hideDetails();
     setHideDetails(newValue);
     setStoredBoolean(HIDE_DETAILS_KEY, newValue);
   };
 
-  // Fullscreen preference (persisted to localStorage)
   const [isFullscreen, setIsFullscreen] = createSignal(
     getStoredBoolean(FULLSCREEN_KEY, false)
   );
 
-  // Toggle fullscreen and persist to localStorage
   const toggleFullscreen = () => {
     const newValue = !isFullscreen();
     setIsFullscreen(newValue);
     setStoredBoolean(FULLSCREEN_KEY, newValue);
   };
 
-  // Type for the column query result
   interface ColumnQueryResult {
     id: string;
     name: string;
     board_id: string;
   }
 
-  // Query to get the TODO column for duplicating tasks
   const columnsQuery = useLiveQuery((q) =>
     q.from({ columns: columnsCollection }).select(({ columns }) => ({
       id: columns.id,
@@ -237,22 +205,18 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
     })),
   );
 
-  // Find the TODO column
   const todoColumn = (): ColumnQueryResult | undefined => {
     const cols = (columnsQuery.data ?? []) as ColumnQueryResult[];
     return cols.find((c) => c.name.toUpperCase() === "TODO");
   };
 
-  // Check if task is in TODO column
   const isTodoTask = () => props.columnName?.toUpperCase() === "TODO";
 
   let messagesEndRef: HTMLDivElement | undefined;
   let inputRef: HTMLTextAreaElement | undefined;
 
-  // Get task ID accessor
   const taskId = () => props.task?.id;
 
-  // Executor integration (replaces old chat)
   const {
     output,
     isConnected,
@@ -268,13 +232,11 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
     reconnect,
   } = useTaskChat(taskId);
 
-  // Helper to get timestamp from activity item for sorting
   const getActivityTimestamp = (item: ActivityItem): number => {
     switch (item.type) {
       case "task_created":
         return new Date(item.timestamp).getTime();
       case "hook_execution":
-        // Use inserted_at for stable sorting (when hook was queued)
         return new Date(item.inserted_at).getTime();
       case "grouped_hooks":
         return new Date(item.firstTimestamp).getTime();
@@ -285,14 +247,12 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
     }
   };
 
-  // Group all hook activities together (always collapsed, even if just 1)
   const groupConsecutiveHooks = (items: ActivityItem[]): ActivityItem[] => {
     const result: ActivityItem[] = [];
     let currentHookGroup: HookExecutionActivity[] = [];
 
     const flushHookGroup = () => {
       if (currentHookGroup.length > 0) {
-        // Always create a grouped hooks entry (even for 1 hook)
         result.push({
           type: "grouped_hooks",
           hooks: [...currentHookGroup],
@@ -307,7 +267,6 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
       if (item.type === "hook_execution") {
         currentHookGroup.push(item);
       } else {
-        // Flush any accumulated hooks before adding non-hook item
         if (currentHookGroup.length > 0) {
           flushHookGroup();
         }
@@ -315,7 +274,6 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
       }
     }
 
-    // Flush any remaining hooks at the end
     if (currentHookGroup.length > 0) {
       flushHookGroup();
     }
@@ -323,12 +281,9 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
     return result;
   };
 
-  // Combine task creation, hook history, and output into unified activity list
   const activityItems = createMemo((): ActivityItem[] => {
     const items: ActivityItem[] = [];
 
-    // For TODO tasks, we don't show the description in the activity feed
-    // (it's shown in the header instead as editable content)
     if (props.task && !isTodoTask()) {
       items.push({
         type: "task_created",
@@ -337,13 +292,10 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
       });
     }
 
-    // Add hooks (unless details are hidden)
     if (!hideDetails()) {
-      // Add currently running hooks from hook_queue (pending/running state)
       const hookQueue = props.task?.hook_queue;
       if (hookQueue && hookQueue.length > 0) {
         for (const entry of hookQueue) {
-          // Only show pending/running hooks - completed ones are in history
           if (entry.status === "pending" || entry.status === "running") {
             items.push({
               type: "hook_execution",
@@ -358,7 +310,6 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
         }
       }
 
-      // Add hook execution history (completed hooks)
       const hookHistory = props.task?.hook_history;
       if (hookHistory && hookHistory.length > 0) {
         for (const entry of hookHistory) {
@@ -376,10 +327,8 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
       }
     }
 
-    // Add filtered output lines
     for (const line of output()) {
       if (shouldShowOutput(line)) {
-        // When hideDetails is on, also filter out system messages (started/completed/etc)
         if (hideDetails() && (line.type === "system" || line.role === "system")) {
           continue;
         }
@@ -387,21 +336,17 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
       }
     }
 
-    // Sort by timestamp to interleave activities correctly
     items.sort((a, b) => getActivityTimestamp(a) - getActivityTimestamp(b));
 
-    // Group consecutive hooks together
     return groupConsecutiveHooks(items);
   });
 
-  // Get agent status from task if available
   const taskAgentStatus = () => {
     const task = props.task;
     if (!task) return "idle" as AgentStatusType;
     return (task.agent_status || "idle") as AgentStatusType;
   };
 
-  // Reset form when task changes
   createEffect(() => {
     if (props.task) {
       setTitle(props.task.title);
@@ -425,14 +370,12 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
     setShowDuplicateModal(false);
   };
 
-  // Auto-scroll to bottom when new output arrives
   const scrollToBottom = () => {
     if (messagesEndRef) {
       messagesEndRef.scrollIntoView({ behavior: "smooth" });
     }
   };
 
-  // Scroll on new output - use createEffect for side effects, not createMemo
   createEffect(() => {
     const items = activityItems();
     if (items.length > 0) {
@@ -441,7 +384,6 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
   });
 
   onMount(() => {
-    // Focus input on mount
     inputRef?.focus();
   });
 
@@ -536,7 +478,6 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
 
     try {
       await refineTask(props.task.id);
-      // The task will be updated via Electric sync, so we don't need to manually update
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to refine task");
     } finally {
@@ -544,7 +485,6 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
     }
   };
 
-  // Get the next available image ID for chat
   const getNextChatImageId = (): string => {
     const images = attachedImages();
     const existingNums = images
@@ -558,7 +498,6 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
     return `img-${maxNum + 1}`;
   };
 
-  // Handle paste event to capture images from clipboard
   const handlePaste = async (e: ClipboardEvent) => {
     const items = e.clipboardData?.items;
     if (!items) return;
@@ -572,7 +511,6 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
 
     if (imageItems.length === 0) return;
 
-    // Don't prevent default for text paste
     e.preventDefault();
 
     for (const item of imageItems) {
@@ -602,7 +540,6 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
             text.substring(0, start) + placeholder + text.substring(end);
           setInput(newText);
 
-          // Update cursor position after the placeholder
           requestAnimationFrame(() => {
             const newPos = start + placeholder.length;
             textarea.selectionStart = newPos;
@@ -616,10 +553,8 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
     }
   };
 
-  // Remove an attached image and its placeholder from text
   const removeImage = (id: string) => {
     setAttachedImages((prev) => prev.filter((img) => img.id !== id));
-    // Also remove the placeholder from the input text
     const placeholder = `![${id}]()`;
     setInput((prev) => prev.replaceAll(placeholder, ""));
   };
@@ -648,9 +583,6 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
         throw new Error("No task selected");
       }
 
-      // Start the executor with the user's prompt
-      // Note: Backend handles moving task to "In Progress" if needed
-      // This will also create the user message in the database
       const imageData = images.map((img) => ({
         name: img.name,
         data: img.dataUrl,
@@ -737,7 +669,6 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
     }
   };
 
-  // Check if Claude Code is available
   const hasClaudeCode = () =>
     executors().some((e) => e.type === "claude_code" && e.available);
 
@@ -1391,7 +1322,6 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
       <Show when={props.task}>
         {(getTask) => {
           const col = todoColumn();
-          // Only render if we have a TODO column for the duplicate
           if (!col) return null;
           return (
             <CreateTaskModal
@@ -1411,14 +1341,12 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
   );
 }
 
-// Task Created Activity Component
 interface TaskCreatedActivityComponentProps {
   timestamp: string;
   description: string | null;
   formatDate: (dateStr: string) => string;
 }
 
-/** CSS classes for task created activity description styling */
 const TASK_CREATED_PROSE_CLASSES =
   "prose prose-sm prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0 prose-headings:my-2 prose-headings:text-gray-200";
 
@@ -1460,7 +1388,6 @@ function TaskCreatedActivityComponent(
   );
 }
 
-// Hook Execution Activity Component
 interface HookExecutionActivityComponentProps {
   name: string;
   status: "pending" | "running" | "completed" | "failed" | "cancelled" | "skipped";
@@ -1534,7 +1461,6 @@ function HookExecutionActivityComponent(
   );
 }
 
-// Grouped Hooks Activity Component - collapsible group of hooks
 interface GroupedHooksActivityComponentProps {
   hooks: HookExecutionActivity[];
   formatDate: (dateStr: string) => string;
@@ -1545,7 +1471,6 @@ function GroupedHooksActivityComponent(
 ) {
   const [isExpanded, setIsExpanded] = createSignal(false);
 
-  // Count hooks by status
   const statusCounts = () => {
     const counts = { pending: 0, running: 0, completed: 0, failed: 0, cancelled: 0, skipped: 0 };
     for (const hook of props.hooks) {
@@ -1567,7 +1492,6 @@ function GroupedHooksActivityComponent(
     return parts.join(", ");
   };
 
-  // Determine overall status color based on worst status
   const overallStatus = () => {
     const counts = statusCounts();
     if (counts.running > 0) return "running";
@@ -1643,7 +1567,6 @@ function GroupedHooksActivityComponent(
   );
 }
 
-// Output Bubble Component - displays executor output
 interface OutputBubbleProps {
   line: OutputLine;
   formatTime: (dateStr?: string) => string;
@@ -1665,7 +1588,6 @@ function OutputBubble(props: OutputBubbleProps) {
     return JSON.stringify(props.line.content, null, 2);
   };
 
-  // Get tool info from parsed content
   const getToolInfo = (): { tool: string; input?: Record<string, unknown> } | null => {
     const content = props.line.content;
     if (typeof content === "object" && content !== null) {
@@ -1680,11 +1602,9 @@ function OutputBubble(props: OutputBubbleProps) {
     return null;
   };
 
-  // Format tool input for display (extract key details)
   const formatToolInput = (input: Record<string, unknown> | undefined): string => {
     if (!input) return "";
 
-    // For common tools, show relevant info
     if (typeof input.file_path === "string") {
       return input.file_path;
     }
@@ -1702,7 +1622,6 @@ function OutputBubble(props: OutputBubbleProps) {
       return input.query;
     }
 
-    // Fallback: show first string value
     for (const value of Object.values(input)) {
       if (typeof value === "string" && value.length > 0) {
         return value.length > 50 ? value.slice(0, 50) + "..." : value;
@@ -1711,7 +1630,6 @@ function OutputBubble(props: OutputBubbleProps) {
     return "";
   };
 
-  // User messages display on the right with brand color
   if (isUser()) {
     return (
       <div class="flex justify-end">
@@ -1727,7 +1645,6 @@ function OutputBubble(props: OutputBubbleProps) {
     );
   }
 
-  // Tool usage messages display as compact inline items
   if (isTool()) {
     const toolInfo = getToolInfo();
     if (toolInfo) {
@@ -1765,7 +1682,6 @@ function OutputBubble(props: OutputBubbleProps) {
     }
   }
 
-  // System messages display as compact inline text
   if (isSystem()) {
     return (
       <div class="flex items-center gap-2 py-1 px-2 text-xs">
@@ -1779,7 +1695,6 @@ function OutputBubble(props: OutputBubbleProps) {
     );
   }
 
-  // Assistant messages (from Claude) display with markdown rendering
   if (isAssistant()) {
     return (
       <div class="flex justify-start">
@@ -1798,7 +1713,6 @@ function OutputBubble(props: OutputBubbleProps) {
     );
   }
 
-  // Fallback for raw output (should be filtered out, but just in case)
   return (
     <div class="flex justify-start">
       <div class="max-w-[95%] rounded-lg px-4 py-2 bg-gray-900 border border-gray-700 text-gray-300 font-mono text-sm">

@@ -1,28 +1,9 @@
-/**
- * useKanban - Core Kanban data layer with Electric SQL real-time sync.
- *
- * This module provides:
- * - Type definitions for all Kanban entities
- * - Electric SQL collections for real-time sync
- * - React hooks for querying data
- * - RPC mutations for data updates
- */
-
 import { createCollection, eq, inArray } from "@tanstack/db";
 import { electricCollectionOptions } from "@tanstack/electric-db-collection";
 import { useLiveQuery } from "@tanstack/solid-db";
 
-// ============================================================================
-// Configuration Constants
-// ============================================================================
-
-/** Default API base URL for SSR/server context */
 const DEFAULT_API_BASE = "http://localhost:8000";
 
-/**
- * Returns the API base URL.
- * Uses window.location.origin in browser (through Caddy proxy for HTTP/2 support).
- */
 const getApiBase = (): string => {
   if (typeof window !== "undefined") {
     return window.location.origin;
@@ -30,25 +11,12 @@ const getApiBase = (): string => {
   return DEFAULT_API_BASE;
 };
 
-// ============================================================================
-// Type Guards for Runtime Validation
-// ============================================================================
-
-/**
- * Type guard to check if a value is a non-null object.
- * Used as a foundation for more specific type guards.
- */
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-/**
- * Type guard to validate Task objects from API responses.
- * Uses minimal checks to avoid filtering out valid data from Electric sync.
- */
 export function isTask(data: unknown): data is Task {
   if (!isObject(data)) return false;
-  // Only check for required string fields - position may be string from DB
   return (
     typeof data.id === "string" &&
     typeof data.column_id === "string" &&
@@ -56,9 +24,6 @@ export function isTask(data: unknown): data is Task {
   );
 }
 
-/**
- * Type guard to validate Board objects from API responses.
- */
 export function isBoard(data: unknown): data is Board {
   if (!isObject(data)) return false;
   return (
@@ -68,9 +33,6 @@ export function isBoard(data: unknown): data is Board {
   );
 }
 
-/**
- * Type guard to validate Column objects from API responses.
- */
 export function isColumn(data: unknown): data is Column {
   if (!isObject(data)) return false;
   return (
@@ -81,10 +43,6 @@ export function isColumn(data: unknown): data is Column {
   );
 }
 
-/**
- * Safely validates and returns an array of items using a type guard.
- * Returns an empty array if validation fails.
- */
 export function validateArray<T>(
   data: unknown,
   guard: (item: unknown) => item is T,
@@ -92,12 +50,6 @@ export function validateArray<T>(
   if (!Array.isArray(data)) return [];
   return data.filter(guard);
 }
-
-// ============================================================================
-// Type Definitions
-// ============================================================================
-
-// Types for Kanban entities
 export interface Board {
   id: string;
   name: string;
@@ -148,18 +100,15 @@ export interface Task {
   pr_url: string | null;
   pr_number: number | null;
   pr_status: "open" | "merged" | "closed" | "draft" | null;
-  // Parent-subtask fields
   parent_task_id: string | null;
   is_parent: boolean;
   subtask_position: number;
   subtask_generation_status: "generating" | "completed" | "failed" | null;
-  // Description images
   description_images: Array<{
     id: string;
     path: string;
     name: string;
   }> | null;
-  // Hook execution tracking
   hook_queue: Array<{
     id: string;
     name: string;
@@ -172,7 +121,6 @@ export interface Task {
       | "skipped";
     skip_reason?: "error" | "disabled";
   }> | null;
-  // Persistent hook execution history
   hook_history: Array<{
     id: string;
     name: string;
@@ -202,7 +150,6 @@ export interface Subtask {
   agent_status_message: string | null;
 }
 
-// Hook types
 export type HookKind = "script" | "agent";
 export type AgentExecutor =
   | "claude_code"
@@ -216,9 +163,7 @@ export interface Hook {
   board_id: string;
   name: string;
   hook_kind: HookKind;
-  // Script hook fields
   command: string | null;
-  // Agent hook fields
   agent_prompt: string | null;
   agent_executor: AgentExecutor | null;
   agent_auto_approve: boolean;
@@ -226,7 +171,6 @@ export interface Hook {
   updated_at: string;
 }
 
-// System hook type (virtual hooks defined in code)
 export interface SystemHook {
   id: string;
   name: string;
@@ -236,20 +180,16 @@ export interface SystemHook {
   command: null;
 }
 
-// Combined hook type that can be either a database hook or a system hook
 export interface CombinedHook {
   id: string;
   name: string;
   description: string | null;
   hook_kind: HookKind;
-  // Script hook fields
   command: string | null;
-  // Agent hook fields
   agent_prompt: string | null;
   agent_executor: AgentExecutor | null;
   agent_auto_approve: boolean;
   is_system: boolean;
-  // Default settings for when this hook is added to a column
   default_execute_once: boolean;
   default_transparent: boolean;
 }
@@ -258,7 +198,7 @@ export interface ColumnHook {
   id: string;
   column_id: string;
   hook_id: string;
-  hook_type: "on_entry"; // Only on_entry hooks are supported
+  hook_type: "on_entry";
   position: number;
   execute_once: boolean;
   transparent: boolean;
@@ -285,7 +225,6 @@ export interface Repository {
   updated_at: string;
 }
 
-// Message type for LLM chat
 export interface Message {
   id: string;
   task_id: string;
@@ -298,15 +237,6 @@ export interface Message {
   updated_at: string;
 }
 
-// ============================================================================
-// Electric Collections
-// ============================================================================
-
-/**
- * Electric SQL collections for real-time sync.
- * These use getApiBase() which returns window.location.origin in the browser,
- * ensuring all requests go through Caddy proxy for HTTP/2 support.
- */
 export const boardsCollection = createCollection(
   electricCollectionOptions<Board>({
     id: "boards",
@@ -317,7 +247,6 @@ export const boardsCollection = createCollection(
   }),
 );
 
-// Column type for Electric sync (settings stored as JSON string, parsed on read)
 interface ColumnRaw {
   id: string;
   board_id: string;
@@ -389,14 +318,12 @@ export const messagesCollection = createCollection(
   }),
 );
 
-// Shared hook result type to ensure consistency across all query hooks
 interface QueryHookResult<T> {
   data: () => T;
   isLoading: () => boolean;
   error: () => string | null;
 }
 
-// Helper to create standardized hook results from useLiveQuery
 function createQueryResult<T>(
   query: ReturnType<typeof useLiveQuery>,
   defaultValue: T,
@@ -408,7 +335,6 @@ function createQueryResult<T>(
   };
 }
 
-// Hooks
 export function useBoards() {
   const query = useLiveQuery((q) =>
     q.from({ boards: boardsCollection }).select(({ boards }) => ({
@@ -453,7 +379,6 @@ export function useBoard(boardId: () => string | undefined) {
   };
 }
 
-// Helper to parse settings from raw column data
 function parseColumnSettings(
   settings: string | ColumnSettings,
 ): ColumnSettings {
@@ -500,7 +425,6 @@ export function useColumns(boardId: () => string | undefined) {
   };
 }
 
-// Shared task selection fields to avoid duplication across useTasks and useAllTasks
 type TaskQueryFields = {
   tasks: {
     id: string;
@@ -524,7 +448,6 @@ type TaskQueryFields = {
   };
 };
 
-// Shared select function for task queries
 const selectTaskFields = ({ tasks }: TaskQueryFields) => ({
   id: tasks.id,
   column_id: tasks.column_id,
@@ -589,20 +512,12 @@ export function useAllTasks(boardId: () => string | undefined) {
   };
 }
 
-// ============================================================================
-// RPC Mutation Functions
-// ============================================================================
-
-/** Response structure from RPC API calls */
 interface RpcResponse<T> {
   ok: boolean;
   result?: T;
   error?: string;
 }
 
-/**
- * Type guard to validate RPC response structure.
- */
 function isRpcResponse<T>(data: unknown): data is RpcResponse<T> {
   return (
     typeof data === "object" &&
@@ -612,16 +527,6 @@ function isRpcResponse<T>(data: unknown): data is RpcResponse<T> {
   );
 }
 
-/**
- * Makes an RPC call to the backend API.
- *
- * @param domain - The Ash domain (e.g., "Kanban")
- * @param resource - The Ash resource (e.g., "Task", "Board")
- * @param action - The action to perform (e.g., "create", "update")
- * @param input - Optional input parameters for the action
- * @param id - Optional resource ID for update/delete operations
- * @param validator - Optional type guard to validate the response
- */
 async function rpcCall<T>(
   domain: string,
   resource: string,
@@ -654,10 +559,8 @@ async function rpcCall<T>(
     throw new Error(data.error ?? "Unknown error");
   }
 
-  // Result is guaranteed to exist when ok is true by the API contract
   const result = data.result as T;
 
-  // If a validator is provided, validate the result at runtime
   if (validator && !validator(result)) {
     console.warn("[rpcCall] Response validation failed for:", resource, action);
     throw new Error(`Invalid ${resource} response from server`);
@@ -666,18 +569,12 @@ async function rpcCall<T>(
   return result;
 }
 
-// ============================================================================
-// Task Mutations
-// ============================================================================
-
-/** Image input for task descriptions */
 export interface DescriptionImageInput {
   id: string;
   name: string;
-  dataUrl?: string; // Only for new images
+  dataUrl?: string;
 }
 
-// Task mutations
 export interface CreateTaskInput {
   title: string;
   description?: string;
@@ -745,7 +642,6 @@ export async function refineTask(taskId: string): Promise<RefineTaskResult> {
   return data.task;
 }
 
-// Refine task description before creation (preview mode)
 export interface RefinePreviewInput {
   title: string;
   description?: string;
@@ -775,7 +671,6 @@ export async function refinePreview(
   return { refined_description: data.refined_description };
 }
 
-// Subtask functions
 export async function generateSubtasks(taskId: string): Promise<void> {
   const response = await fetch(`/api/tasks/${taskId}/generate_subtasks`, {
     method: "POST",
@@ -823,10 +718,6 @@ export async function createSubtask(
   });
 }
 
-// ============================================================================
-// Column Mutations
-// ============================================================================
-
 export interface CreateColumnInput {
   name: string;
   position?: number;
@@ -868,10 +759,6 @@ export async function updateColumnSettings(
 export async function deleteColumn(id: string): Promise<void> {
   await rpcCall<void>("Kanban", "Column", "destroy", undefined, id);
 }
-
-// ============================================================================
-// Board Mutations
-// ============================================================================
 
 export interface CreateBoardInput {
   name: string;

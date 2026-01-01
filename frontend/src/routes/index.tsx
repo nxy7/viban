@@ -6,10 +6,8 @@ import { useAuth } from "~/lib/useAuth";
 import { useBoards } from "~/lib/useKanban";
 import { createBoardWithRepo, useVCSRepos, type VCSRepo } from "~/lib/useVCS";
 
-/** Number of skeleton cards to show while loading */
 const SKELETON_COUNT = 3;
 
-/** GitHub icon for sign-in button */
 function GitHubIcon(props: { class?: string }) {
   return (
     <svg
@@ -33,7 +31,6 @@ export default function Home() {
   const [isSubmitting, setIsSubmitting] = createSignal(false);
   const [repoSearchQuery, setRepoSearchQuery] = createSignal("");
 
-  // Only fetch repos when authenticated and creating
   const {
     repos,
     isLoading: isLoadingRepos,
@@ -41,7 +38,6 @@ export default function Home() {
     refetch: refetchRepos,
   } = useVCSRepos();
 
-  // Filter repos based on search query
   const filteredRepos = () => {
     const allRepos = repos() || [];
     const query = repoSearchQuery().toLowerCase();
@@ -85,7 +81,6 @@ export default function Home() {
         },
       });
 
-      // Reset form and close
       resetForm();
       setIsCreating(false);
     } catch (err) {
@@ -106,7 +101,6 @@ export default function Home() {
     refetchRepos();
   };
 
-  // Helper to reset form state
   const resetForm = () => {
     setNewBoardName("");
     setNewBoardDescription("");

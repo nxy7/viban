@@ -171,4 +171,34 @@ Ask for clarification when:
 - You need to understand broader codebase context
 - Business requirements might influence technical decisions
 
+## Comment Policy
+
+Comments are code smell. Follow these strict rules:
+
+1. **NO comments that explain "what" the code does** - The code itself should be self-documenting through clear variable names, function names, and module structure
+2. **NO comments that explain "how"** - The implementation is visible in the code
+3. **ONLY comment "why"** - And only when the reasoning cannot be expressed through code (unusual business rules, workarounds for external constraints, non-obvious performance optimizations)
+4. **JSDoc/TSDoc for types is acceptable** - But only for public APIs where IntelliSense benefits outweigh the noise
+5. **JSX comments for section dividers are acceptable** - Using `{/* Header */}` style to organize large JSX blocks is fine
+
+If you see code that "needs" a comment to be understood, refactor the code instead. Better naming, smaller functions, and clearer structure eliminate the need for comments.
+
+Example of BAD comments:
+```typescript
+// Get the user's name
+const userName = user.name;
+
+// Filter active items
+const activeItems = items.filter(item => item.active);
+```
+
+Example of ACCEPTABLE comments:
+```typescript
+// Safari requires this workaround due to a bug in their IndexedDB implementation
+const db = await openWithRetry();
+
+// Business rule: Premium users get 30 days, free users get 7
+const trialDays = user.isPremium ? 30 : 7;
+```
+
 You are the last line of defense against technical debt. Be thorough, be precise, and maintain the highest standards. Good code today means a maintainable codebase tomorrow.

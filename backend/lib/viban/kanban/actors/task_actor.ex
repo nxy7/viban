@@ -42,13 +42,8 @@ defmodule Viban.Kanban.Actors.TaskActor do
   alias Viban.Executors.Runner
   alias Phoenix.PubSub
 
-  # Registry for actor lookups
   @registry Viban.Kanban.ActorRegistry
-
-  # PubSub name
   @pubsub Viban.PubSub
-
-  # Maximum length of error output to include in error messages
   @max_error_output_length 200
 
   @type state :: %__MODULE__{
@@ -133,10 +128,8 @@ defmodule Viban.Kanban.Actors.TaskActor do
       executor_running: false
     }
 
-    # Subscribe to execution trigger (from semaphore when slot becomes available)
     PubSub.subscribe(@pubsub, "task:#{task.id}:execute")
 
-    # Defer initialization to avoid blocking the supervisor
     send(self(), :init_hooks)
 
     {:ok, state}
@@ -174,8 +167,6 @@ defmodule Viban.Kanban.Actors.TaskActor do
   @impl true
   def handle_cast(:executor_started_externally, state) do
     Logger.info("Task #{state.task_id} executor started externally (via hook or channel)")
-
-    # Subscribe to executor completion
     PubSub.subscribe(@pubsub, "executor:#{state.task_id}:completed")
 
     {:noreply, %{state | executor_running: true}}
@@ -216,7 +207,6 @@ defmodule Viban.Kanban.Actors.TaskActor do
 
   defp maybe_process_next_command(%{command_queue: queue} = state) do
     if CommandQueue.executing?(queue) do
-      # Already executing a command
       state
     else
       case CommandQueue.pop(queue) do
@@ -225,7 +215,6 @@ defmodule Viban.Kanban.Actors.TaskActor do
           execute_command(state, command)
 
         :empty ->
-          # All commands processed - finalize hook execution
           finalize_hook_execution(state.task_id)
           state
       end
@@ -235,11 +224,8 @@ defmodule Viban.Kanban.Actors.TaskActor do
   defp execute_command(state, %{type: :hook_entry} = command) do
     %{data: %{column_hook: column_hook, hook: hook}} = command
 
-    # Update hook status in database to running
     update_hook_queue_status(state.task_id, column_hook.id, "running")
 
-    # For transparent hooks, don't change task status (preserve error state, don't show "working")
-    # For normal hooks, set the current hook which updates agent_status and in_progress
     state =
       if column_hook.transparent do
         %{state | current_hook_name: hook.name}
@@ -247,24 +233,20 @@ defmodule Viban.Kanban.Actors.TaskActor do
         set_current_hook(state, hook.name)
       end
 
-    # Get fresh task for hook execution
     task_result = Task.get(state.task_id)
 
     case task_result do
       {:ok, task} ->
-        # Pass board_id and hook_settings to hooks (used by system hooks like PlaySound)
         hook_opts = [
           board_id: state.board_id,
           hook_settings: column_hook.hook_settings || %{}
         ]
 
-        # Use HookRunner.execute which handles all hook types (system, script, agent)
         case HookRunner.execute(hook, task, nil, hook_opts) do
           {:ok, _} ->
             mark_hook_executed_if_needed(column_hook, state.task_id)
             update_hook_queue_status(state.task_id, column_hook.id, "completed")
 
-            # For transparent hooks, just clear the hook name without touching task status
             state =
               if column_hook.transparent do
                 clear_current_hook_name_only(state)
@@ -275,29 +257,22 @@ defmodule Viban.Kanban.Actors.TaskActor do
             complete_command(state, :ok)
 
           {:await_executor, _task_id} ->
-            # Hook started an async executor (e.g., Execute AI)
-            # Keep the hook in "running" status - it will be completed when executor finishes
-            # Store the column_hook_id so we can complete it when executor finishes
             Logger.info("Hook '#{hook.name}' awaiting executor completion for task #{state.task_id}")
             state = %{state | awaiting_executor_hook_id: column_hook.id}
-            # Don't complete the command yet - executor completion handler will do it
             state
 
           {:error, reason} ->
             error_message = format_error_message(hook.name, reason)
 
-            # Transparent hooks don't affect task status or cancel other hooks
             if column_hook.transparent do
               Logger.warning("Transparent hook '#{hook.name}' failed: #{error_message}")
               update_hook_queue_status(state.task_id, column_hook.id, "failed", error_message)
               state = clear_current_hook_name_only(state)
-              # Continue with remaining hooks
               complete_command(state, :ok)
             else
               set_task_error(state.task_id, hook.name, reason, state.board_id)
               update_hook_queue_status(state.task_id, column_hook.id, "failed", error_message)
               state = clear_current_hook(state)
-              # Mark remaining hooks as cancelled and clear queue
               cancel_pending_hooks_in_db(state.task_id)
               state = %{state | command_queue: CommandQueue.clear(state.command_queue)}
               complete_command(state, {:error, reason})
@@ -316,7 +291,6 @@ defmodule Viban.Kanban.Actors.TaskActor do
 
     case Task.get(state.task_id) do
       {:ok, task} ->
-        # Only move if not already in target column
         if task.column_id != target_column_id do
           Logger.info("Moving task #{state.task_id} to column #{target_column_id}")
           Task.move(task, %{column_id: target_column_id})
@@ -357,7 +331,6 @@ defmodule Viban.Kanban.Actors.TaskActor do
 
     state = %{state | command_queue: queue}
 
-    # Schedule next command processing
     send(self(), :process_next_command)
     state
   end
@@ -369,7 +342,6 @@ defmodule Viban.Kanban.Actors.TaskActor do
   defp handle_executor_completion(state, exit_code) do
     state = %{state | executor_running: false}
 
-    # If we were awaiting executor completion for a hook, complete it now
     state =
       if state.awaiting_executor_hook_id do
         hook_id = state.awaiting_executor_hook_id
@@ -382,17 +354,14 @@ defmodule Viban.Kanban.Actors.TaskActor do
           update_hook_queue_status(state.task_id, hook_id, "failed", error_message)
         end
 
-        # Clear the awaiting hook and complete the command to continue processing
         state = %{state | awaiting_executor_hook_id: nil}
         complete_command(state, if(exit_code == 0, do: :ok, else: {:error, :executor_failed}))
       else
         state
       end
 
-    # Update task status and move to "To Review"
     case Task.get(state.task_id) do
       {:ok, task} ->
-        # Set status based on exit code - error state persists on the card
         agent_status = if exit_code == 0, do: :idle, else: :error
 
         message =
@@ -407,8 +376,6 @@ defmodule Viban.Kanban.Actors.TaskActor do
 
         Task.set_in_progress(task, %{in_progress: false})
 
-        # Always move to "To Review" regardless of exit code
-        # If there was an error, the task will show error state in "To Review"
         to_review_column_id = ColumnLookup.find_to_review_column(state.board_id)
 
         if to_review_column_id do
@@ -425,7 +392,6 @@ defmodule Viban.Kanban.Actors.TaskActor do
         :ok
     end
 
-    # Clear current hook name since executor completed
     clear_current_hook(state)
   end
 
@@ -435,21 +401,17 @@ defmodule Viban.Kanban.Actors.TaskActor do
 
   @spec handle_column_change(state(), String.t() | nil, String.t()) :: state()
   defp handle_column_change(state, old_column_id, new_column_id) do
-    # If executor is running, stop it when task moves
     state =
       if state.executor_running do
         Logger.info("Task #{state.task_id} moved - stopping executor")
         stop_executor_sync(state.task_id)
         %{state | executor_running: false, command_queue: CommandQueue.clear(state.command_queue)}
       else
-        # Just clear any pending commands
         %{state | command_queue: CommandQueue.clear(state.command_queue)}
       end
 
-    # Mark any pending/running hooks as cancelled in DB (task was moved)
     cancel_pending_hooks_in_db(state.task_id)
 
-    # Queue cleanup for old column, then entry for new column
     state
     |> queue_column_leave_commands(old_column_id)
     |> queue_column_entry_commands(new_column_id)
@@ -459,7 +421,6 @@ defmodule Viban.Kanban.Actors.TaskActor do
   defp queue_column_leave_commands(state, nil), do: state
 
   defp queue_column_leave_commands(state, column_id) do
-    # Queue semaphore notification
     notify_command = %{type: :notify_semaphore_leave, data: %{column_id: column_id}}
 
     %{state | command_queue: CommandQueue.push_all(state.command_queue, [notify_command])}
@@ -471,7 +432,6 @@ defmodule Viban.Kanban.Actors.TaskActor do
     Logger.info("TaskActor #{state.task_id}: Queuing entry commands for column #{column_id}")
     task = get_task_or_nil(state.task_id)
 
-    # Check if hooks are enabled for this column
     hooks_enabled = column_hooks_enabled?(column_id)
     Logger.info("TaskActor #{state.task_id}: Hooks enabled? #{hooks_enabled}")
 
@@ -482,17 +442,14 @@ defmodule Viban.Kanban.Actors.TaskActor do
     task_in_error = task && task.agent_status == :error
     executed_hooks = (task && task.executed_hooks) || []
 
-    # Get all on_entry hooks for this column
     entry_hooks = get_hooks_for_column(column_id)
     Logger.info("TaskActor #{state.task_id}: Found #{length(entry_hooks)} hooks for column")
 
-    # Filter by execute_once
     entry_hooks =
       Enum.filter(entry_hooks, fn {column_hook, _hook} ->
         not (column_hook.execute_once and column_hook.id in executed_hooks)
       end)
 
-    # If hooks are disabled, skip all hooks
     if not hooks_enabled do
       now = DateTime.utc_now() |> DateTime.to_iso8601()
 
@@ -524,13 +481,9 @@ defmodule Viban.Kanban.Actors.TaskActor do
 
       state
     else
-      # Split hooks into transparent and non-transparent
       {transparent_hooks, normal_hooks} =
         Enum.split_with(entry_hooks, fn {column_hook, _hook} -> column_hook.transparent end)
 
-      # If task is in error state:
-      # - Skip non-transparent hooks
-      # - Execute transparent hooks
       {hooks_to_execute, hooks_to_skip} =
         if task_in_error do
           {transparent_hooks, normal_hooks}
@@ -540,7 +493,6 @@ defmodule Viban.Kanban.Actors.TaskActor do
 
       now = DateTime.utc_now() |> DateTime.to_iso8601()
 
-      # Build the hook queue: skipped hooks + pending hooks to execute
       skipped_queue =
         Enum.map(hooks_to_skip, fn {column_hook, hook} ->
           %{"id" => column_hook.id, "name" => hook.name, "status" => "skipped", "skip_reason" => "error", "inserted_at" => now}
@@ -559,7 +511,6 @@ defmodule Viban.Kanban.Actors.TaskActor do
 
       set_hook_queue(state.task_id, skipped_queue ++ pending_queue)
 
-      # Record skipped hooks to history
       Enum.each(hooks_to_skip, fn {column_hook, hook} ->
         history_entry = %{
           "id" => column_hook.id,
@@ -596,8 +547,6 @@ defmodule Viban.Kanban.Actors.TaskActor do
   # Hook Management
   # ============================================================================
 
-  # Get all hooks for a column, sorted by position.
-  # Returns a list of {column_hook, hook} tuples.
   defp get_hooks_for_column(column_id) do
     case ColumnHook.read() do
       {:ok, column_hooks} ->
@@ -617,7 +566,6 @@ defmodule Viban.Kanban.Actors.TaskActor do
     end
   end
 
-  # Get hook by ID - checks both database hooks and system hooks from Registry
   defp get_hook(hook_id) do
     alias Viban.Kanban.SystemHooks.Registry
 
@@ -628,15 +576,12 @@ defmodule Viban.Kanban.Actors.TaskActor do
     end
   end
 
-  # Check if hooks are enabled for a column (defaults to true if not set)
   defp column_hooks_enabled?(column_id) do
     case Column.get(column_id) do
       {:ok, column} ->
-        # Default to true if not explicitly set to false
         column.settings["hooks_enabled"] != false
 
       _ ->
-        # Column not found, assume hooks enabled to not break existing behavior
         true
     end
   end
@@ -650,12 +595,9 @@ defmodule Viban.Kanban.Actors.TaskActor do
     end
   end
 
-  # Set and broadcast the current hook name with "Executing" prefix
   defp set_current_hook(state, hook_name) do
     Logger.info("Task #{state.task_id}: Setting status to 'Executing #{hook_name}'")
 
-    # Update task agent_status_message to show current hook
-    # Also set in_progress so the frontend shows the status badge
     case Task.get(state.task_id) do
       {:ok, task} ->
         Task.update_agent_status(task, %{
@@ -672,14 +614,12 @@ defmodule Viban.Kanban.Actors.TaskActor do
     %{state | current_hook_name: hook_name}
   end
 
-  # Clear current hook and reset agent status to idle
   defp clear_current_hook(state) do
     Logger.info("TaskActor #{state.task_id}: Clearing current hook")
 
     case Task.get(state.task_id) do
       {:ok, task} ->
         Logger.info("TaskActor #{state.task_id}: agent_status=#{task.agent_status}, in_progress=#{task.in_progress}")
-        # Only clear if still in executing state (don't override error state)
         if task.agent_status == :executing do
           Logger.info("TaskActor #{state.task_id}: Setting status to idle and in_progress to false")
           Task.update_agent_status(task, %{
@@ -699,8 +639,6 @@ defmodule Viban.Kanban.Actors.TaskActor do
     %{state | current_hook_name: nil}
   end
 
-  # Clear current hook name only, without touching task status
-  # Used for transparent hooks which should not affect task agent_status or in_progress
   defp clear_current_hook_name_only(state) do
     %{state | current_hook_name: nil}
   end
@@ -709,7 +647,6 @@ defmodule Viban.Kanban.Actors.TaskActor do
   # Hook Queue Database Operations
   # ============================================================================
 
-  # Set the entire hook queue for a task
   defp set_hook_queue(task_id, hook_queue) do
     case Task.get(task_id) do
       {:ok, task} ->
@@ -720,16 +657,11 @@ defmodule Viban.Kanban.Actors.TaskActor do
     end
   end
 
-  # Final statuses that should be recorded in hook history
   @final_statuses ["completed", "failed", "cancelled", "skipped"]
 
-  # Update a single hook's status in the queue
-  # Also records to hook_history when transitioning to a final status
-  # Optional error_message is stored for failed hooks
   defp update_hook_queue_status(task_id, hook_id, new_status, error_message \\ nil) do
     case Task.get(task_id) do
       {:ok, task} ->
-        # Find the hook entry to get its name for history
         hook_entry = Enum.find(task.hook_queue || [], &(&1["id"] == hook_id))
 
         updated_queue =
@@ -747,7 +679,6 @@ defmodule Viban.Kanban.Actors.TaskActor do
 
         Task.update_hook_queue(task, %{hook_queue: updated_queue})
 
-        # Record to history when transitioning to a final status
         if hook_entry && new_status in @final_statuses do
           history_entry =
             %{
@@ -761,7 +692,6 @@ defmodule Viban.Kanban.Actors.TaskActor do
               if error_message, do: Map.put(entry, "error_message", error_message), else: entry
             end)
 
-          # Re-fetch task to get updated state and append to history
           case Task.get(task_id) do
             {:ok, fresh_task} ->
               Task.append_hook_history(fresh_task, history_entry)
@@ -776,14 +706,11 @@ defmodule Viban.Kanban.Actors.TaskActor do
     end
   end
 
-  # Mark all pending/running hooks as cancelled in the database
-  # Also records cancelled hooks to history
   defp cancel_pending_hooks_in_db(task_id) do
     case Task.get(task_id) do
       {:ok, task} ->
         now = DateTime.utc_now() |> DateTime.to_iso8601()
 
-        # Find hooks to cancel and update queue
         {updated_queue, cancelled_hooks} =
           Enum.map_reduce(task.hook_queue || [], [], fn hook, acc ->
             if hook["status"] in ["pending", "running"] do
@@ -796,7 +723,6 @@ defmodule Viban.Kanban.Actors.TaskActor do
 
         Task.update_hook_queue(task, %{hook_queue: updated_queue})
 
-        # Record cancelled hooks to history
         Enum.each(cancelled_hooks, fn hook ->
           history_entry = %{
             "id" => hook["id"],
@@ -820,16 +746,12 @@ defmodule Viban.Kanban.Actors.TaskActor do
     end
   end
 
-  # Called when the command queue becomes empty after processing hooks.
-  # Clears the hook queue. History is already recorded by update_hook_queue_status.
   defp finalize_hook_execution(task_id) do
     case Task.get(task_id) do
       {:ok, task} ->
         hook_queue = task.hook_queue || []
 
-        # Only finalize if there are hooks to clear
         if Enum.any?(hook_queue) do
-          # Clear the hook queue (history was already recorded in update_hook_queue_status)
           case Task.get(task_id) do
             {:ok, fresh_task} ->
               Task.update_hook_queue(fresh_task, %{hook_queue: []})
@@ -901,11 +823,9 @@ defmodule Viban.Kanban.Actors.TaskActor do
   defp maybe_cleanup_worktree(state) do
     case Task.get(state.task_id) do
       {:ok, _task} ->
-        # Task still exists, don't clean up worktree
         :ok
 
       {:error, _} ->
-        # Task was deleted, clean up worktree
         if state.worktree_path do
           Logger.info("Task #{state.task_id} was deleted, cleaning up worktree")
 
@@ -935,7 +855,6 @@ defmodule Viban.Kanban.Actors.TaskActor do
           in_progress: false
         })
 
-        # Move to "To Review" with error state visible on the card
         to_review_column_id = ColumnLookup.find_to_review_column(board_id)
 
         if to_review_column_id do

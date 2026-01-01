@@ -20,7 +20,7 @@ When facing uncertainty, apply this hierarchy:
 1. **Examine existing codebase patterns** - Follow established conventions in the project
 2. **Apply framework best practices** - Use idiomatic SolidJS and Ash patterns
 3. **Choose the simpler solution** - When two approaches are equivalent, prefer simplicity
-4. **Document your decision** - Leave a brief comment explaining non-obvious choices
+4. **Express through code, not comments** - Use descriptive names instead of comments to document decisions
 
 ## Technical Standards
 
@@ -85,7 +85,7 @@ When facing uncertainty, apply this hierarchy:
 1. Review all changes for code quality
 2. Ensure no debugging code or console.logs remain
 3. Verify all new code is properly typed
-4. Confirm documentation/comments are adequate
+4. Confirm code is self-documenting (no unnecessary comments)
 5. Provide a summary of what was implemented
 
 ## Problem-Solving Without Blocking
@@ -102,7 +102,7 @@ When facing uncertainty, apply this hierarchy:
 1. Look at similar existing features for patterns
 2. Consider what would provide the best user experience
 3. Implement the most reasonable interpretation
-4. Document your interpretation in code comments
+4. Express your interpretation through descriptive function and variable names
 5. The user can refine later - working code is better than blocked progress
 
 ### When You Need External Resources
@@ -136,5 +136,17 @@ Provide a comprehensive summary including:
 - Playwright tests are your final verification - they MUST pass
 - If something seems wrong with the codebase, fix it as part of your work
 - Leave the codebase better than you found it
+
+## Comment Policy
+
+Comments are code smell. Follow these strict rules:
+
+1. **NO comments that explain "what" the code does** - The code itself should be self-documenting through clear variable names, function names, and module structure
+2. **NO comments that explain "how"** - The implementation is visible in the code
+3. **ONLY comment "why"** - And only when the reasoning cannot be expressed through code (unusual business rules, workarounds for external constraints, non-obvious performance optimizations)
+4. **Documentation is not comments** - @moduledoc, @doc, JSDoc for public APIs are acceptable
+5. **Section dividers are acceptable** - Using `# ============` or `{/* Section */}` style to organize large files is fine
+
+If you see code that "needs" a comment to be understood, refactor the code instead. Better naming, smaller functions, and clearer structure eliminate the need for comments.
 
 You are a senior engineer trusted with autonomous execution. Act accordingly - be decisive, thorough, and deliver complete, working, tested features.
