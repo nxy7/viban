@@ -9,8 +9,42 @@ defmodule Viban.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
-      deps: deps()
+      deps: deps(),
+      releases: releases()
     ]
+  end
+
+  defp releases do
+    [
+      viban: release_config()
+    ]
+  end
+
+  defp release_config do
+    base = [
+      include_executables_for: [:unix],
+      applications: [runtime_tools: :permanent]
+    ]
+
+    if System.get_env("BURRITO_BUILD") == "1" do
+      # Single-binary build with Burrito (requires OTP <= 27 and zig installed)
+      # Usage: BURRITO_BUILD=1 MIX_ENV=prod mix release
+      base ++
+        [
+          steps: [:assemble, &Burrito.wrap/1],
+          burrito: [
+            targets: [
+              macos_arm: [os: :darwin, cpu: :aarch64],
+              macos_intel: [os: :darwin, cpu: :x86_64],
+              linux_arm: [os: :linux, cpu: :aarch64],
+              linux_intel: [os: :linux, cpu: :x86_64]
+            ]
+          ]
+        ]
+    else
+      # Standard release (works with any OTP version)
+      base
+    end
   end
 
   def application do
@@ -81,7 +115,10 @@ defmodule Viban.MixProject do
 
       # Dev/Test
       {:floki, ">= 0.30.0", only: :test},
-      {:tidewave, "~> 0.2", only: :dev}
+      {:tidewave, "~> 0.2", only: :dev},
+
+      # Single-binary packaging
+      {:burrito, "~> 1.0"}
     ]
   end
 
