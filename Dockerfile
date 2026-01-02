@@ -9,13 +9,17 @@
 #   docker build -t viban .
 #   docker run -it --rm \
 #     -p 8000:8000 \
-#     -v /:/host:ro \
-#     -v viban-data:/var/lib/postgresql/data \
-#     -e SECRET_KEY_BASE=$(mix phx.gen.secret) \
+#     --env-file .env \
+#     -v ~/.local/share/viban:/root/.local/share/viban \
+#     -v ~/.claude:/root/.claude \
+#     -v viban-pgdata:/var/lib/postgresql/data \
+#     -e SECRET_KEY_BASE=$(openssl rand -base64 48) \
 #     viban
 #
-# The /host mount provides read-only access to the host filesystem
-# for AI agents like Claude Code to work on host projects.
+# Volume mounts:
+#   ~/.local/share/viban - Viban data (cloned repos, worktrees) shared with host
+#   ~/.claude            - Claude Code authentication config
+#   viban-pgdata         - PostgreSQL data (named volume, container-only)
 
 # ==============================================================================
 # Stage 1: Build the Elixir backend
@@ -79,13 +83,17 @@ RUN apk add --no-cache \
     bash \
     # For health checks
     postgresql-client \
-    # For Bun
-    gcompat libgcc
+    # For Bun and Node
+    gcompat libgcc \
+    nodejs npm
 
 # Install Bun for frontend server
 RUN curl -fsSL https://bun.sh/install | bash && \
     mv /root/.bun/bin/bun /usr/local/bin/ && \
     rm -rf /root/.bun
+
+# Install Claude Code CLI globally
+RUN npm install -g @anthropic-ai/claude-code
 
 # Create non-root user for the app (but PostgreSQL needs its own user)
 RUN addgroup -g 1000 viban && \
@@ -172,7 +180,7 @@ stderr_logfile_maxbytes=0
 
 [program:backend]
 command=/app/backend/bin/viban start
-user=viban
+user=root
 autostart=true
 autorestart=true
 priority=20
@@ -182,7 +190,6 @@ stdout_logfile=/dev/stdout
 stdout_logfile_maxbytes=0
 stderr_logfile=/dev/stderr
 stderr_logfile_maxbytes=0
-environment=DATABASE_URL="ecto://postgres:postgres@127.0.0.1/viban_prod",PHX_SERVER="true",PORT="4000",SECRET_KEY_BASE="%(ENV_SECRET_KEY_BASE)s",PHX_HOST="%(ENV_PHX_HOST)s"
 
 [program:frontend]
 command=/usr/local/bin/bun /app/frontend/server/index.mjs
@@ -241,9 +248,15 @@ if [ ! -f /var/lib/postgresql/data/PG_VERSION ]; then
     sleep 1
 fi
 
-# Export environment variables for supervisor to pick up
+# Export environment variables for all services
 export DATABASE_URL="ecto://postgres:postgres@127.0.0.1/viban_prod"
 export PHX_HOST="${PHX_HOST:-localhost}"
+export PHX_SERVER="true"
+export PORT="4000"
+export HOME="/root"
+export ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-}"
+export GH_CLIENT_ID="${GH_CLIENT_ID:-}"
+export GH_CLIENT_SECRET="${GH_CLIENT_SECRET:-}"
 
 # Start supervisor (runs all services)
 echo "Starting services..."

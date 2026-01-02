@@ -21,4 +21,20 @@ Tasks completed:
   - Dockerfile created and tested successfully
   - Image builds and runs correctly
   - Health check passes, all services start properly
-  - Usage: docker run -p 8000:8000 -v viban-data:/var/lib/postgresql/data -e SECRET_KEY_BASE="..." viban
+  - Claude Code CLI installed and working inside container
+  - Usage:
+    ```bash
+    docker build -t viban .
+    docker run -it --rm \
+      -p 8000:8000 \
+      --env-file .env \
+      -v ~/.local/share/viban:/root/.local/share/viban \
+      -v ~/.claude:/root/.claude \
+      -v viban-pgdata:/var/lib/postgresql/data \
+      -e SECRET_KEY_BASE=$(openssl rand -base64 48) \
+      viban
+    ```
+  - Volume mounts:
+    - `~/.local/share/viban` - Viban data (cloned repos, worktrees) shared with host
+    - `~/.claude` - Claude Code authentication config
+    - `viban-pgdata` - PostgreSQL data (named volume, container-only)
