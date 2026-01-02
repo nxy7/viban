@@ -109,11 +109,4 @@ defmodule VibanWeb.Router do
     end
   end
 
-  # Tidewave MCP for AI debugging (dev only)
-  if Code.ensure_loaded?(Tidewave.Plug) do
-    scope "/tidewave" do
-      pipe_through :api
-      forward "/", Tidewave.Plug
-    end
-  end
 end
