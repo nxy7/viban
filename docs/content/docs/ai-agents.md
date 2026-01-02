@@ -9,7 +9,7 @@ Viban supports multiple AI agents for autonomous task execution. Learn how each 
 
 ## Supported Agents
 
-### Claude Code
+### Claude Code (Default)
 
 Claude Code is Anthropic's autonomous coding agent, designed specifically for software development tasks.
 
@@ -18,6 +18,7 @@ Claude Code is Anthropic's autonomous coding agent, designed specifically for so
 - Strong reasoning capabilities
 - Built-in tool use (file editing, terminal, etc.)
 - Long context windows
+- Full project context awareness
 
 **Best For:**
 - Complex feature implementation
@@ -34,26 +35,12 @@ npm install -g @anthropic-ai/claude-code
 claude login
 ```
 
-### Codex
+### Gemini CLI
 
-OpenAI's code generation model, accessible through their API.
-
-**Strengths:**
-- Fast code completion
-- Good for boilerplate generation
-- Multiple language support
-
-**Best For:**
-- Quick code generation
-- Simple implementations
-- Template-based tasks
-
-### Gemini
-
-Google's multimodal AI model with code capabilities.
+Google's Gemini model accessible through the CLI for code tasks.
 
 **Strengths:**
-- Multimodal understanding
+- Multimodal understanding (can process images)
 - Large context window
 - Fast inference
 
@@ -61,20 +48,6 @@ Google's multimodal AI model with code capabilities.
 - Tasks involving images/diagrams
 - Documentation from mockups
 - Multi-file understanding
-
-### Cursor Agent
-
-Cursor's built-in AI agent for code editing.
-
-**Strengths:**
-- Tight editor integration
-- Good for incremental changes
-- Fast iteration
-
-**Best For:**
-- Small changes
-- Interactive development
-- Editor-based workflows
 
 ## Agent Selection
 

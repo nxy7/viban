@@ -48,13 +48,14 @@ just dev
 ```
 
 This will start:
-- Backend server at `http://localhost:4000`
+- Caddy HTTPS proxy at `https://localhost:8000`
+- Backend server at `http://localhost:7771`
 - Frontend at `http://localhost:3000`
 - Electric SQL sync service
 
 ## Creating Your First Project
 
-1. Open the Viban dashboard at `http://localhost:3000`
+1. Open the Viban dashboard at `https://localhost:8000`
 2. Click "New Project" and give it a name
 3. Connect your GitHub repository (optional but recommended)
 
