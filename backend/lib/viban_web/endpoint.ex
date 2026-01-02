@@ -32,8 +32,10 @@ defmodule VibanWeb.Endpoint do
   plug Plug.Static,
     at: "/",
     from: :viban,
-    gzip: false,
-    only: VibanWeb.static_paths()
+    gzip: true,
+    brotli: true,
+    only: VibanWeb.static_paths(),
+    headers: [{"cache-control", "public, max-age=31536000, immutable"}]
 
   if Code.ensure_loaded?(Tidewave) do
     plug Tidewave

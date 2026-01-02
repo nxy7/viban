@@ -20,10 +20,9 @@ defmodule VibanWeb.Router do
     plug :accepts, ["json"]
   end
 
-  scope "/", VibanWeb do
-    pipe_through :browser
-
-    get "/", PageController, :home
+  pipeline :spa do
+    plug :accepts, ["html"]
+    plug :fetch_session
   end
 
   # OAuth routes (browser pipeline for redirects)
@@ -112,4 +111,9 @@ defmodule VibanWeb.Router do
     end
   end
 
+  scope "/", VibanWeb do
+    pipe_through :spa
+
+    get "/*path", SPAController, :index
+  end
 end
