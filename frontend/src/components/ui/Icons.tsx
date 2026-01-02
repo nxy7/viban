@@ -173,16 +173,10 @@ export function PRIcon(props: PRIconProps): JSX.Element {
     <svg
       class={`${props.class ?? "h-3.5 w-3.5"} ${PR_STATUS_COLORS[props.status]}`}
       xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      stroke-width="2"
+      viewBox="0 0 14 16"
+      fill="currentColor"
     >
-      <path
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-      />
+      <path d="M0.5 3.25a2.25 2.25 0 1 1 3 2.122v5.256a2.251 2.251 0 1 1-1.5 0V5.372A2.25 2.25 0 0 1 0.5 3.25Zm5.677-.177L8.573.677A.25.25 0 0 1 9 .854V2.5h1A2.5 2.5 0 0 1 12.5 5v5.628a2.251 2.251 0 1 1-1.5 0V5a1 1 0 0 0-1-1h-1v1.646a.25.25 0 0 1-.427.177L6.177 3.427a.25.25 0 0 1 0-.354ZM2.75 2.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Zm0 9.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Zm8.25.75a.75.75 0 1 0 1.5 0 .75.75 0 0 0-1.5 0Z" />
     </svg>
   );
 }

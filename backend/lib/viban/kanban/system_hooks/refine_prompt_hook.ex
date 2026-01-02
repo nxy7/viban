@@ -28,13 +28,6 @@ defmodule Viban.Kanban.SystemHooks.RefinePromptHook do
       :ok
     else
       Logger.info("[RefinePromptHook] Queueing prompt refinement for task #{task.id}")
-
-      # In a real implementation, this would enqueue an Oban job
-      # For now, we'll just log and return success
-      # %{task_id: task.id, auto_apply: true}
-      # |> Viban.Workers.RefinePromptWorker.new()
-      # |> Oban.insert()
-
       :ok
     end
   end

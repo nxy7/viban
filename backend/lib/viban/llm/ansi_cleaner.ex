@@ -29,12 +29,14 @@ defmodule Viban.LLM.AnsiCleaner do
   @spec clean(String.t()) :: String.t()
   def clean(output) when is_binary(output) do
     output
-    # Remove ANSI escape codes (ESC [ ... letter)
+    # Remove ANSI escape codes (ESC [ ... letter) - includes private mode sequences with ?
     |> String.replace(~r/\x1b\[[0-9;?]*[a-zA-Z]/, "")
     # Alternative escape notation
     |> String.replace(~r/\e\[[0-9;?]*[a-zA-Z]/, "")
-    # Remove cursor show/hide codes [?25h [?25l
+    # Remove orphaned cursor show/hide codes (when ESC was already stripped)
     |> String.replace(~r/\[\?25[hl]/, "")
+    # Remove standalone private mode sequences that may appear without ESC
+    |> String.replace(~r/\[\?\d+[a-zA-Z]/, "")
     # Remove OSC sequences (ESC ] ... BEL)
     |> String.replace(~r/\x1b\].*?\x07/, "")
     # Remove DCS/SOS/PM/APC sequences

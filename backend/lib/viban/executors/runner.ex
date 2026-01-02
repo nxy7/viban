@@ -294,7 +294,9 @@ defmodule Viban.Executors.Runner do
       output_buffer: buffer
     } = state
 
-    Logger.info("#{@log_prefix} [#{task_id}] Received data (#{byte_size(data)} bytes): #{String.slice(data, 0, 200)}")
+    Logger.info(
+      "#{@log_prefix} [#{task_id}] Received data (#{byte_size(data)} bytes): #{String.slice(data, 0, 200)}"
+    )
 
     data
     |> String.split("\n", trim: true)
@@ -309,7 +311,10 @@ defmodule Viban.Executors.Runner do
     %{task_id: task_id, session_id: session_id, output_buffer: buffer} = state
 
     total_output_size = buffer |> Enum.map(fn {_, data} -> byte_size(data) end) |> Enum.sum()
-    Logger.info("#{@log_prefix} [#{task_id}] Process exited with code #{exit_code}, total output: #{total_output_size} bytes, #{length(buffer)} chunks")
+
+    Logger.info(
+      "#{@log_prefix} [#{task_id}] Process exited with code #{exit_code}, total output: #{total_output_size} bytes, #{length(buffer)} chunks"
+    )
 
     status = if exit_code == 0, do: :completed, else: :failed
     broadcast_completed(task_id, session_id, exit_code, status)
@@ -474,15 +479,20 @@ defmodule Viban.Executors.Runner do
       end
 
     case parsed do
+      :skip ->
+        :ok
+
       {:ok, %{type: type}} ->
         Logger.debug("#{@log_prefix} [#{task_id}] Parsed output type: #{type}")
+        handle_parsed_output(parsed, task_id, session_id)
+
       {:raw, _} ->
         Logger.debug("#{@log_prefix} [#{task_id}] Raw output: #{String.slice(line, 0, 100)}")
+        handle_parsed_output(parsed, task_id, session_id)
+
       _ ->
         :ok
     end
-
-    handle_parsed_output(parsed, task_id, session_id)
   end
 
   defp handle_parsed_output(
@@ -517,7 +527,7 @@ defmodule Viban.Executors.Runner do
        ) do
     broadcast_output(task_id, session_id, :parsed, event)
     PRDetector.process_output(task_id, content)
-    update_task_agent_status(task_id, :waiting_for_user, "Waiting for user input")
+    update_task_agent_status(task_id, :idle, "Agent completed")
   end
 
   defp handle_parsed_output({:ok, %{type: :error, message: message} = event}, task_id, session_id) do

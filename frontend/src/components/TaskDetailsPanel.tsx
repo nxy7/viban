@@ -1,8 +1,10 @@
-import { useLiveQuery } from "@tanstack/solid-db";
+import { useNavigate } from "@solidjs/router";
+import { useLiveQuery, useQuery } from "@tanstack/solid-db";
 import { marked } from "marked";
 import {
   createEffect,
   createMemo,
+  createResource,
   createSignal,
   For,
   onMount,
@@ -32,20 +34,21 @@ function setStoredBoolean(key: string, value: boolean): void {
   if (typeof window === "undefined") return;
   localStorage.setItem(key, String(value));
 }
+import * as sdk from "~/lib/generated/ash";
+import { getErrorMessage } from "~/lib/errorUtils";
 import { CHAT_PROSE_CLASSES, renderMarkdown } from "~/lib/markdown";
+import { useSystem } from "~/lib/SystemContext";
 import { getPRBadgeHoverClasses } from "~/lib/taskStyles";
 import {
   columnsCollection,
-  deleteTask,
-  refineTask,
   type Task,
-  type UpdateTaskInput,
-  updateTask,
+  toDecimal,
+  unwrap,
 } from "~/lib/useKanban";
 import { type OutputLine, useTaskChat } from "~/lib/useTaskChat";
 import { AgentStatusBadge, type AgentStatusType } from "./AgentStatus";
+import CreatePRModal from "./CreatePRModal";
 import CreateTaskModal from "./CreateTaskModal";
-import HookQueueDisplay from "./HookQueueDisplay";
 import ImageTextarea, {
   type InlineImage,
   parseDescriptionImages,
@@ -79,18 +82,29 @@ type HookExecutionActivity = {
   type: "hook_execution";
   id: string;
   name: string;
-  status: "pending" | "running" | "completed" | "failed" | "cancelled" | "skipped";
-  skip_reason?: "error" | "disabled";
-  error_message?: string;
-  inserted_at: string;
-  executed_at?: string;
+  status:
+    | "pending"
+    | "running"
+    | "completed"
+    | "failed"
+    | "cancelled"
+    | "skipped";
+  skip_reason?:
+    | "error"
+    | "disabled"
+    | "column_change"
+    | "server_restart"
+    | "user_cancelled"
+    | null;
+  error_message?: string | null;
+  queued_at: string | null;
+  started_at?: string | null;
+  completed_at?: string | null;
 };
 
 type GroupedHooksActivity = {
   type: "grouped_hooks";
   hooks: HookExecutionActivity[];
-  firstTimestamp: string;
-  lastTimestamp: string;
 };
 
 type ActivityItem =
@@ -115,7 +129,10 @@ function fileToDataUrl(file: File): Promise<string> {
   });
 }
 
-const shouldShowOutput = (line: OutputLine): boolean => {
+const shouldShowOutput = (
+  line: OutputLine,
+  hideDetails: boolean = false,
+): boolean => {
   if (line.type === "user" || line.role === "user") return true;
   if (line.role === "tool") return true;
 
@@ -144,13 +161,32 @@ const shouldShowOutput = (line: OutputLine): boolean => {
 
   if (line.type === "raw") {
     const content = typeof line.content === "string" ? line.content : "";
-    return content.trim().length > 0;
+    if (content.trim().length === 0) return false;
+
+    // In hide details mode, filter out system/init JSON messages
+    if (hideDetails) {
+      const trimmed = content.trim();
+      // Filter out JSON that looks like system init messages
+      if (
+        trimmed.startsWith('{"type":"system"') ||
+        trimmed.startsWith('{\"type\":\"system\"')
+      ) {
+        return false;
+      }
+      // Filter partial JSON fragments that are part of init messages
+      if (trimmed.includes('"mcp_servers"') || trimmed.includes('"tools":[')) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   return true;
 };
 
 export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
+  const navigate = useNavigate();
   const [title, setTitle] = createSignal("");
   const [description, setDescription] = createSignal("");
   const [descriptionImages, setDescriptionImages] = createSignal<InlineImage[]>(
@@ -166,13 +202,15 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
   const [isSending, setIsSending] = createSignal(false);
   const [isRefining, setIsRefining] = createSignal(false);
   const [showDuplicateModal, setShowDuplicateModal] = createSignal(false);
+  const [showCreatePRModal, setShowCreatePRModal] = createSignal(false);
 
   const [attachedImages, setAttachedImages] = createSignal<ImageAttachment[]>(
     [],
   );
   const [isStopping, setIsStopping] = createSignal(false);
+  const [isCreatingWorktree, setIsCreatingWorktree] = createSignal(false);
   const [hideDetails, setHideDetails] = createSignal(
-    getStoredBoolean(HIDE_DETAILS_KEY, false)
+    getStoredBoolean(HIDE_DETAILS_KEY, false),
   );
 
   const toggleHideDetails = () => {
@@ -182,7 +220,7 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
   };
 
   const [isFullscreen, setIsFullscreen] = createSignal(
-    getStoredBoolean(FULLSCREEN_KEY, false)
+    getStoredBoolean(FULLSCREEN_KEY, false),
   );
 
   const toggleFullscreen = () => {
@@ -210,12 +248,30 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
     return cols.find((c) => c.name.toUpperCase() === "TODO");
   };
 
+  const currentBoardId = (): string | undefined => {
+    const task = props.task;
+    if (!task) return undefined;
+    const cols = (columnsQuery.data ?? []) as ColumnQueryResult[];
+    const col = cols.find((c) => c.id === task.column_id);
+    return col?.board_id;
+  };
+
+  const navigateToSubtask = (subtaskId: string) => {
+    const boardId = currentBoardId();
+    if (boardId) {
+      navigate(`/board/${boardId}/card/${subtaskId}`);
+    }
+  };
+
   const isTodoTask = () => props.columnName?.toUpperCase() === "TODO";
 
   let messagesEndRef: HTMLDivElement | undefined;
   let inputRef: HTMLTextAreaElement | undefined;
 
   const taskId = () => props.task?.id;
+
+  const { executors, selectedExecutor, setSelectedExecutor, hasClaudeCode } =
+    useSystem();
 
   const {
     output,
@@ -226,23 +282,52 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
     error: executorError,
     agentStatus,
     agentStatusMessage,
-    executors,
     todos,
-    messageQueue,
-    startExecutor,
     queueMessage,
     stopExecutor,
     reconnect,
+    createWorktree,
   } = useTaskChat(taskId);
+
+  const [hookExecutions, { refetch: refetchHookExecutions }] = createResource(
+    taskId,
+    async (id) => {
+      if (!id) return [];
+      const result = await sdk.hook_executions_for_task({
+        input: { task_id: id },
+        fields: [
+          "id",
+          "hook_name",
+          "status",
+          "skip_reason",
+          "error_message",
+          "queued_at",
+          "started_at",
+          "completed_at",
+        ],
+      });
+      if (result.success) {
+        return result.data;
+      }
+      return [];
+    },
+  );
+
+  createEffect(() => {
+    props.task?.agent_status;
+    refetchHookExecutions();
+  });
 
   const getActivityTimestamp = (item: ActivityItem): number => {
     switch (item.type) {
       case "task_created":
         return new Date(item.timestamp).getTime();
       case "hook_execution":
-        return new Date(item.inserted_at).getTime();
+        return item.queued_at ? new Date(item.queued_at).getTime() : 0;
       case "grouped_hooks":
-        return new Date(item.firstTimestamp).getTime();
+        return item.hooks[0]?.queued_at
+          ? new Date(item.hooks[0].queued_at).getTime()
+          : 0;
       case "output":
         return item.line.timestamp
           ? new Date(item.line.timestamp).getTime()
@@ -259,8 +344,6 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
         result.push({
           type: "grouped_hooks",
           hooks: [...currentHookGroup],
-          firstTimestamp: currentHookGroup[0].inserted_at,
-          lastTimestamp: currentHookGroup[currentHookGroup.length - 1].inserted_at,
         });
       }
       currentHookGroup = [];
@@ -295,46 +378,23 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
       });
     }
 
-    if (!hideDetails()) {
-      const hookQueue = props.task?.hook_queue;
-      if (hookQueue && hookQueue.length > 0) {
-        for (const entry of hookQueue) {
-          if (entry.status === "pending" || entry.status === "running") {
-            items.push({
-              type: "hook_execution",
-              id: entry.id,
-              name: entry.name,
-              status: entry.status,
-              skip_reason: entry.skip_reason,
-              error_message: undefined,
-              inserted_at: entry.inserted_at,
-            });
-          }
-        }
-      }
-
-      const hookHistory = props.task?.hook_history;
-      if (hookHistory && hookHistory.length > 0) {
-        for (const entry of hookHistory) {
-          items.push({
-            type: "hook_execution",
-            id: entry.id,
-            name: entry.name,
-            status: entry.status,
-            skip_reason: entry.skip_reason,
-            error_message: entry.error_message,
-            inserted_at: entry.inserted_at,
-            executed_at: entry.executed_at,
-          });
-        }
-      }
+    const executions = hookExecutions() ?? [];
+    for (const exec of executions) {
+      items.push({
+        type: "hook_execution",
+        id: exec.id,
+        name: exec.hook_name,
+        status: exec.status,
+        skip_reason: exec.skip_reason,
+        error_message: exec.error_message,
+        queued_at: exec.queued_at,
+        started_at: exec.started_at,
+        completed_at: exec.completed_at,
+      });
     }
 
     for (const line of output()) {
-      if (shouldShowOutput(line)) {
-        if (hideDetails() && (line.type === "system" || line.role === "system")) {
-          continue;
-        }
+      if (shouldShowOutput(line, hideDetails())) {
         items.push({ type: "output", line });
       }
     }
@@ -406,17 +466,16 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
     setIsSaving(true);
     setError(null);
 
-    try {
-      const input: UpdateTaskInput = {
-        title: title().trim(),
-      };
+    const result = await sdk
+      .update_task({
+        identity: props.task.id,
+        input: { title: title().trim() },
+      })
+      .then(unwrap);
 
-      await updateTask(props.task.id, input);
+    setIsSaving(false);
+    if (result) {
       setIsEditingTitle(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update task");
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -426,20 +485,21 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
     setIsSaving(true);
     setError(null);
 
-    try {
-      const images = descriptionImages();
-      const input: UpdateTaskInput = {
-        description: description().trim() || undefined,
-        description_images:
-          images.length > 0 ? prepareImagesForApi(images) : undefined,
-      };
+    const images = descriptionImages();
+    const result = await sdk
+      .update_task({
+        identity: props.task.id,
+        input: {
+          description: description().trim() || undefined,
+          description_images:
+            images.length > 0 ? prepareImagesForApi(images) : undefined,
+        },
+      })
+      .then(unwrap);
 
-      await updateTask(props.task.id, input);
+    setIsSaving(false);
+    if (result) {
       setIsEditingDescription(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update task");
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -460,14 +520,14 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
     setIsDeleting(true);
     setError(null);
 
-    try {
-      await deleteTask(props.task.id);
+    const result = await sdk
+      .destroy_task({ identity: props.task.id })
+      .then(unwrap);
+
+    setIsDeleting(false);
+    setShowDeleteConfirm(false);
+    if (result !== null) {
       props.onClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete task");
-    } finally {
-      setIsDeleting(false);
-      setShowDeleteConfirm(false);
     }
   };
 
@@ -485,13 +545,9 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
     setIsRefining(true);
     setError(null);
 
-    try {
-      await refineTask(props.task.id);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to refine task");
-    } finally {
-      setIsRefining(false);
-    }
+    await sdk.refine_task({ input: { task_id: props.task.id } }).then(unwrap);
+
+    setIsRefining(false);
   };
 
   const getNextChatImageId = (): string => {
@@ -572,8 +628,14 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
     e.preventDefault();
     const prompt = input().trim();
     const images = attachedImages();
+    const executor = selectedExecutor();
 
-    if ((!prompt && images.length === 0) || isSending() || !isConnected())
+    if (
+      (!prompt && images.length === 0) ||
+      isSending() ||
+      !isConnected() ||
+      !executor
+    )
       return;
 
     setIsSending(true);
@@ -592,14 +654,10 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
         mimeType: img.file.type,
       }));
 
-      if (isTaskWorking()) {
-        queueMessage(prompt, "claude_code", imageData);
-      } else {
-        await startExecutor(prompt, "claude_code", imageData);
-      }
+      await queueMessage(prompt, executor, imageData);
     } catch (err) {
       console.error("Failed to start work:", err);
-      setError(err instanceof Error ? err.message : "Failed to start work");
+      setError(getErrorMessage(err, "Failed to start work"));
     } finally {
       setIsSending(false);
       inputRef?.focus();
@@ -614,16 +672,31 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
   };
 
   const handleStopExecutor = async () => {
-    if (isStopping() || !isRunning()) return;
+    if (isStopping() || !isTaskWorking()) return;
 
     setIsStopping(true);
     try {
       await stopExecutor();
     } catch (err) {
       console.error("Failed to stop executor:", err);
-      setError(err instanceof Error ? err.message : "Failed to stop executor");
+      setError(getErrorMessage(err, "Failed to stop executor"));
     } finally {
       setIsStopping(false);
+    }
+  };
+
+  const handleCreateWorktree = async () => {
+    if (isCreatingWorktree() || !isConnected()) return;
+
+    setIsCreatingWorktree(true);
+    setError(null);
+    try {
+      await createWorktree();
+    } catch (err) {
+      console.error("Failed to create worktree:", err);
+      setError(getErrorMessage(err, "Failed to create worktree"));
+    } finally {
+      setIsCreatingWorktree(false);
     }
   };
 
@@ -645,40 +718,36 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
 
   const openInEditor = async (path: string) => {
     try {
-      const response = await fetch("/api/editor/open", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ path }),
-      });
-      if (!response.ok) {
-        const data = await response.json();
-        setError(data.error || "Failed to open editor");
-      }
+      await sdk.open_in_editor({ input: { path } });
     } catch (err) {
-      setError("Failed to open editor");
+      setError(getErrorMessage(err, "Failed to open editor"));
       console.error("Failed to open editor:", err);
     }
   };
 
   const openFolder = async (path: string) => {
     try {
-      const response = await fetch("/api/folder/open", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ path }),
-      });
-      if (!response.ok) {
-        const data = await response.json();
-        setError(data.error || "Failed to open folder");
-      }
+      await sdk.open_folder({ input: { path } });
     } catch (err) {
-      setError("Failed to open folder");
+      setError(getErrorMessage(err, "Failed to open folder"));
       console.error("Failed to open folder:", err);
     }
   };
 
-  const hasClaudeCode = () =>
-    executors().some((e) => e.type === "claude_code" && e.available);
+  const handleDismissError = async () => {
+    const t = props.task;
+    if (!t) return;
+
+    try {
+      await sdk.clear_task_error({ identity: t.id });
+    } catch (err) {
+      console.error("Failed to clear error:", err);
+      setError(getErrorMessage(err, "Failed to clear error"));
+    }
+  };
+
+  const availableExecutors = () => executors().filter((e) => e.available);
+  const hasAvailableExecutor = () => availableExecutors().length > 0;
 
   return (
     <SidePanel
@@ -693,13 +762,13 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
           <div class="flex flex-col h-full">
             {/* Header with Title and Actions */}
             <div class="flex-shrink-0 px-6 py-4 border-b border-gray-800">
-              <div class="flex items-start justify-between gap-4">
-                <div class="flex-1">
+              <div class="flex flex-wrap-reverse items-end justify-between gap-x-4 gap-y-2">
+                <div class="flex-1 basis-[250px]">
                   <Show
                     when={isEditingTitle()}
                     fallback={
                       <h2
-                        class="text-lg font-semibold text-white cursor-pointer hover:text-brand-400 transition-colors"
+                        class="text-lg font-semibold text-white cursor-pointer hover:text-brand-400 transition-colors break-words"
                         onClick={() => setIsEditingTitle(true)}
                         title="Click to edit"
                       >
@@ -745,8 +814,11 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
                 </div>
 
                 {/* Status and Actions */}
-                <div class="flex items-center gap-2">
-                  <AgentStatusBadge status={taskAgentStatus()} />
+                <div class="flex items-center gap-2 flex-shrink-0 self-end">
+                  <AgentStatusBadge
+                    status={taskAgentStatus()}
+                    onDismiss={handleDismissError}
+                  />
                   <Show when={task().worktree_path}>
                     {/* Open Folder button */}
                     <button
@@ -765,8 +837,49 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
                       <CodeEditorIcon class="w-4 h-4" />
                     </button>
                   </Show>
-                  {/* PR Link - show when task has a PR */}
-                  <Show when={task().pr_url && task().pr_status}>
+                  {/* Create Worktree button - show when task doesn't have a worktree */}
+                  <Show when={!task().worktree_path && isConnected()}>
+                    <button
+                      onClick={handleCreateWorktree}
+                      disabled={isCreatingWorktree()}
+                      class="p-1.5 text-gray-400 hover:text-amber-400 hover:bg-amber-500/10 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Create Worktree"
+                    >
+                      <Show
+                        when={isCreatingWorktree()}
+                        fallback={
+                          <svg
+                            class="w-4 h-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            stroke-width="2"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                            />
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              d="M12 11v6m-3-3h6"
+                            />
+                          </svg>
+                        }
+                      >
+                        <LoadingSpinner class="w-4 h-4" />
+                      </Show>
+                    </button>
+                  </Show>
+                  {/* PR Link - show when task has an active PR */}
+                  <Show
+                    when={
+                      task().pr_url &&
+                      task().pr_status &&
+                      task().pr_status !== "closed"
+                    }
+                  >
                     <a
                       href={task().pr_url!}
                       target="_blank"
@@ -775,8 +888,23 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
                       title="View Pull Request"
                     >
                       <PRIcon status={task().pr_status!} class="w-3.5 h-3.5" />
-                      <span>#{task().pr_number}</span>
+                      <span>{task().pr_number}</span>
                     </a>
+                  </Show>
+                  {/* Create PR button - show when task has branch but no active PR */}
+                  <Show
+                    when={
+                      task().worktree_branch &&
+                      (!task().pr_url || task().pr_status === "closed")
+                    }
+                  >
+                    <button
+                      onClick={() => setShowCreatePRModal(true)}
+                      class="flex items-center p-1.5 text-xs rounded-full bg-gray-500/20 text-gray-400 border border-gray-500/30 hover:bg-gray-500/30 transition-colors"
+                      title="Create Pull Request"
+                    >
+                      <PRIcon status="draft" class="w-3.5 h-3.5" />
+                    </button>
                   </Show>
                   {/* Refine button - uses LLM to improve task description (only in TODO) */}
                   <Show when={isTodoTask()}>
@@ -814,15 +942,33 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
                     }`}
                     title={hideDetails() ? "Show details" : "Hide details"}
                   >
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <svg
+                      class="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
                       <Show
                         when={hideDetails()}
                         fallback={
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                          />
                         }
                       >
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                        />
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                        />
                       </Show>
                     </svg>
                   </button>
@@ -836,14 +982,28 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
                     }`}
                     title={isFullscreen() ? "Exit fullscreen" : "Fullscreen"}
                   >
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <svg
+                      class="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
                       <Show
                         when={isFullscreen()}
                         fallback={
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
+                          />
                         }
                       >
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25"
+                        />
                       </Show>
                     </svg>
                   </button>
@@ -899,20 +1059,40 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
               {/* LLM Todo List - shows agent's progress during execution */}
               <LLMTodoList todos={todos()} isRunning={isRunning()} />
 
-              {/* Hook Queue - shows pending/running/completed/cancelled hooks */}
-              <Show when={task().hook_queue && task().hook_queue!.length > 0}>
-                <HookQueueDisplay hooks={task().hook_queue!} />
+              {/* Hook execution history moved to hook_executions table */}
+
+              {/* Parent Task Link - for subtasks */}
+              <Show when={task().parent_task_id}>
+                <div class="mt-4 pt-4 border-t border-gray-700">
+                  <button
+                    type="button"
+                    onClick={() => navigateToSubtask(task().parent_task_id!)}
+                    class="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
+                  >
+                    <svg
+                      class="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                      />
+                    </svg>
+                    Parent Task
+                  </button>
+                </div>
               </Show>
 
-              {/* Subtasks Section - for parent tasks or tasks that can have subtasks */}
-              <Show when={isTodoTask()}>
+              {/* Subtasks Section - only for tasks without a parent (top-level tasks) */}
+              <Show when={isTodoTask() && !task().parent_task_id}>
                 <div class="mt-4 pt-4 border-t border-gray-700">
                   <SubtaskList
                     task={task()}
-                    onSubtaskClick={(subtaskId) => {
-                      // TODO: Navigate to subtask details
-                      console.log("Subtask clicked:", subtaskId);
-                    }}
+                    onSubtaskClick={navigateToSubtask}
                   />
                 </div>
               </Show>
@@ -920,12 +1100,14 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
               {/* Executor availability notice */}
               <Show
                 when={
-                  isConnected() && !hasClaudeCode() && executors().length > 0
+                  isConnected() &&
+                  !hasAvailableExecutor() &&
+                  executors().length > 0
                 }
               >
                 <div class="mt-2 p-2 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-400 text-sm">
-                  Claude Code is not available. Make sure it's installed and in
-                  PATH.
+                  No AI executors available. Make sure at least one (Claude
+                  Code, Codex, Aider, etc.) is installed and in PATH.
                 </div>
               </Show>
 
@@ -1076,9 +1258,13 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
                             when={item.type === "hook_execution" ? item : null}
                             fallback={
                               <Show
-                                when={item.type === "grouped_hooks" ? item : null}
+                                when={
+                                  item.type === "grouped_hooks" ? item : null
+                                }
                                 fallback={
-                                  <Show when={item.type === "output" ? item : null}>
+                                  <Show
+                                    when={item.type === "output" ? item : null}
+                                  >
                                     {(outputItem) => (
                                       <OutputBubble
                                         line={outputItem().line}
@@ -1104,7 +1290,7 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
                                 status={hookItem().status}
                                 skip_reason={hookItem().skip_reason}
                                 error_message={hookItem().error_message}
-                                inserted_at={hookItem().inserted_at}
+                                queued_at={hookItem().queued_at}
                                 formatDate={formatDate}
                               />
                             )}
@@ -1128,14 +1314,27 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
                       </div>
                       <div class="flex-1">
                         <div class="flex items-center gap-2">
-                          <span class="text-sm font-medium text-blue-400">Agent is thinking</span>
+                          <span class="text-sm font-medium text-blue-400">
+                            Agent is thinking
+                          </span>
                           <span class="flex gap-1">
-                            <span class="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{ "animation-delay": "0ms" }} />
-                            <span class="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{ "animation-delay": "150ms" }} />
-                            <span class="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{ "animation-delay": "300ms" }} />
+                            <span
+                              class="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce"
+                              style={{ "animation-delay": "0ms" }}
+                            />
+                            <span
+                              class="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce"
+                              style={{ "animation-delay": "150ms" }}
+                            />
+                            <span
+                              class="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce"
+                              style={{ "animation-delay": "300ms" }}
+                            />
                           </span>
                         </div>
-                        <p class="text-xs text-gray-500 mt-1">Processing your request...</p>
+                        <p class="text-xs text-gray-500 mt-1">
+                          Processing your request...
+                        </p>
                       </div>
                     </div>
                   </Show>
@@ -1208,7 +1407,7 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
                   </For>
                 </div>
               </Show>
-              <Show when={messageQueue().length > 0}>
+              <Show when={(task().message_queue?.length ?? 0) > 0}>
                 <div class="flex items-center gap-2 px-3 py-1.5 bg-amber-900/30 border border-amber-700/50 rounded-lg">
                   <svg
                     class="w-4 h-4 text-amber-400"
@@ -1224,74 +1423,97 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
                     />
                   </svg>
                   <span class="text-sm text-amber-200">
-                    {messageQueue().length} message
-                    {messageQueue().length > 1 ? "s" : ""} queued - will send
-                    when current execution completes
+                    {task().message_queue?.length ?? 0} message
+                    {(task().message_queue?.length ?? 0) > 1 ? "s" : ""} queued
                   </span>
                 </div>
               </Show>
-              <form onSubmit={handleStartExecutor} class="flex gap-2">
-                <textarea
-                  ref={inputRef}
-                  value={input()}
-                  onInput={(e) => setInput(e.currentTarget.value)}
-                  onKeyDown={handleKeyDown}
-                  onPaste={handlePaste}
-                  placeholder={
-                    !isConnected()
-                      ? "Connecting..."
-                      : isTaskWorking()
-                        ? "Type to queue message..."
-                        : hasClaudeCode()
+              <form onSubmit={handleStartExecutor} class="flex flex-col gap-1">
+                {/* Subtle executor indicator */}
+                <Show when={hasAvailableExecutor()}>
+                  <div class="flex items-center px-1">
+                    <Show
+                      when={availableExecutors().length > 1}
+                      fallback={
+                        <span class="text-xs text-gray-500">
+                          {executors().find(
+                            (e) => e.type === selectedExecutor(),
+                          )?.name ?? "AI"}
+                        </span>
+                      }
+                    >
+                      <div class="relative inline-block">
+                        <select
+                          value={selectedExecutor() ?? ""}
+                          onChange={(e) =>
+                            setSelectedExecutor(e.currentTarget.value)
+                          }
+                          disabled={!isConnected() || isSending()}
+                          class="appearance-none bg-transparent text-xs text-gray-400 hover:text-gray-300 pr-4 cursor-pointer focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                          title="Select AI executor"
+                        >
+                          <For each={availableExecutors()}>
+                            {(exec) => (
+                              <option
+                                value={exec.type}
+                                class="bg-gray-800 text-white"
+                              >
+                                {exec.name}
+                              </option>
+                            )}
+                          </For>
+                        </select>
+                        <svg
+                          class="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-500 pointer-events-none"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M19 9l-7 7-7-7"
+                          />
+                        </svg>
+                      </div>
+                    </Show>
+                  </div>
+                </Show>
+                <div class="flex gap-2">
+                  <textarea
+                    ref={inputRef}
+                    value={input()}
+                    onInput={(e) => setInput(e.currentTarget.value)}
+                    onKeyDown={handleKeyDown}
+                    onPaste={handlePaste}
+                    placeholder={
+                      !isConnected()
+                        ? "Connecting..."
+                        : hasAvailableExecutor()
                           ? "Enter a prompt or paste an image (Ctrl+V)..."
-                          : "Claude Code not available"
-                  }
-                  disabled={!isConnected() || isSending() || !hasClaudeCode()}
-                  rows={1}
-                  class="flex-1 px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed resize-none"
-                />
-                <button
-                  type="submit"
-                  disabled={
-                    !isConnected() ||
-                    isSending() ||
-                    (!input().trim() && attachedImages().length === 0) ||
-                    !hasClaudeCode()
-                  }
-                  class={`px-4 py-2 ${isTaskWorking() ? "bg-amber-600 hover:bg-amber-700 disabled:bg-amber-800" : "bg-brand-600 hover:bg-brand-700 disabled:bg-brand-800"} disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2`}
-                  title={
-                    isTaskWorking()
-                      ? `Queue message (${messageQueue().length} in queue)`
-                      : "Start Claude Code"
-                  }
-                >
-                  <Show
-                    when={isSending()}
-                    fallback={
-                      <Show
-                        when={isTaskWorking()}
-                        fallback={
-                          <svg
-                            class="w-4 h-4"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="2"
-                              d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
-                            />
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="2"
-                              d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                            />
-                          </svg>
-                        }
-                      >
+                          : "No AI executors available"
+                    }
+                    disabled={
+                      !isConnected() || isSending() || !hasAvailableExecutor()
+                    }
+                    rows={1}
+                    class="flex-1 px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed resize-none"
+                  />
+                  <button
+                    type="submit"
+                    disabled={
+                      !isConnected() ||
+                      isSending() ||
+                      (!input().trim() && attachedImages().length === 0) ||
+                      !hasAvailableExecutor()
+                    }
+                    class="px-4 py-2 bg-brand-600 hover:bg-brand-700 disabled:bg-brand-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2"
+                    title="Send message"
+                  >
+                    <Show
+                      when={isSending()}
+                      fallback={
                         <svg
                           class="w-4 h-4"
                           fill="none"
@@ -1302,65 +1524,7 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
                             stroke-linecap="round"
                             stroke-linejoin="round"
                             stroke-width="2"
-                            d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                          />
-                        </svg>
-                      </Show>
-                    }
-                  >
-                    <svg
-                      class="w-4 h-4 animate-spin"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        class="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        stroke-width="4"
-                      />
-                      <path
-                        class="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      />
-                    </svg>
-                  </Show>
-                  <Show when={messageQueue().length > 0}>
-                    <span class="text-xs bg-white/20 px-1.5 py-0.5 rounded">
-                      {messageQueue().length}
-                    </span>
-                  </Show>
-                </button>
-                <Show when={isTaskWorking()}>
-                  <button
-                    type="button"
-                    onClick={handleStopExecutor}
-                    disabled={isStopping()}
-                    class="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2"
-                    title="Stop Executor"
-                  >
-                    <Show
-                      when={isStopping()}
-                      fallback={
-                        <svg
-                          class="w-4 h-4"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <rect
-                            x="6"
-                            y="6"
-                            width="12"
-                            height="12"
-                            rx="1"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            fill="currentColor"
+                            d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
                           />
                         </svg>
                       }
@@ -1385,8 +1549,66 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
                         />
                       </svg>
                     </Show>
+                    <Show when={(task().message_queue?.length ?? 0) > 0}>
+                      <span class="text-xs bg-white/20 px-1.5 py-0.5 rounded">
+                        {task().message_queue?.length ?? 0}
+                      </span>
+                    </Show>
                   </button>
-                </Show>
+                  <Show when={isTaskWorking()}>
+                    <button
+                      type="button"
+                      onClick={handleStopExecutor}
+                      disabled={isStopping()}
+                      class="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2"
+                      title="Stop Executor"
+                    >
+                      <Show
+                        when={isStopping()}
+                        fallback={
+                          <svg
+                            class="w-4 h-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <rect
+                              x="6"
+                              y="6"
+                              width="12"
+                              height="12"
+                              rx="1"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              fill="currentColor"
+                            />
+                          </svg>
+                        }
+                      >
+                        <svg
+                          class="w-4 h-4 animate-spin"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            class="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            stroke-width="4"
+                          />
+                          <path
+                            class="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          />
+                        </svg>
+                      </Show>
+                    </button>
+                  </Show>
+                </div>
               </form>
             </div>
           </div>
@@ -1411,6 +1633,19 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
             />
           );
         }}
+      </Show>
+
+      <Show when={props.task}>
+        {(getTask) => (
+          <CreatePRModal
+            isOpen={showCreatePRModal()}
+            onClose={() => setShowCreatePRModal(false)}
+            task={getTask()}
+            onSuccess={(url) => {
+              window.open(url, "_blank");
+            }}
+          />
+        )}
       </Show>
     </SidePanel>
   );
@@ -1465,16 +1700,45 @@ function TaskCreatedActivityComponent(
 
 interface HookExecutionActivityComponentProps {
   name: string;
-  status: "pending" | "running" | "completed" | "failed" | "cancelled" | "skipped";
-  skip_reason?: "error" | "disabled";
-  error_message?: string;
-  inserted_at: string;
+  status:
+    | "pending"
+    | "running"
+    | "completed"
+    | "failed"
+    | "cancelled"
+    | "skipped";
+  skip_reason?:
+    | "error"
+    | "disabled"
+    | "column_change"
+    | "server_restart"
+    | "user_cancelled"
+    | null;
+  error_message?: string | null;
+  queued_at: string | null;
   formatDate: (dateStr: string) => string;
 }
 
 function HookExecutionActivityComponent(
   props: HookExecutionActivityComponentProps,
 ) {
+  const getSkipLabel = () => {
+    switch (props.skip_reason) {
+      case "disabled":
+        return "Hook skipped (disabled)";
+      case "error":
+        return "Hook skipped (error)";
+      case "column_change":
+        return "Hook skipped (column change)";
+      case "server_restart":
+        return "Hook skipped (server restart)";
+      case "user_cancelled":
+        return "Hook cancelled (by user)";
+      default:
+        return "Hook skipped";
+    }
+  };
+
   const statusConfig = () => {
     switch (props.status) {
       case "pending":
@@ -1489,25 +1753,22 @@ function HookExecutionActivityComponent(
         };
       case "completed":
         return {
-          label: "Hook completed",
+          label: "Completed",
           textClass: "text-green-400",
         };
       case "failed":
         return {
-          label: "Hook failed",
+          label: "Failed",
           textClass: "text-red-400",
         };
       case "cancelled":
         return {
-          label: "Hook cancelled",
+          label: getSkipLabel(),
           textClass: "text-yellow-400",
         };
       case "skipped":
         return {
-          label:
-            props.skip_reason === "disabled"
-              ? "Hook skipped (disabled)"
-              : "Hook skipped (error)",
+          label: getSkipLabel(),
           textClass: "text-gray-400",
         };
     }
@@ -1520,15 +1781,18 @@ function HookExecutionActivityComponent(
       class="flex items-center gap-2 text-xs py-0.5"
       title={props.error_message || undefined}
     >
-      <span class={`font-medium ${config.textClass}`}>
-        {props.name}
-      </span>
+      <span class={`font-medium ${config.textClass}`}>{props.name}</span>
       <span class="text-gray-500">{config.label}</span>
-      <span class="text-gray-600 ml-auto">
-        {props.formatDate(props.inserted_at)}
-      </span>
+      <Show when={props.queued_at}>
+        <span class="text-gray-600 ml-auto">
+          {props.formatDate(props.queued_at!)}
+        </span>
+      </Show>
       <Show when={props.error_message}>
-        <span class="text-red-400 truncate max-w-[150px]" title={props.error_message}>
+        <span
+          class="text-red-400 truncate max-w-[150px]"
+          title={props.error_message ?? undefined}
+        >
           {props.error_message}
         </span>
       </Show>
@@ -1547,7 +1811,14 @@ function GroupedHooksActivityComponent(
   const [isExpanded, setIsExpanded] = createSignal(false);
 
   const statusCounts = () => {
-    const counts = { pending: 0, running: 0, completed: 0, failed: 0, cancelled: 0, skipped: 0 };
+    const counts = {
+      pending: 0,
+      running: 0,
+      completed: 0,
+      failed: 0,
+      cancelled: 0,
+      skipped: 0,
+    };
     for (const hook of props.hooks) {
       counts[hook.status]++;
     }
@@ -1605,7 +1876,9 @@ function GroupedHooksActivityComponent(
         onClick={() => setIsExpanded(!isExpanded())}
         class={`flex items-center gap-2 text-sm font-medium ${colors.textClass} hover:underline cursor-pointer`}
       >
-        <span>{props.hooks.length} {props.hooks.length === 1 ? "hook" : "hooks"}</span>
+        <span>
+          {props.hooks.length} {props.hooks.length === 1 ? "hook" : "hooks"}
+        </span>
         <span class="text-gray-500 font-normal">({summaryText()})</span>
         <svg
           class={`w-4 h-4 transition-transform ${isExpanded() ? "rotate-180" : ""}`}
@@ -1631,7 +1904,7 @@ function GroupedHooksActivityComponent(
                 status={hook.status}
                 skip_reason={hook.skip_reason}
                 error_message={hook.error_message}
-                inserted_at={hook.inserted_at}
+                queued_at={hook.queued_at}
                 formatDate={props.formatDate}
               />
             )}
@@ -1663,7 +1936,10 @@ function OutputBubble(props: OutputBubbleProps) {
     return JSON.stringify(props.line.content, null, 2);
   };
 
-  const getToolInfo = (): { tool: string; input?: Record<string, unknown> } | null => {
+  const getToolInfo = (): {
+    tool: string;
+    input?: Record<string, unknown>;
+  } | null => {
     const content = props.line.content;
     if (typeof content === "object" && content !== null) {
       const parsed = content as Record<string, unknown>;
@@ -1677,7 +1953,9 @@ function OutputBubble(props: OutputBubbleProps) {
     return null;
   };
 
-  const formatToolInput = (input: Record<string, unknown> | undefined): string => {
+  const formatToolInput = (
+    input: Record<string, unknown> | undefined,
+  ): string => {
     if (!input) return "";
 
     if (typeof input.file_path === "string") {
@@ -1759,21 +2037,53 @@ function OutputBubble(props: OutputBubbleProps) {
 
   if (isSystem()) {
     const content = getTextContent();
-    const isError = content.toLowerCase().includes("error") || content.toLowerCase().includes("failed");
-    const isSuccess = content.toLowerCase().includes("completed") || content.toLowerCase().includes("success");
-    const colorClass = isError ? "text-red-400" : isSuccess ? "text-green-400" : "text-amber-400";
+    const isError =
+      content.toLowerCase().includes("error") ||
+      content.toLowerCase().includes("failed");
+    const isSuccess =
+      content.toLowerCase().includes("completed") ||
+      content.toLowerCase().includes("success");
+    const colorClass = isError
+      ? "text-red-400"
+      : isSuccess
+        ? "text-green-400"
+        : "text-amber-400";
 
     return (
       <div class="flex items-center gap-2 py-1.5 px-3 text-xs bg-gray-900/50 rounded-lg border border-gray-800">
-        <svg class={`w-4 h-4 flex-shrink-0 ${colorClass}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <Show when={isError} fallback={
-            <Show when={isSuccess} fallback={
-              <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            }>
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </Show>
-          }>
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        <svg
+          class={`w-4 h-4 flex-shrink-0 ${colorClass}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <Show
+            when={isError}
+            fallback={
+              <Show
+                when={isSuccess}
+                fallback={
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                }
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </Show>
+            }
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+            />
           </Show>
         </svg>
         <span class={colorClass}>{content}</span>

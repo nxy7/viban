@@ -1,0 +1,77 @@
+digraph "xref graph" {
+  "lib/viban/accounts.ex"
+  "lib/viban/accounts.ex" -> "lib/viban/accounts/user.ex" [label="(compile)"]
+  "lib/viban/app_runtime/domain.ex"
+  "lib/viban/app_runtime/domain.ex" -> "lib/viban/app_runtime/system_tools.ex" [label="(compile)"]
+  "lib/viban/executors/domain.ex"
+  "lib/viban/executors/domain.ex" -> "lib/viban/executors/executor.ex" [label="(compile)"]
+  "lib/viban/executors/executor.ex" -> "lib/viban/executors/actions/execute.ex" [label="(compile)"]
+  "lib/viban/executors/domain.ex" -> "lib/viban/executors/executor_message.ex" [label="(compile)"]
+  "lib/viban/executors/domain.ex" -> "lib/viban/executors/executor_session.ex" [label="(compile)"]
+  "lib/viban/executors/executor.ex"
+  "lib/viban/kanban.ex"
+  "lib/viban/kanban.ex" -> "lib/viban/kanban/board.ex" [label="(compile)"]
+  "lib/viban/kanban.ex" -> "lib/viban/kanban/column.ex" [label="(compile)"]
+  "lib/viban/kanban.ex" -> "lib/viban/kanban/column_hook.ex" [label="(compile)"]
+  "lib/viban/kanban.ex" -> "lib/viban/kanban/hook.ex" [label="(compile)"]
+  "lib/viban/kanban.ex" -> "lib/viban/kanban/message.ex" [label="(compile)"]
+  "lib/viban/kanban.ex" -> "lib/viban/kanban/repository.ex" [label="(compile)"]
+  "lib/viban/kanban/repository.ex" -> "lib/viban/kanban/repository/actions/list_branches.ex" [label="(compile)"]
+  "lib/viban/kanban.ex" -> "lib/viban/kanban/task.ex" [label="(compile)"]
+  "lib/viban/kanban/task.ex" -> "lib/viban/kanban/notifiers/task_notifier.ex" [label="(compile)"]
+  "lib/viban/kanban/task.ex" -> "lib/viban/kanban/task/actions/create_pr.ex" [label="(compile)"]
+  "lib/viban/kanban/task.ex" -> "lib/viban/kanban/task/actions/generate_subtasks.ex" [label="(compile)"]
+  "lib/viban/kanban/task.ex" -> "lib/viban/kanban/task/actions/refine.ex" [label="(compile)"]
+  "lib/viban/kanban/task.ex" -> "lib/viban/kanban/task/actions/refine_preview.ex" [label="(compile)"]
+  "lib/viban/kanban/repository.ex"
+  "lib/viban/kanban/system_hooks/lint_code_hook.ex"
+  "lib/viban/kanban/system_hooks/lint_code_hook.ex" -> "lib/viban/kanban/system_hooks/shell_hook.ex" [label="(compile)"]
+  "lib/viban/kanban/system_hooks/run_tests_hook.ex"
+  "lib/viban/kanban/system_hooks/run_tests_hook.ex" -> "lib/viban/kanban/system_hooks/shell_hook.ex" [label="(compile)"]
+  "lib/viban/kanban/task.ex"
+  "lib/viban/messages.ex"
+  "lib/viban/messages.ex" -> "lib/viban/messages/test_message.ex" [label="(compile)"]
+  "lib/viban/messages/test_message.ex" -> "lib/viban/messages/test_message/actions/get_or_create.ex" [label="(compile)"]
+  "lib/viban/messages/test_message.ex" -> "lib/viban/messages/test_message/actions/randomize.ex" [label="(compile)"]
+  "lib/viban/messages/test_message.ex"
+  "lib/viban_web/components/layouts.ex"
+  "lib/viban_web/components/layouts.ex" -> "lib/viban_web.ex" [label="(compile)"]
+  "lib/viban_web/controllers/auth_controller.ex"
+  "lib/viban_web/controllers/auth_controller.ex" -> "lib/viban_web.ex" [label="(compile)"]
+  "lib/viban_web/controllers/board_controller.ex"
+  "lib/viban_web/controllers/board_controller.ex" -> "lib/viban_web.ex" [label="(compile)"]
+  "lib/viban_web/controllers/editor_controller.ex"
+  "lib/viban_web/controllers/editor_controller.ex" -> "lib/viban_web.ex" [label="(compile)"]
+  "lib/viban_web/controllers/error_html.ex"
+  "lib/viban_web/controllers/error_html.ex" -> "lib/viban_web.ex" [label="(compile)"]
+  "lib/viban_web/controllers/folder_controller.ex"
+  "lib/viban_web/controllers/folder_controller.ex" -> "lib/viban_web.ex" [label="(compile)"]
+  "lib/viban_web/controllers/health_controller.ex"
+  "lib/viban_web/controllers/health_controller.ex" -> "lib/viban_web.ex" [label="(compile)"]
+  "lib/viban_web/controllers/hook_controller.ex"
+  "lib/viban_web/controllers/hook_controller.ex" -> "lib/viban_web.ex" [label="(compile)"]
+  "lib/viban_web/controllers/kanban_sync_controller.ex"
+  "lib/viban_web/controllers/kanban_sync_controller.ex" -> "lib/viban_web.ex" [label="(compile)"]
+  "lib/viban_web/controllers/messages_controller.ex"
+  "lib/viban_web/controllers/messages_controller.ex" -> "lib/viban_web.ex" [label="(compile)"]
+  "lib/viban_web/controllers/page_controller.ex"
+  "lib/viban_web/controllers/page_controller.ex" -> "lib/viban_web.ex" [label="(compile)"]
+  "lib/viban_web/controllers/page_html.ex"
+  "lib/viban_web/controllers/page_html.ex" -> "lib/viban_web.ex" [label="(compile)"]
+  "lib/viban_web/controllers/rpc_controller.ex"
+  "lib/viban_web/controllers/rpc_controller.ex" -> "lib/viban_web.ex" [label="(compile)"]
+  "lib/viban_web/controllers/spa_controller.ex"
+  "lib/viban_web/controllers/spa_controller.ex" -> "lib/viban_web.ex" [label="(compile)"]
+  "lib/viban_web/controllers/sync_controller.ex"
+  "lib/viban_web/controllers/sync_controller.ex" -> "lib/viban_web.ex" [label="(compile)"]
+  "lib/viban_web/controllers/task_controller.ex"
+  "lib/viban_web/controllers/task_controller.ex" -> "lib/viban_web.ex" [label="(compile)"]
+  "lib/viban_web/controllers/test_controller.ex"
+  "lib/viban_web/controllers/test_controller.ex" -> "lib/viban_web.ex" [label="(compile)"]
+  "lib/viban_web/controllers/vcs_controller.ex"
+  "lib/viban_web/controllers/vcs_controller.ex" -> "lib/viban_web.ex" [label="(compile)"]
+  "lib/viban_web/endpoint.ex"
+  "lib/viban_web/endpoint.ex" -> "lib/viban_web.ex" [label="(compile)"]
+  "lib/viban_web/router.ex"
+  "lib/viban_web/router.ex" -> "lib/viban_web.ex" [label="(compile)"]
+}

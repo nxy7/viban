@@ -61,8 +61,15 @@ if config_env() == :prod do
       path -> to_string(path)
     end
 
-  full_cert_path = if String.starts_with?(cert_path, "/"), do: cert_path, else: Path.join(priv_dir, String.replace_prefix(cert_path, "priv/", ""))
-  full_key_path = if String.starts_with?(key_path, "/"), do: key_path, else: Path.join(priv_dir, String.replace_prefix(key_path, "priv/", ""))
+  full_cert_path =
+    if String.starts_with?(cert_path, "/"),
+      do: cert_path,
+      else: Path.join(priv_dir, String.replace_prefix(cert_path, "priv/", ""))
+
+  full_key_path =
+    if String.starts_with?(key_path, "/"),
+      do: key_path,
+      else: Path.join(priv_dir, String.replace_prefix(key_path, "priv/", ""))
 
   use_https = File.exists?(full_cert_path) && File.exists?(full_key_path)
 

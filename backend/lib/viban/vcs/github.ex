@@ -63,14 +63,20 @@ defmodule Viban.VCS.GitHub do
   end
 
   @impl true
-  def clone_repo(access_token, clone_url, local_path) do
-    # Convert https://github.com/owner/repo.git to authenticated URL
-    auth_url = String.replace(clone_url, "https://", "https://#{access_token}@")
+  def clone_repo(_access_token, clone_url, local_path) do
+    ssh_url = https_to_ssh(clone_url)
 
-    case System.cmd("git", ["clone", auth_url, local_path], stderr_to_stdout: true) do
+    case System.cmd("git", ["clone", ssh_url, local_path], stderr_to_stdout: true) do
       {_, 0} -> {:ok, local_path}
       {output, code} -> {:error, {:git_error, code, output}}
     end
+  end
+
+  defp https_to_ssh(url) do
+    # Convert https://github.com/owner/repo.git to git@github.com:owner/repo.git
+    url
+    |> String.replace("https://github.com/", "git@github.com:")
+    |> String.replace("https://www.github.com/", "git@github.com:")
   end
 
   # Pull request operations

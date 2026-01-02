@@ -29,8 +29,8 @@ defmodule Viban.Kanban.Board.Changes.CreateDefaultColumns do
     %{name: "Cancelled", position: 4, color: "#ef4444"}
   ]
 
-  # The system hook ID for "Execute AI"
   @execute_ai_hook_id "system:execute-ai"
+  @move_task_hook_id "system:move-task"
 
   @impl true
   @spec change(Ash.Changeset.t(), keyword(), Ash.Resource.Change.context()) :: Ash.Changeset.t()
@@ -62,7 +62,6 @@ defmodule Viban.Kanban.Board.Changes.CreateDefaultColumns do
     end
   end
 
-  # Add the non-removable "Execute AI" hook to the "In Progress" column
   defp add_default_hooks(columns) do
     in_progress_column = Enum.find(columns, fn col -> col.name == "In Progress" end)
 
@@ -75,15 +74,27 @@ defmodule Viban.Kanban.Board.Changes.CreateDefaultColumns do
              transparent: false,
              removable: false
            }) do
-        {:ok, _column_hook} ->
-          Logger.debug(
-            "Added non-removable 'Execute AI' hook to 'In Progress' column #{in_progress_column.id}"
-          )
+        {:ok, _} ->
+          Logger.debug("Added 'Execute AI' hook to 'In Progress' column #{in_progress_column.id}")
 
         {:error, error} ->
-          Logger.warning(
-            "Failed to add 'Execute AI' hook to 'In Progress' column: #{inspect(error)}"
-          )
+          Logger.warning("Failed to add 'Execute AI' hook: #{inspect(error)}")
+      end
+
+      case ColumnHook.create(%{
+             column_id: in_progress_column.id,
+             hook_id: @move_task_hook_id,
+             position: 1,
+             execute_once: false,
+             transparent: true,
+             removable: false,
+             hook_settings: %{target_column: "To Review"}
+           }) do
+        {:ok, _} ->
+          Logger.debug("Added 'Move Task' hook to 'In Progress' column #{in_progress_column.id}")
+
+        {:error, error} ->
+          Logger.warning("Failed to add 'Move Task' hook: #{inspect(error)}")
       end
     end
   end

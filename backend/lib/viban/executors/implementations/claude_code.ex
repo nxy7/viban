@@ -39,6 +39,24 @@ defmodule Viban.Executors.Implementations.ClaudeCode do
   end
 
   @doc """
+  Wrap a command with PTY for proper TTY handling.
+  Claude Code requires a TTY for streaming output.
+  """
+  def wrap_with_pty(executable, args) do
+    case :os.type() do
+      {:unix, :darwin} ->
+        {"/usr/bin/script", ["-q", "/dev/null", executable] ++ args}
+
+      {:unix, _} ->
+        cmd_string = Enum.join([executable | args], " ")
+        {"/usr/bin/script", ["-q", "-c", cmd_string, "/dev/null"]}
+
+      _ ->
+        {executable, args}
+    end
+  end
+
+  @doc """
   Find the claude executable, checking both PATH and common installation locations.
   """
   def find_claude_executable do
@@ -91,23 +109,7 @@ defmodule Viban.Executors.Implementations.ClaudeCode do
       |> maybe_add_arg(mcp_config, "--mcp-config")
       |> maybe_add_arg(working_dir, "--add-dir")
 
-    # Use script to provide a PTY - Claude Code requires TTY for streaming output
-    # macOS: script -q /dev/null <cmd> <args...>
-    # Linux: script -q -c "<cmd> <args...>" /dev/null
-    case :os.type() do
-      {:unix, :darwin} ->
-        # macOS version of script
-        {"/usr/bin/script", ["-q", "/dev/null", claude_executable] ++ claude_args}
-
-      {:unix, _} ->
-        # Linux version of script (different syntax)
-        cmd_string = Enum.join([claude_executable | claude_args], " ")
-        {"/usr/bin/script", ["-q", "-c", cmd_string, "/dev/null"]}
-
-      _ ->
-        # Fallback - no PTY wrapper
-        {claude_executable, claude_args}
-    end
+    wrap_with_pty(claude_executable, claude_args)
   end
 
   @impl true
@@ -126,16 +128,27 @@ defmodule Viban.Executors.Implementations.ClaudeCode do
 
   @impl true
   def parse_output(raw) do
-    # Claude Code stream-json format outputs one JSON object per line
-    case Jason.decode(raw) do
-      {:ok, parsed} ->
-        {:ok, normalize_event(parsed)}
+    cleaned = strip_ansi_sequences(raw)
 
-      {:error, reason} ->
-        # Not valid JSON - log it for debugging
-        Logger.warning("[ClaudeCode] Failed to parse JSON: #{inspect(reason)}, raw: #{String.slice(raw, 0, 500)}")
-        {:raw, raw}
+    if String.trim(cleaned) == "" do
+      :skip
+    else
+      case Jason.decode(cleaned) do
+        {:ok, parsed} ->
+          {:ok, normalize_event(parsed)}
+
+        {:error, _reason} ->
+          :skip
+      end
     end
+  end
+
+  defp strip_ansi_sequences(str) do
+    str
+    |> String.replace(~r/\e\[[0-9;?]*[a-zA-Z]/, "")
+    |> String.replace(~r/\e\][^\a]*\a/, "")
+    |> String.replace(~r/\e[PX^_][^\e]*\e\\/, "")
+    |> String.replace(~r/[\x00-\x08\x0B\x0C\x0E-\x1F]/, "")
   end
 
   @impl true
@@ -202,7 +215,10 @@ defmodule Viban.Executors.Implementations.ClaudeCode do
   end
 
   defp normalize_event(event) do
-    Logger.warning("[ClaudeCode] Unknown event type, logging for future handling: #{inspect(event)}")
+    Logger.warning(
+      "[ClaudeCode] Unknown event type, logging for future handling: #{inspect(event)}"
+    )
+
     %{
       type: :unknown,
       raw: event

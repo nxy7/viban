@@ -4,15 +4,23 @@ defmodule VibanWeb.TaskChannel do
 
   Handles real-time communication between users and executor agents
   for a specific task. Supports:
-  - Starting/stopping executors
+  - Sending messages (queued for AI execution)
   - Receiving executor output streams
   - Getting task/executor status
   - Message history
+  - Stopping running executors
+
+  ## AI Execution Flow
+
+  When a user sends a message via `send_message`:
+  1. Message is queued on the task's `message_queue`
+  2. Task is moved to "In Progress" column (if not already there)
+  3. Execute AI hook processes queued messages until queue is empty
 
   ## Events
 
   ### Incoming (client -> server)
-  - `start_executor` - Start an executor for the task
+  - `send_message` - Queue a message and move task to "In Progress"
   - `stop_executor` - Stop a running executor
   - `get_status` - Get current task/executor status
   - `get_history` - Get executor session history
@@ -28,7 +36,7 @@ defmodule VibanWeb.TaskChannel do
   use Phoenix.Channel
 
   alias Viban.Kanban.Task
-  alias Viban.Executors.{Executor, ExecutorSession, ExecutorMessage, Registry}
+  alias Viban.Executors.{Executor, ExecutorSession, ExecutorMessage}
 
   require Logger
 
@@ -48,20 +56,24 @@ defmodule VibanWeb.TaskChannel do
     end
   end
 
-  # Start an executor for this task.
+  # Queue a message and move task to "In Progress" for AI execution.
+  #
+  # This handler:
+  # 1. Queues the message on the task's message_queue
+  # 2. Moves the task to "In Progress" column (if not already there)
+  # 3. The Execute AI hook will process queued messages
+  #
   # Params:
   # - `executor_type` - Atom type of executor (e.g., "claude_code", "gemini_cli")
   # - `prompt` - The prompt/instruction for the executor
-  # - `working_directory` - Optional working directory (defaults to task worktree)
   # - `images` - Optional list of image attachments (base64 data URLs)
-  #
-  # This handler also moves the task to "In Progress" if it's not already there.
-  # The BE handles all the logic - FE just sends the message.
   @impl true
-  def handle_in("start_executor", params, socket) do
+  def handle_in("send_message", params, socket) do
+    alias Viban.Kanban.Column
+    alias Viban.Kanban.Actors.ColumnLookup
+
     task_id = socket.assigns.task_id
 
-    # Reload task to get fresh data (title, description, column)
     case Task.get(task_id) do
       {:ok, task} ->
         executor_type =
@@ -72,42 +84,26 @@ defmodule VibanWeb.TaskChannel do
         user_prompt = Map.get(params, "prompt", "")
         images = Map.get(params, "images", [])
 
-        # Use task worktree if no working directory specified
-        working_directory = Map.get(params, "working_directory") || task.worktree_path
-
         # Allow empty prompt if images are provided
         if user_prompt == "" and Enum.empty?(images) do
           {:reply, {:error, %{reason: "prompt_required"}}, socket}
         else
-          # Move task to "In Progress" if not already there
-          task = maybe_move_to_in_progress(task)
+          # Queue the message on the task
+          case Task.queue_message(task, user_prompt, executor_type, images) do
+            {:ok, updated_task} ->
+              Logger.info(
+                "[TaskChannel] Queued message for task #{task_id}, queue size: #{length(updated_task.message_queue)}"
+              )
 
-          # Check if this is the first session for this task
-          # If so, prepend title and description to the prompt
-          final_prompt = build_prompt_with_context(task, user_prompt)
+              # Move task to "In Progress" if not already there
+              updated_task = maybe_move_to_in_progress(updated_task)
 
-          Logger.info(
-            "[TaskChannel] Starting #{executor_type} for task #{task_id} with #{length(images)} images"
-          )
+              {:reply, {:ok, %{queued: true, queue_size: length(updated_task.message_queue)}},
+               socket}
 
-          # Check if executor is available
-          unless Registry.available?(executor_type) do
-            {:reply, {:error, %{reason: "executor_not_available", executor_type: executor_type}},
-             socket}
-          else
-            # Start the executor via Ash action
-            case Executor.execute(task_id, final_prompt, executor_type, working_directory, images) do
-              {:ok, result} ->
-                # Notify TaskActor so it can subscribe to completion and handle auto-move
-                Viban.Kanban.Actors.TaskActor.notify_executor_started(task_id)
-                {:reply, {:ok, result}, socket}
-
-              {:error, error} ->
-                Logger.error("[TaskChannel] Failed to start executor: #{inspect(error)}")
-
-                {:reply, {:error, %{reason: "failed_to_start_executor", details: inspect(error)}},
-                 socket}
-            end
+            {:error, error} ->
+              Logger.error("[TaskChannel] Failed to queue message: #{inspect(error)}")
+              {:reply, {:error, %{reason: "failed_to_queue", details: inspect(error)}}, socket}
           end
         end
 
@@ -174,17 +170,41 @@ defmodule VibanWeb.TaskChannel do
     end
   end
 
-  # Stop the currently running executor for this task.
+  # Stop the currently running executor and cancel pending hooks for this task.
   @impl true
   def handle_in("stop_executor", _params, socket) do
     task_id = socket.assigns.task_id
+
+    Viban.Kanban.Servers.TaskServer.stop_execution(task_id)
 
     case Viban.Executors.Runner.stop_by_task(task_id, :user_cancelled) do
       :ok ->
         {:reply, {:ok, %{status: "stopped"}}, socket}
 
       {:error, :not_running} ->
-        {:reply, {:error, %{reason: "no_executor_running"}}, socket}
+        {:reply, {:ok, %{status: "stopped"}}, socket}
+    end
+  end
+
+  # Create worktree for this task.
+  @impl true
+  def handle_in("create_worktree", _params, socket) do
+    task_id = socket.assigns.task_id
+
+    case Task.create_worktree(task_id) do
+      {:ok, result} ->
+        {:reply,
+         {:ok,
+          %{
+            worktree_path: result.worktree_path,
+            worktree_branch: result.worktree_branch
+          }}, socket}
+
+      {:error, error} when is_binary(error) ->
+        {:reply, {:error, %{reason: error}}, socket}
+
+      {:error, error} ->
+        {:reply, {:error, %{reason: inspect(error)}}, socket}
     end
   end
 
@@ -241,21 +261,15 @@ defmodule VibanWeb.TaskChannel do
     }
   end
 
-  # Move task to "In Progress" column if it's not already there.
-  # Returns the task (possibly updated with new column_id).
   defp maybe_move_to_in_progress(task) do
-    alias Viban.Kanban.{Column, Task}
+    alias Viban.Kanban.Column
     alias Viban.Kanban.Actors.ColumnLookup
 
-    # Get the task's current column to find the board_id
     case Column.get(task.column_id) do
       {:ok, column} ->
-        # Check if already in "In Progress"
         if ColumnLookup.in_progress_column?(task.column_id) do
-          # Already in the right column, return as-is
           task
         else
-          # Find the "In Progress" column for this board
           case ColumnLookup.find_in_progress_column(column.board_id) do
             nil ->
               Logger.warning(
@@ -265,13 +279,9 @@ defmodule VibanWeb.TaskChannel do
               task
 
             in_progress_column_id ->
-              # Move task to "In Progress" column at position 0 (top)
-              case Task.move(task, %{column_id: in_progress_column_id, position: Decimal.new(0)}) do
+              case Task.move(task, %{column_id: in_progress_column_id, position: 0.0}) do
                 {:ok, updated_task} ->
-                  Logger.info(
-                    "[TaskChannel] Moved task #{task.id} to 'In Progress' column"
-                  )
-
+                  Logger.info("[TaskChannel] Moved task #{task.id} to 'In Progress' column")
                   updated_task
 
                 {:error, error} ->
@@ -287,40 +297,6 @@ defmodule VibanWeb.TaskChannel do
       {:error, _} ->
         Logger.error("[TaskChannel] Could not find column for task #{task.id}")
         task
-    end
-  end
-
-  # Build the prompt, prepending title and description for the first session only
-  defp build_prompt_with_context(task, user_prompt) do
-    # Check if there are any existing sessions for this task
-    has_previous_sessions =
-      case ExecutorSession.for_task(task.id) do
-        {:ok, sessions} -> length(sessions) > 0
-        _ -> false
-      end
-
-    if has_previous_sessions do
-      # Not the first session - just use user's prompt
-      user_prompt
-    else
-      # First session - prepend title and description
-      context_parts = [task.title]
-
-      context_parts =
-        case task.description do
-          nil -> context_parts
-          "" -> context_parts
-          desc -> context_parts ++ [desc]
-        end
-
-      context_parts =
-        if user_prompt != "" do
-          context_parts ++ [user_prompt]
-        else
-          context_parts
-        end
-
-      Enum.join(context_parts, "\n\n")
     end
   end
 end

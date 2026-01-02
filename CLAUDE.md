@@ -8,6 +8,12 @@ This document defines the coding standards and practices for this project when w
 - `backend/` - Elixir/Ash backend application
 - `.claude/agents/` - Custom Claude agents for specialized tasks
 
+## Development URLs
+
+- **App URL**: `https://localhost:8000` (Caddy reverse proxy - use this for testing)
+- Backend API: `http://localhost:4000` (Phoenix - don't access directly)
+- Frontend dev server: `http://localhost:3000` (Vite - don't access directly)
+
 ## Comment Policy
 
 Comments are code smell. This project follows a strict no-comment philosophy:
@@ -72,6 +78,27 @@ If code "needs" a comment to be understood, the code should be refactored instea
 - Extract to a well-named function
 - Use descriptive variable names
 - Break complex logic into smaller, understandable pieces
+
+## Backend/Frontend Communication
+
+All communication between backend and frontend MUST use one of these two methods:
+
+### 1. Electric SQL (for real-time data sync)
+- Used for reactive queries that need real-time updates
+- Collections defined in `frontend/src/lib/useKanban.ts` (e.g., `boardsCollection`, `tasksCollection`)
+- Use `useLiveQuery` from `@tanstack/solid-db` to query collections
+
+### 2. AshTypescript Generated SDK (for RPC actions)
+- Generated file: `frontend/src/lib/generated/ash.ts`
+- Regenerate with: `mix ash.codegen` (from backend directory)
+- Functions like `create_task`, `update_board`, `move_task`, etc.
+- Automatically handles error notifications via `rpcHooks.ts`
+- **DO NOT** create custom `fetch` calls to `/api/rpc/run` - use the generated SDK
+
+### Adding New RPC Actions
+1. Add `rpc_action` in the domain's `typescript_rpc` block (e.g., `lib/viban/kanban.ex`)
+2. Run `mix ash.codegen` to regenerate the SDK
+3. Import and use the generated function in frontend
 
 ## Code Quality Standards
 

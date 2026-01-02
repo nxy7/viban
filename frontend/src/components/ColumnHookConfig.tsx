@@ -3,18 +3,17 @@ import {
   createSortable,
   DragDropProvider,
   DragDropSensors,
-  type DragEvent,
   DragOverlay,
   SortableProvider,
 } from "@thisbeyond/solid-dnd";
 import { createMemo, createResource, createSignal, For, Show } from "solid-js";
+import * as sdk from "~/lib/generated/ash";
+import { useHookReordering } from "~/hooks/useHookReordering";
 import {
   type ColumnHook,
   type CombinedHook,
-  createColumnHook,
-  deleteColumnHook,
   fetchAllHooks,
-  updateColumnHook,
+  unwrap,
   useColumnHooks,
 } from "~/lib/useKanban";
 import ErrorBanner from "./ui/ErrorBanner";
@@ -27,7 +26,6 @@ interface ColumnHookConfigProps {
 }
 
 export default function ColumnHookConfig(props: ColumnHookConfigProps) {
-  // Use createResource to fetch combined hooks (system + custom) from API
   const [allHooks] = createResource(() => props.boardId, fetchAllHooks);
   const { columnHooks, isLoading } = useColumnHooks(() => props.columnId);
   const [isAdding, setIsAdding] = createSignal(false);
@@ -37,18 +35,15 @@ export default function ColumnHookConfig(props: ColumnHookConfigProps) {
   const [error, setError] = createSignal<string | null>(null);
   const [isSaving, setIsSaving] = createSignal(false);
 
-  // Get hooks that are already assigned to this column
   const assignedHookIds = createMemo(() => {
     return new Set(columnHooks().map((ch) => ch.hook_id));
   });
 
-  // Get available hooks (not already assigned)
   const availableHooks = createMemo(() => {
     const hooks = allHooks() || [];
     return hooks.filter((h) => !assignedHookIds().has(h.id));
   });
 
-  // Split available hooks into system and custom
   const availableSystemHooks = createMemo(() =>
     availableHooks().filter((h) => h.is_system),
   );
@@ -56,19 +51,16 @@ export default function ColumnHookConfig(props: ColumnHookConfigProps) {
     availableHooks().filter((h) => !h.is_system),
   );
 
-  // Get hook details for a column hook
   const getHookDetails = (hookId: string): CombinedHook | undefined => {
     return (allHooks() || []).find((h) => h.id === hookId);
   };
 
-  // Sorted column hooks by position
   const sortedColumnHooks = createMemo(() => {
     return [...columnHooks()].sort(
       (a, b) => Number(a.position) - Number(b.position),
     );
   });
 
-  // IDs for sortable provider
   const hookIds = createMemo(() => sortedColumnHooks().map((h) => h.id));
 
   const handleAdd = async () => {
@@ -80,67 +72,32 @@ export default function ColumnHookConfig(props: ColumnHookConfigProps) {
     setIsSaving(true);
     setError(null);
 
-    try {
-      await createColumnHook({
-        column_id: props.columnId,
-        hook_id: selectedHookId(),
-        position: columnHooks().length,
-        execute_once: executeOnce(),
-        transparent: transparent(),
-      });
+    const result = await sdk
+      .create_column_hook({
+        input: {
+          column_id: props.columnId,
+          hook_id: selectedHookId(),
+          position: columnHooks().length,
+          execute_once: executeOnce(),
+          transparent: transparent(),
+        },
+      })
+      .then(unwrap);
+
+    setIsSaving(false);
+    if (result) {
       setIsAdding(false);
       setSelectedHookId("");
       setExecuteOnce(false);
       setTransparent(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to add hook");
-    } finally {
-      setIsSaving(false);
     }
   };
 
   const handleRemove = async (columnHookId: string) => {
-    try {
-      await deleteColumnHook(columnHookId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to remove hook");
-    }
+    await sdk.destroy_column_hook({ identity: columnHookId }).then(unwrap);
   };
 
-  // Handle drag end for reordering
-  const handleDragEnd = async ({ draggable, droppable }: DragEvent) => {
-    if (!droppable) return;
-
-    const draggedId = String(draggable.id);
-    const droppedId = String(droppable.id);
-
-    if (draggedId === droppedId) return;
-
-    const hooks = sortedColumnHooks();
-    const draggedIndex = hooks.findIndex((h) => h.id === draggedId);
-    const droppedIndex = hooks.findIndex((h) => h.id === droppedId);
-
-    if (draggedIndex === -1 || droppedIndex === -1) return;
-
-    // Calculate new positions
-    const reorderedHooks = [...hooks];
-    const [removed] = reorderedHooks.splice(draggedIndex, 1);
-    reorderedHooks.splice(droppedIndex, 0, removed);
-
-    // Update positions for all affected hooks
-    try {
-      await Promise.all(
-        reorderedHooks.map((hook, index) => {
-          if (hook.position !== index) {
-            return updateColumnHook(hook.id, { position: index });
-          }
-          return Promise.resolve();
-        }),
-      );
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to reorder hooks");
-    }
-  };
+  const { handleDragEnd } = useHookReordering(sortedColumnHooks);
 
   return (
     <div class="space-y-3">
@@ -168,8 +125,9 @@ export default function ColumnHookConfig(props: ColumnHookConfigProps) {
               onChange={(e) => {
                 const hookId = e.currentTarget.value;
                 setSelectedHookId(hookId);
-                // Apply hook's default settings when selected
-                const selectedHook = (allHooks() || []).find(h => h.id === hookId);
+                const selectedHook = (allHooks() || []).find(
+                  (h) => h.id === hookId,
+                );
                 if (selectedHook) {
                   setExecuteOnce(selectedHook.default_execute_once ?? false);
                   setTransparent(selectedHook.default_transparent ?? false);
@@ -221,7 +179,10 @@ export default function ColumnHookConfig(props: ColumnHookConfigProps) {
               onChange={(e) => setTransparent(e.currentTarget.checked)}
               class="w-4 h-4 text-brand-600 bg-gray-700 border-gray-600 rounded focus:ring-brand-500 focus:ring-2 cursor-pointer"
             />
-            <label for="transparent" class="text-xs text-gray-300 cursor-pointer">
+            <label
+              for="transparent"
+              class="text-xs text-gray-300 cursor-pointer"
+            >
               Transparent (runs even on error, doesn't change status)
             </label>
           </div>
@@ -275,9 +236,12 @@ export default function ColumnHookConfig(props: ColumnHookConfigProps) {
                     onRemove={handleRemove}
                     onToggleExecuteOnce={async () => {
                       try {
-                        await updateColumnHook(columnHook.id, {
-                          execute_once: !columnHook.execute_once,
-                        });
+                        await sdk
+                          .update_column_hook({
+                            identity: columnHook.id,
+                            input: { execute_once: !columnHook.execute_once },
+                          })
+                          .then(unwrap);
                       } catch (err) {
                         setError(
                           err instanceof Error
@@ -288,9 +252,12 @@ export default function ColumnHookConfig(props: ColumnHookConfigProps) {
                     }}
                     onToggleTransparent={async () => {
                       try {
-                        await updateColumnHook(columnHook.id, {
-                          transparent: !columnHook.transparent,
-                        });
+                        await sdk
+                          .update_column_hook({
+                            identity: columnHook.id,
+                            input: { transparent: !columnHook.transparent },
+                          })
+                          .then(unwrap);
                       } catch (err) {
                         setError(
                           err instanceof Error
@@ -323,7 +290,6 @@ export default function ColumnHookConfig(props: ColumnHookConfigProps) {
   );
 }
 
-// Sortable hook item component
 interface SortableHookItemProps {
   columnHook: ColumnHook;
   hookDetails: CombinedHook | undefined;
@@ -420,7 +386,6 @@ function SortableHookItem(props: SortableHookItemProps) {
   );
 }
 
-// Drag overlay for hook items
 function HookItemOverlay(props: { hookName: string }) {
   return (
     <div class="flex items-center gap-2 p-2 bg-gray-800 border border-brand-500 rounded shadow-lg">

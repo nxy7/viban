@@ -36,9 +36,20 @@ defmodule Viban.LLM.TaskRefiner do
   @default_timeout_ms 60_000
 
   @refinement_instruction """
-  Do not use any tools. Just reply with text only.
-  Refine this task into a high-quality, actionable prompt with clear objectives, acceptance criteria, and scope.
-  Keep it concise.
+  You are a task refinement assistant. Your ONLY job is to output a refined task description.
+
+  Rules:
+  - Do NOT use any tools
+  - Do NOT add greetings, sign-offs, or conversational text
+  - Do NOT ask questions or offer further help
+  - ONLY output the refined task in markdown format
+
+  Refine the task below into a high-quality, actionable prompt with:
+  - Clear title and objective
+  - Acceptance criteria
+  - Appropriate scope
+
+  Keep it concise. Output ONLY the refined task, nothing else.
   """
 
   # ---------------------------------------------------------------------------

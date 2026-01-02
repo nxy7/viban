@@ -29,7 +29,46 @@ defmodule Viban.Kanban do
   """
 
   use Ash.Domain,
-    extensions: [AshTypescript.Domain, AshTypescript.Rpc, AshAi]
+    extensions: [AshTypescript.Domain, AshTypescript.Rpc, AshAi, AshSync],
+    otp_app: :viban
+
+  # ============================================================================
+  # AshSync Configuration
+  # ============================================================================
+
+  sync do
+    resource Viban.Kanban.Board do
+      query(:sync_boards, :read)
+    end
+
+    resource Viban.Kanban.Column do
+      query(:sync_columns, :read)
+    end
+
+    resource Viban.Kanban.Task do
+      query(:sync_tasks, :read)
+    end
+
+    resource Viban.Kanban.Hook do
+      query(:sync_hooks, :read)
+    end
+
+    resource Viban.Kanban.ColumnHook do
+      query(:sync_column_hooks, :read)
+    end
+
+    resource Viban.Kanban.Repository do
+      query(:sync_repositories, :read)
+    end
+
+    resource Viban.Kanban.Message do
+      query(:sync_messages, :read)
+    end
+
+    resource Viban.Kanban.HookExecution do
+      query(:sync_hook_executions, :read)
+    end
+  end
 
   # ============================================================================
   # Resources
@@ -48,6 +87,9 @@ defmodule Viban.Kanban do
     # Integration resources
     resource Viban.Kanban.Repository
     resource Viban.Kanban.Message
+
+    # Hook execution tracking
+    resource Viban.Kanban.HookExecution
   end
 
   # ============================================================================
@@ -107,54 +149,79 @@ defmodule Viban.Kanban do
 
   typescript_rpc do
     resource Viban.Kanban.Board do
-      rpc_action(:create, :create)
-      rpc_action(:read, :read)
-      rpc_action(:update, :update)
-      rpc_action(:destroy, :destroy)
+      rpc_action(:create_board, :create)
+      rpc_action(:list_boards, :read)
+      rpc_action(:get_board, :read, get?: true)
+      rpc_action(:update_board, :update)
+      rpc_action(:destroy_board, :destroy)
     end
 
     resource Viban.Kanban.Column do
-      rpc_action(:create, :create)
-      rpc_action(:read, :read)
-      rpc_action(:update, :update)
-      rpc_action(:destroy, :destroy)
+      rpc_action(:create_column, :create)
+      rpc_action(:list_columns, :read)
+      rpc_action(:get_column, :read, get?: true)
+      rpc_action(:update_column, :update)
+      rpc_action(:destroy_column, :destroy)
+      rpc_action(:update_column_settings, :update_settings)
+      rpc_action(:delete_all_column_tasks, :delete_all_tasks)
     end
 
     resource Viban.Kanban.Task do
-      rpc_action(:create, :create)
-      rpc_action(:read, :read)
-      rpc_action(:update, :update)
-      rpc_action(:destroy, :destroy)
-      rpc_action(:move, :move)
+      rpc_action(:create_task, :create)
+      rpc_action(:list_tasks, :read)
+      rpc_action(:get_task, :read, get?: true)
+      rpc_action(:update_task, :update)
+      rpc_action(:destroy_task, :destroy)
+      rpc_action(:move_task, :move)
+      rpc_action(:refine_task, :refine)
+      rpc_action(:refine_preview, :refine_preview)
+      rpc_action(:generate_subtasks, :generate_subtasks)
+      rpc_action(:list_subtasks, :subtasks)
+      rpc_action(:create_subtask, :create_subtask)
+      rpc_action(:create_task_pr, :create_pr)
+      rpc_action(:clear_task_error, :clear_error)
     end
 
     resource Viban.Kanban.Hook do
-      rpc_action(:create, :create)
-      rpc_action(:read, :read)
-      rpc_action(:update, :update)
-      rpc_action(:destroy, :destroy)
+      rpc_action(:create_hook, :create)
+      rpc_action(:list_hooks, :read)
+      rpc_action(:get_hook, :read, get?: true)
+      rpc_action(:update_hook, :update)
+      rpc_action(:destroy_hook, :destroy)
+      rpc_action(:create_script_hook, :create_script_hook)
+      rpc_action(:create_agent_hook, :create_agent_hook)
     end
 
     resource Viban.Kanban.ColumnHook do
-      rpc_action(:create, :create)
-      rpc_action(:read, :read)
-      rpc_action(:update, :update)
-      rpc_action(:destroy, :destroy)
+      rpc_action(:create_column_hook, :create)
+      rpc_action(:list_column_hooks, :read)
+      rpc_action(:get_column_hook, :read, get?: true)
+      rpc_action(:update_column_hook, :update)
+      rpc_action(:destroy_column_hook, :destroy)
     end
 
     resource Viban.Kanban.Repository do
-      rpc_action(:create, :create)
-      rpc_action(:read, :read)
-      rpc_action(:update, :update)
-      rpc_action(:destroy, :destroy)
+      rpc_action(:create_repository, :create)
+      rpc_action(:list_repositories, :read)
+      rpc_action(:get_repository, :read, get?: true)
+      rpc_action(:update_repository, :update)
+      rpc_action(:destroy_repository, :destroy)
+      rpc_action(:list_branches, :list_branches)
     end
 
     resource Viban.Kanban.Message do
-      rpc_action(:create, :create)
-      rpc_action(:read, :read)
-      rpc_action(:update, :update)
-      rpc_action(:destroy, :destroy)
-      rpc_action(:for_task, :for_task)
+      rpc_action(:create_message, :create)
+      rpc_action(:list_messages, :read)
+      rpc_action(:get_message, :read, get?: true)
+      rpc_action(:update_message, :update)
+      rpc_action(:destroy_message, :destroy)
+      rpc_action(:messages_for_task, :for_task)
+    end
+
+    resource Viban.Kanban.HookExecution do
+      rpc_action(:list_hook_executions, :read)
+      rpc_action(:get_hook_execution, :read, get?: true)
+      rpc_action(:hook_executions_for_task, :history_for_task)
     end
   end
 end

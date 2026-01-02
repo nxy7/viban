@@ -34,7 +34,10 @@ export function levenshteinDistance(a: string, b: string): number {
 export function fuzzyWordMatch(text: string, queryWord: string): boolean {
   const lowerText = text.toLowerCase();
   const lowerWord = queryWord.toLowerCase();
-  const maxDistance = Math.max(1, Math.floor(lowerWord.length * FUZZY_TOLERANCE));
+  const maxDistance = Math.max(
+    1,
+    Math.floor(lowerWord.length * FUZZY_TOLERANCE),
+  );
 
   if (lowerText.includes(lowerWord)) return true;
 

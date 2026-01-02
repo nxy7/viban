@@ -7,13 +7,13 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": [
-      "**",
-      "!node_modules",
-      "!dist",
-      "!.vinxi",
-      "!.output",
-      "!src/lib/generated"
+    "includes": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", "**/*.json"],
+    "experimentalScannerIgnores": [
+      "node_modules",
+      "dist",
+      ".vinxi",
+      ".output",
+      "src/lib/generated"
     ]
   },
   "formatter": {

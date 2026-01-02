@@ -77,12 +77,14 @@ defmodule Viban.Kanban.ColumnHook do
     attribute :transparent, :boolean do
       public? true
       default false
+
       description "If true, hook runs even when task is in error state and doesn't change task status"
     end
 
     attribute :removable, :boolean do
       public? true
       default true
+
       description "If false, this hook cannot be removed from the column (e.g., core AI execution hook)"
     end
 
@@ -114,8 +116,10 @@ defmodule Viban.Kanban.ColumnHook do
     destroy :destroy do
       primary? true
       require_atomic? false
+
       validate fn changeset, _ ->
         column_hook = changeset.data
+
         if column_hook.removable == false do
           {:error, field: :removable, message: "This hook cannot be removed"}
         else
@@ -125,7 +129,16 @@ defmodule Viban.Kanban.ColumnHook do
     end
 
     create :create do
-      accept [:position, :column_id, :hook_id, :execute_once, :hook_settings, :transparent, :removable]
+      accept [
+        :position,
+        :column_id,
+        :hook_id,
+        :execute_once,
+        :hook_settings,
+        :transparent,
+        :removable
+      ]
+
       primary? true
       validate Validations.ValidHookId
     end

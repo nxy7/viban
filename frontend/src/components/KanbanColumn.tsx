@@ -1,4 +1,4 @@
-import { createDroppable, SortableProvider } from "@thisbeyond/solid-dnd";
+import { createDroppable } from "@thisbeyond/solid-dnd";
 import { createMemo, For, Show } from "solid-js";
 import { CheckIcon, PlusIcon, SettingsIcon } from "~/components/ui/Icons";
 import type { Column, Task } from "~/lib/useKanban";
@@ -45,16 +45,16 @@ export default function KanbanColumn(props: KanbanColumnProps) {
     isDropTarget() ? props.dropTarget?.beforeTaskId : undefined,
   );
 
-  // Sort tasks and optionally filter out the dragged task if it's from this column
+  // Sort tasks by position, with ID as tiebreaker for stable ordering
   const sortedTasks = createMemo(() => {
-    const tasks = [...props.tasks].sort(
-      (a, b) => Number(a.position) - Number(b.position),
-    );
-    // Don't filter out dragged task - let solid-dnd handle the opacity
+    const tasks = [...props.tasks].sort((a, b) => {
+      const posA = Number(a.position) || 0;
+      const posB = Number(b.position) || 0;
+      if (posA !== posB) return posA - posB;
+      return a.id.localeCompare(b.id);
+    });
     return tasks;
   });
-
-  const taskIds = createMemo(() => sortedTasks().map((t) => t.id));
 
   // Count of tasks that are currently executing (in_progress)
   const inProgressCount = createMemo(
@@ -64,7 +64,7 @@ export default function KanbanColumn(props: KanbanColumnProps) {
   return (
     <div
       class={`
-        flex flex-col bg-gray-900/50 border border-gray-800 rounded-xl min-w-[280px] max-w-[320px]
+        flex flex-col h-full bg-gray-900/50 border border-gray-800 rounded-xl min-w-[280px] max-w-[320px]
         ${droppable.isActiveDroppable ? "ring-2 ring-brand-500/50" : ""}
       `}
     >
@@ -100,41 +100,36 @@ export default function KanbanColumn(props: KanbanColumnProps) {
       </div>
 
       {/* Tasks List - droppable ref on the scrollable container for cross-column drops */}
-      <div
-        ref={droppable.ref}
-        class="flex-1 p-3 min-h-[100px] max-h-[calc(100vh-200px)] overflow-y-auto"
-      >
-        <SortableProvider ids={taskIds()}>
-          <div class="flex flex-col gap-2">
-            <For each={sortedTasks()}>
-              {(task) => (
-                <>
-                  {/* Show gap before this task if it's the drop target */}
-                  <Show
-                    when={
-                      isDropTarget() &&
-                      gapBeforeTaskId() === task.id &&
-                      props.draggedTaskId !== task.id
-                    }
-                  >
-                    <DropGapIndicator />
-                  </Show>
-                  <TaskCard task={task} onClick={() => props.onTaskClick(task)} />
-                </>
-              )}
-            </For>
-            {/* Show gap at end if dropping at end of column */}
-            <Show
-              when={
-                isDropTarget() &&
-                gapBeforeTaskId() === null &&
-                sortedTasks().length > 0
-              }
-            >
-              <DropGapIndicator />
-            </Show>
-          </div>
-        </SortableProvider>
+      <div ref={droppable.ref} class="flex-1 p-3 min-h-0 overflow-y-auto">
+        <div class="flex flex-col gap-2">
+          <For each={sortedTasks()}>
+            {(task) => (
+              <>
+                {/* Show gap before this task if it's the drop target */}
+                <Show
+                  when={
+                    isDropTarget() &&
+                    gapBeforeTaskId() === task.id &&
+                    props.draggedTaskId !== task.id
+                  }
+                >
+                  <DropGapIndicator />
+                </Show>
+                <TaskCard task={task} onClick={() => props.onTaskClick(task)} />
+              </>
+            )}
+          </For>
+          {/* Show gap at end if dropping at end of column */}
+          <Show
+            when={
+              isDropTarget() &&
+              gapBeforeTaskId() === null &&
+              sortedTasks().length > 0
+            }
+          >
+            <DropGapIndicator />
+          </Show>
+        </div>
 
         {/* Empty column with drop target */}
         <Show when={props.tasks.length === 0}>
@@ -165,7 +160,6 @@ export default function KanbanColumn(props: KanbanColumnProps) {
           </button>
         </div>
       </Show>
-
     </div>
   );
 }

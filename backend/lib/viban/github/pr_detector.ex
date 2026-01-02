@@ -46,7 +46,6 @@ defmodule Viban.GitHub.PRDetector do
     with pr_url when not is_nil(pr_url) <- extract_pr_url(output),
          pr_number when not is_nil(pr_number) <- extract_pr_number(pr_url),
          {:ok, task} <- Task.get(task_id),
-         # Only link if task doesn't already have a PR
          true <- is_nil(task.pr_url) do
       Logger.info("[PRDetector] Found PR URL in output for task #{task_id}: #{pr_url}")
       Task.link_pr(task, pr_url, pr_number, :open)
@@ -60,7 +59,6 @@ defmodule Viban.GitHub.PRDetector do
   Called after task execution completes or periodically.
   """
   def detect_and_link_pr(task) do
-    # Use worktree_branch as the branch name
     branch = task.worktree_branch
 
     cond do
@@ -74,7 +72,6 @@ defmodule Viban.GitHub.PRDetector do
         {:ok, :no_worktree}
 
       true ->
-        # Use the worktree path to run gh commands
         case Client.find_pr_for_branch(task.worktree_path, branch) do
           {:ok, nil} ->
             {:ok, :no_pr_found}
@@ -109,10 +106,18 @@ defmodule Viban.GitHub.PRDetector do
                 "[PRDetector] Updating PR status for task #{task.id}: #{task.pr_status} -> #{status}"
               )
 
-              Task.update_pr_status(task, %{pr_status: status})
+              if status == :closed do
+                Task.clear_pr(task)
+              else
+                Task.update_pr_status(task, %{pr_status: status})
+              end
             else
               {:ok, :unchanged}
             end
+
+          {:error, :not_found} ->
+            Logger.info("[PRDetector] PR not found for task #{task.id}, clearing link")
+            Task.clear_pr(task)
 
           {:error, error} ->
             Logger.warning("[PRDetector] Failed to get PR status: #{error}")

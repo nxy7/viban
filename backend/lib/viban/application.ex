@@ -44,6 +44,9 @@ defmodule Viban.Application do
 
   defp core_children do
     [
+      # Tool detection (runs first to log available tools)
+      Viban.Tools.Detector,
+
       # Telemetry and database
       VibanWeb.Telemetry,
       Viban.Repo,

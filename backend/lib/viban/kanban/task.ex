@@ -20,7 +20,6 @@ defmodule Viban.Kanban.Task do
   - `:idle` - No agent activity
   - `:thinking` - Agent is processing/planning
   - `:executing` - Agent is running commands/making changes
-  - `:waiting_for_user` - Agent needs user input
   - `:error` - Agent encountered an error
 
   ## Queue Management
@@ -45,7 +44,7 @@ defmodule Viban.Kanban.Task do
   alias Viban.Kanban.Task.Changes, as: TaskChanges
 
   # Type definitions for documentation
-  @type agent_status :: :idle | :thinking | :executing | :waiting_for_user | :error
+  @type agent_status :: :idle | :thinking | :executing | :error
   @type priority :: :low | :medium | :high
   @type pr_status :: :open | :merged | :closed | :draft
   @type subtask_generation_status :: :generating | :completed | :failed
@@ -57,6 +56,17 @@ defmodule Viban.Kanban.Task do
   postgres do
     table "tasks"
     repo Viban.Repo
+
+    references do
+      reference :parent_task, on_delete: :delete
+    end
+  end
+
+  identities do
+    identity :unique_worktree_path, [:worktree_path] do
+      message "This worktree path is already assigned to another task"
+      nils_distinct? true
+    end
   end
 
   attributes do
@@ -79,12 +89,12 @@ defmodule Viban.Kanban.Task do
       description "Task description (supports markdown)"
     end
 
-    attribute :position, :decimal do
+    attribute :position, :float do
       allow_nil? false
       public? true
-      default 0
-      constraints min: 0
-      description "Order position within the column (supports fractional values for reordering)"
+      default 0.0
+
+      description "Order position within the column (supports fractional and negative values for reordering)"
     end
 
     attribute :priority, :atom do
@@ -128,7 +138,7 @@ defmodule Viban.Kanban.Task do
 
     attribute :agent_status, :atom do
       public? true
-      constraints one_of: [:idle, :thinking, :executing, :waiting_for_user, :error]
+      constraints one_of: [:idle, :thinking, :executing, :error]
       default :idle
       description "Current state of the LLM agent"
     end
@@ -222,18 +232,14 @@ defmodule Viban.Kanban.Task do
       description "Column hook IDs already executed (for execute_once tracking)"
     end
 
-    attribute :hook_queue, {:array, :map} do
+    # =========================================================================
+    # Message Queue for AI Execution
+    # =========================================================================
+
+    attribute :message_queue, {:array, Viban.Kanban.Types.MessageQueueEntry} do
       public? true
       default []
-
-      description "Current hook execution queue: [{id, name, status}] where status is pending/running/completed/cancelled/failed"
-    end
-
-    attribute :hook_history, {:array, :map} do
-      public? true
-      default []
-
-      description "Persistent hook execution history: [{id, name, status, executed_at}]"
+      description "Queue of messages waiting to be processed by Execute AI hook"
     end
 
     timestamps()
@@ -270,6 +276,12 @@ defmodule Viban.Kanban.Task do
     has_many :executor_sessions, Viban.Executors.ExecutorSession do
       public? true
       description "Executor sessions for this task"
+    end
+
+    has_many :hook_executions, Viban.Kanban.HookExecution do
+      public? true
+      sort queued_at: :desc
+      description "Hook execution history for this task"
     end
   end
 
@@ -322,10 +334,6 @@ defmodule Viban.Kanban.Task do
       primary? true
       require_atomic? false
 
-      # Cascade delete in order of dependencies
-      change cascade_destroy(:subtasks)
-      change cascade_destroy(:messages)
-      change cascade_destroy(:executor_sessions)
       change Viban.Kanban.Changes.CleanupDescriptionImages
     end
 
@@ -337,6 +345,9 @@ defmodule Viban.Kanban.Task do
       description "Move task to different column or position (for drag & drop)"
 
       accept [:column_id, :position]
+      require_atomic? false
+
+      change TaskChanges.CancelHooksOnMove
     end
 
     # =========================================================================
@@ -354,6 +365,17 @@ defmodule Viban.Kanban.Task do
 
       change set_attribute(:worktree_path, nil)
       change set_attribute(:worktree_branch, nil)
+    end
+
+    action :create_worktree, :map do
+      description "Create a git worktree for this task"
+
+      argument :task_id, :uuid do
+        allow_nil? false
+        description "ID of the task to create worktree for"
+      end
+
+      run Actions.CreateWorktree
     end
 
     # =========================================================================
@@ -505,24 +527,48 @@ defmodule Viban.Kanban.Task do
       change TaskChanges.AddExecutedHook
     end
 
-    update :update_hook_queue do
-      description "Update hook execution queue (called by TaskActor)"
+    # =========================================================================
+    # Message Queue Actions
+    # =========================================================================
 
-      accept [:hook_queue]
-    end
-
-    update :append_hook_history do
-      description "Append completed hook execution to history (called by TaskActor)"
+    update :queue_message do
+      description "Add a message to the task's message queue for AI processing"
 
       accept []
       require_atomic? false
 
-      argument :hook_entry, :map do
+      argument :prompt, :string do
         allow_nil? false
-        description "Hook entry: %{id, name, status, executed_at}"
+        description "The user's message/prompt"
       end
 
-      change TaskChanges.AppendHookHistory
+      argument :executor_type, :atom do
+        default :claude_code
+        constraints one_of: [:claude_code, :gemini_cli]
+        description "The executor to use"
+      end
+
+      argument :images, {:array, :map} do
+        default []
+        description "Image attachments"
+      end
+
+      change TaskChanges.QueueMessage
+    end
+
+    update :pop_message do
+      description "Remove and return the first message from the queue"
+
+      accept []
+      require_atomic? false
+
+      change TaskChanges.PopMessage
+    end
+
+    update :clear_message_queue do
+      description "Clear all queued messages"
+
+      change set_attribute(:message_queue, [])
     end
 
     # =========================================================================
@@ -538,6 +584,59 @@ defmodule Viban.Kanban.Task do
       end
 
       run Actions.Refine
+    end
+
+    action :refine_preview, :map do
+      description "Preview refined description without saving"
+
+      argument :title, :string do
+        allow_nil? false
+        description "Task title to refine"
+      end
+
+      argument :description, :string do
+        allow_nil? true
+        default nil
+        description "Optional task description to include in refinement"
+      end
+
+      run Actions.RefinePreview
+    end
+
+    action :generate_subtasks, :map do
+      description "Generate subtasks for a parent task using AI"
+
+      argument :task_id, :uuid do
+        allow_nil? false
+        description "ID of the parent task"
+      end
+
+      run Actions.GenerateSubtasks
+    end
+
+    action :create_pr, :map do
+      description "Create a GitHub pull request for this task"
+
+      argument :task_id, :uuid do
+        allow_nil? false
+        description "ID of the task to create PR for"
+      end
+
+      argument :title, :string do
+        allow_nil? false
+        description "PR title"
+      end
+
+      argument :body, :string do
+        default ""
+        description "PR description/body"
+      end
+
+      argument :base_branch, :string do
+        description "Base branch for the PR (defaults to repo default)"
+      end
+
+      run Actions.CreatePR
     end
 
     # =========================================================================
@@ -562,6 +661,18 @@ defmodule Viban.Kanban.Task do
       filter expr(not is_nil(queued_at))
       prepare build(sort: [queue_priority: :desc, queued_at: :asc])
     end
+
+    read :subtasks do
+      description "List all subtasks for a parent task"
+
+      argument :parent_task_id, :uuid do
+        allow_nil? false
+        description "ID of the parent task"
+      end
+
+      filter expr(parent_task_id == ^arg(:parent_task_id))
+      prepare build(sort: [subtask_position: :asc])
+    end
   end
 
   code_interface do
@@ -578,6 +689,7 @@ defmodule Viban.Kanban.Task do
     # Worktree management
     define :assign_worktree
     define :clear_worktree
+    define :create_worktree, args: [:task_id]
 
     # Agent status
     define :update_agent_status
@@ -602,14 +714,21 @@ defmodule Viban.Kanban.Task do
 
     # Hook execution tracking
     define :mark_hook_executed, args: [:column_hook_id]
-    define :update_hook_queue
-    define :append_hook_history, args: [:hook_entry]
+
+    # Message queue
+    define :queue_message, args: [:prompt, :executor_type, :images]
+    define :pop_message
+    define :clear_message_queue
 
     # LLM actions
     define :refine, args: [:task_id]
+    define :refine_preview, args: [:title, :description]
+    define :generate_subtasks, args: [:task_id]
+    define :create_pr, args: [:task_id, :title, :body, :base_branch]
 
     # Read actions
     define :for_column, args: [:column_id]
     define :queued
+    define :subtasks, args: [:parent_task_id]
   end
 end

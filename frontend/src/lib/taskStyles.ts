@@ -13,12 +13,7 @@ import type { JSX } from "solid-js";
 export type GlowState = "parent" | "child" | null;
 
 // Type for agent status
-export type AgentStatus =
-  | "idle"
-  | "thinking"
-  | "executing"
-  | "waiting_for_user"
-  | "error";
+export type AgentStatus = "idle" | "thinking" | "executing" | "error";
 
 // Type for PR status
 export type PRStatusType = "open" | "merged" | "closed" | "draft";

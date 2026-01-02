@@ -232,12 +232,12 @@ defmodule Viban.LLM.SubtaskGenerationService do
     priority = parse_priority(Map.get(subtask_data, "priority", "medium"))
 
     case KanbanTask.create_subtask(
+           parent_task_id,
            %{
              title: title,
              description: description,
              priority: priority
-           },
-           parent_task_id
+           }
          ) do
       {:ok, subtask} ->
         Logger.info("#{@log_prefix} Created subtask: #{subtask.id} - #{title}")

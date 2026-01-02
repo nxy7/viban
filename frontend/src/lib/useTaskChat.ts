@@ -1,4 +1,5 @@
 import { type Accessor, createEffect, createSignal, onCleanup } from "solid-js";
+import { getErrorMessage } from "./errorUtils";
 import {
   type ExecutorCompletedPayload,
   type ExecutorErrorPayload,
@@ -12,12 +13,7 @@ import {
   socketManager,
 } from "./socket";
 
-export type AgentStatusType =
-  | "idle"
-  | "thinking"
-  | "executing"
-  | "waiting_for_user"
-  | "error";
+export type AgentStatusType = "idle" | "thinking" | "executing" | "error";
 
 const DEFAULT_AGENT_STATUS: AgentStatusType = "idle";
 
@@ -25,7 +21,6 @@ const VALID_AGENT_STATUSES: readonly AgentStatusType[] = [
   "idle",
   "thinking",
   "executing",
-  "waiting_for_user",
   "error",
 ];
 
@@ -64,12 +59,6 @@ export interface ImageData {
   mimeType: string;
 }
 
-export interface QueuedMessage {
-  prompt: string;
-  executorType: string;
-  images?: ImageData[];
-}
-
 export interface UseTaskChatReturn {
   output: Accessor<OutputLine[]>;
   isConnected: Accessor<boolean>;
@@ -81,20 +70,17 @@ export interface UseTaskChatReturn {
   agentStatusMessage: Accessor<string | null>;
   executors: Accessor<ExecutorInfo[]>;
   todos: Accessor<LLMTodoItem[]>;
-  messageQueue: Accessor<QueuedMessage[]>;
-  startExecutor: (
-    prompt: string,
-    executorType?: string,
-    images?: ImageData[],
-  ) => Promise<void>;
   queueMessage: (
     prompt: string,
     executorType?: string,
     images?: ImageData[],
-  ) => void;
-  clearQueue: () => void;
+  ) => Promise<void>;
   stopExecutor: () => Promise<void>;
   reconnect: () => Promise<void>;
+  createWorktree: () => Promise<{
+    worktree_path: string;
+    worktree_branch: string;
+  }>;
 }
 
 export function useTaskChat(
@@ -115,7 +101,6 @@ export function useTaskChat(
   >(null);
   const [executors, setExecutors] = createSignal<ExecutorInfo[]>([]);
   const [todos, setTodos] = createSignal<LLMTodoItem[]>([]);
-  const [messageQueue, setMessageQueue] = createSignal<QueuedMessage[]>([]);
 
   const [currentTaskId, setCurrentTaskId] = createSignal<string | undefined>(
     undefined,
@@ -123,48 +108,6 @@ export function useTaskChat(
   const [outputIdCounter, setOutputIdCounter] = createSignal(0);
 
   const seenMessagesRef = { current: new Set<string>() };
-
-  const processNextQueuedMessage = async () => {
-    const queue = messageQueue();
-    if (queue.length === 0) return;
-
-    const nextMessage = queue[0];
-    setMessageQueue((prev) => prev.slice(1));
-
-    const id = taskId();
-    if (!id || !isConnected()) return;
-
-    setError(null);
-    setAgentStatus("thinking");
-    setAgentStatusMessage(`Starting ${nextMessage.executorType}...`);
-    setIsThinking(true);
-
-    const imageCount = nextMessage.images?.length || 0;
-    const displayContent =
-      imageCount > 0
-        ? `${nextMessage.prompt}${nextMessage.prompt ? "\n\n" : ""}[${imageCount} image${imageCount > 1 ? "s" : ""} attached]`
-        : nextMessage.prompt;
-
-    addOutput("user", displayContent, "user");
-
-    try {
-      await socketManager.startExecutor(
-        id,
-        nextMessage.prompt,
-        nextMessage.executorType,
-        undefined,
-        nextMessage.images,
-      );
-    } catch (err) {
-      console.error("[useTaskChat] Start queued executor error:", err);
-      setError(
-        err instanceof Error ? err.message : "Failed to start executor",
-      );
-      setAgentStatus("error");
-      setAgentStatusMessage("Failed to start executor");
-      setIsThinking(false);
-    }
-  };
 
   const getContentHash = (
     content: string | Record<string, unknown>,
@@ -203,15 +146,25 @@ export function useTaskChat(
       const hash = getContentHash(msg.content);
       seenMessagesRef.current.add(hash);
 
+      let content: string | Record<string, unknown> = msg.content;
+
+      if (msg.role === "tool" && typeof msg.content === "string") {
+        try {
+          content = JSON.parse(msg.content);
+        } catch {
+          content = msg.content;
+        }
+      }
+
       return {
         id: `stored-${msg.id || index}`,
         type:
           msg.role === "user"
             ? "user"
-            : msg.role === "assistant"
+            : msg.role === "assistant" || msg.role === "tool"
               ? "parsed"
               : "system",
-        content: msg.content,
+        content,
         timestamp: msg.timestamp,
         role: msg.role,
       };
@@ -243,8 +196,8 @@ export function useTaskChat(
               addOutput("parsed", parsed.content as string, "assistant");
             } else if (parsed.type === "result") {
               setIsThinking(false);
-              setAgentStatus("waiting_for_user");
-              setAgentStatusMessage("Waiting for input...");
+              setAgentStatus("idle");
+              setAgentStatusMessage("Agent completed");
               const resultContent = parsed.content as string | undefined;
               if (resultContent) {
                 addOutput("parsed", resultContent, "assistant");
@@ -253,7 +206,9 @@ export function useTaskChat(
               setIsThinking(false);
               setAgentStatus("executing");
               const toolName = parsed.tool as string | undefined;
-              setAgentStatusMessage(toolName ? `Using ${toolName}...` : "Using tools...");
+              setAgentStatusMessage(
+                toolName ? `Using ${toolName}...` : "Using tools...",
+              );
               addOutput("parsed", parsed, "tool");
             } else if (parsed.type === "tool_result") {
               const toolContent = parsed.content as string | undefined;
@@ -265,7 +220,11 @@ export function useTaskChat(
               setAgentStatus("error");
               const errorMsg = parsed.message as string | undefined;
               setAgentStatusMessage(errorMsg || "An error occurred");
-              addOutput("system", `Error: ${errorMsg || "Unknown error"}`, "system");
+              addOutput(
+                "system",
+                `Error: ${errorMsg || "Unknown error"}`,
+                "system",
+              );
             } else if (parsed.type === "unknown") {
               console.log("[useTaskChat] Unknown event type:", parsed);
             }
@@ -301,12 +260,6 @@ export function useTaskChat(
             setAgentStatusMessage("Stopped");
             addOutput("system", "Stopped by user");
           }
-
-          if (messageQueue().length > 0) {
-            setTimeout(() => {
-              processNextQueuedMessage();
-            }, 500);
-          }
         },
         onExecutorError: (data: ExecutorErrorPayload) => {
           console.error("[useTaskChat] Executor error:", data);
@@ -338,8 +291,7 @@ export function useTaskChat(
         const status = await socketManager.getStatus(id);
         setAgentStatus(toAgentStatus(status.agent_status));
         setAgentStatusMessage(status.agent_status_message);
-      } catch {
-      }
+      } catch {}
 
       try {
         const { executors: availableExecutors } =
@@ -365,7 +317,7 @@ export function useTaskChat(
       }
     } catch (err) {
       console.error("[useTaskChat] Connection error:", err);
-      setError(err instanceof Error ? err.message : "Failed to connect");
+      setError(getErrorMessage(err, "Failed to connect"));
       setIsConnected(false);
     } finally {
       setIsLoading(false);
@@ -382,7 +334,6 @@ export function useTaskChat(
     setIsRunning(false);
     setIsThinking(false);
     setTodos([]);
-    setMessageQueue([]);
     seenMessagesRef.current.clear();
     setOutputIdCounter(0);
   };
@@ -409,7 +360,7 @@ export function useTaskChat(
     }
   });
 
-  const startExecutor = async (
+  const queueMessage = async (
     prompt: string,
     executorType: string = "claude_code",
     images?: ImageData[],
@@ -424,9 +375,6 @@ export function useTaskChat(
     }
 
     setError(null);
-    setAgentStatus("thinking");
-    setAgentStatusMessage(`Starting ${executorType}...`);
-    setIsThinking(true);
 
     const imageCount = images?.length || 0;
     const displayContent =
@@ -437,19 +385,17 @@ export function useTaskChat(
     addOutput("user", displayContent, "user");
 
     try {
-      await socketManager.startExecutor(
+      await socketManager.queueMessage(
         id,
         prompt,
         executorType,
         undefined,
         images,
       );
+      console.log("[useTaskChat] Message queued successfully");
     } catch (err) {
-      console.error("[useTaskChat] Start executor error:", err);
-      setError(err instanceof Error ? err.message : "Failed to start executor");
-      setAgentStatus("error");
-      setAgentStatusMessage("Failed to start executor");
-      setIsThinking(false);
+      console.error("[useTaskChat] Send message error:", err);
+      setError(getErrorMessage(err, "Failed to send message"));
       throw err;
     }
   };
@@ -464,15 +410,11 @@ export function useTaskChat(
       throw new Error("Not connected");
     }
 
-    if (!isRunning()) {
-      return;
-    }
-
     try {
       await socketManager.stopExecutor(id);
     } catch (err) {
       console.error("[useTaskChat] Stop executor error:", err);
-      setError(err instanceof Error ? err.message : "Failed to stop executor");
+      setError(getErrorMessage(err, "Failed to stop executor"));
       throw err;
     }
   };
@@ -485,29 +427,20 @@ export function useTaskChat(
     await connect(id);
   };
 
-  const queueMessage = (
-    prompt: string,
-    executorType: string = "claude_code",
-    images?: ImageData[],
-  ): void => {
-    const queuedMessage: QueuedMessage = {
-      prompt,
-      executorType,
-      images,
-    };
-    setMessageQueue((prev) => [...prev, queuedMessage]);
+  const createWorktree = async (): Promise<{
+    worktree_path: string;
+    worktree_branch: string;
+  }> => {
+    const id = taskId();
+    if (!id) {
+      throw new Error("No task ID");
+    }
 
-    const imageCount = images?.length || 0;
-    const displayContent =
-      imageCount > 0
-        ? `${prompt}${prompt ? "\n\n" : ""}[${imageCount} image${imageCount > 1 ? "s" : ""} attached] (queued)`
-        : `${prompt} (queued)`;
+    if (!isConnected()) {
+      throw new Error("Not connected");
+    }
 
-    addOutput("user", displayContent, "user");
-  };
-
-  const clearQueue = (): void => {
-    setMessageQueue([]);
+    return socketManager.createWorktree(id);
   };
 
   return {
@@ -521,12 +454,10 @@ export function useTaskChat(
     agentStatusMessage,
     executors,
     todos,
-    messageQueue,
-    startExecutor,
     queueMessage,
-    clearQueue,
     stopExecutor,
     reconnect,
+    createWorktree,
   };
 }
 

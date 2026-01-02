@@ -1036,23 +1036,6 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
       assert String.contains?(in_progress_task.agent_status_message, "Test AI Agent")
     end
 
-    test "task shows waiting_for_user state correctly", %{todo_column: todo_column} do
-      {:ok, task} =
-        Task.create(%{
-          title: "Test Task",
-          column_id: todo_column.id
-        })
-
-      {:ok, waiting_task} =
-        Task.update_agent_status(task, %{
-          agent_status: :waiting_for_user,
-          agent_status_message: "Waiting for user approval"
-        })
-
-      assert waiting_task.agent_status == :waiting_for_user
-      assert waiting_task.agent_status_message == "Waiting for user approval"
-    end
-
     test "task can be moved to To Review after successful completion", %{
       todo_column: todo_column,
       to_review_column: to_review_column
@@ -1227,8 +1210,12 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
       assert final_task.column_id == todo_column.id
     end
 
-    test "persists hook_queue for crash recovery" do
-      # This test verifies hook_queue persistence for recovery scenarios
+    test "persists hook executions for crash recovery" do
+      # This test verifies HookExecution persistence for recovery scenarios
+      # Hook execution state is now stored in the hook_executions table
+      # and recovered by TaskServer on startup via self_heal/1
+      alias Viban.Kanban.HookExecution
+
       {:ok, user} = create_test_user()
       {:ok, board} = Board.create(%{name: "Recovery Test Board", user_id: user.id})
 
@@ -1241,39 +1228,51 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
           column_id: todo_column.id
         })
 
-      # Simulate a hook queue mid-execution (as if server crashed)
-      simulated_queue = [
-        %{"id" => "hook-1", "name" => "Hook 1", "status" => "completed"},
-        %{"id" => "hook-2", "name" => "Hook 2", "status" => "running"},
-        %{"id" => "hook-3", "name" => "Hook 3", "status" => "pending"}
-      ]
+      # Create hook executions in various states (simulating mid-execution crash)
+      {:ok, exec1} =
+        HookExecution.queue(%{
+          task_id: task.id,
+          hook_name: "Hook 1",
+          hook_id: "hook-1",
+          triggering_column_id: todo_column.id
+        })
 
-      {:ok, _updated_task} = Task.update_hook_queue(task, %{hook_queue: simulated_queue})
+      {:ok, _} = HookExecution.complete(exec1)
 
-      # Verify persistence
-      {:ok, reloaded_task} = Task.get(task.id)
-      assert reloaded_task.hook_queue == simulated_queue
+      {:ok, exec2} =
+        HookExecution.queue(%{
+          task_id: task.id,
+          hook_name: "Hook 2",
+          hook_id: "hook-2",
+          triggering_column_id: todo_column.id
+        })
 
-      # Verify running hook can be identified for recovery
-      running_hook = Enum.find(reloaded_task.hook_queue, &(&1["status"] == "running"))
-      assert running_hook != nil
-      assert running_hook["name"] == "Hook 2"
+      {:ok, _} = HookExecution.start(exec2)
 
-      # Simulate recovery: mark interrupted hook as failed
-      recovered_queue =
-        Enum.map(reloaded_task.hook_queue, fn hook ->
-          if hook["status"] == "running" do
-            Map.put(hook, "status", "failed")
-          else
-            hook
-          end
-        end)
+      {:ok, _exec3} =
+        HookExecution.queue(%{
+          task_id: task.id,
+          hook_name: "Hook 3",
+          hook_id: "hook-3",
+          triggering_column_id: todo_column.id
+        })
 
-      {:ok, recovered_task} =
-        Task.update_hook_queue(reloaded_task, %{hook_queue: recovered_queue})
+      # Verify active executions can be queried for recovery
+      {:ok, active} = HookExecution.active_for_task(task.id)
+      assert length(active) == 2
 
-      hook_2 = Enum.find(recovered_task.hook_queue, &(&1["name"] == "Hook 2"))
-      assert hook_2["status"] == "failed"
+      running = Enum.find(active, &(&1.status == :running))
+      assert running != nil
+      assert running.hook_name == "Hook 2"
+
+      pending = Enum.find(active, &(&1.status == :pending))
+      assert pending != nil
+      assert pending.hook_name == "Hook 3"
+
+      # Simulate recovery: cancel running hook (as TaskServer.self_heal does)
+      {:ok, cancelled} = HookExecution.cancel(running, %{skip_reason: :server_restart})
+      assert cancelled.status == :cancelled
+      assert cancelled.skip_reason == :server_restart
     end
   end
 

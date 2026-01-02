@@ -7,7 +7,6 @@ import {
   type DragEvent,
   DragOverlay,
   type Droppable,
-  useDragDropContext,
 } from "@thisbeyond/solid-dnd";
 import {
   type Accessor,
@@ -28,12 +27,14 @@ import {
   SettingsIcon,
 } from "~/components/ui/Icons";
 import { fuzzyMatch } from "~/lib/fuzzySearch";
+import * as sdk from "~/lib/generated/ash";
 import { TaskRelationProvider } from "~/lib/TaskRelationContext";
 import {
   type Column,
-  moveTask,
   type Task,
   tasksCollection,
+  toDecimal,
+  unwrap,
   useBoard,
   useColumns,
 } from "~/lib/useKanban";
@@ -54,10 +55,16 @@ export interface DropTarget {
   beforeTaskId: string | null;
 }
 
+/** Global pointer position tracker for accurate drag positioning */
+let globalPointerY = 0;
+
 /**
  * Custom collision detector for kanban boards.
  * Prioritizes task droppables over column droppables and calculates
  * the correct insertion point based on the pointer's Y position.
+ *
+ * Uses global pointer position for accurate collision detection since
+ * draggable.transformed.center doesn't track properly with DragOverlay.
  */
 const createKanbanCollisionDetector = (
   columnIds: Set<string>,
@@ -68,7 +75,11 @@ const createKanbanCollisionDetector = (
     droppables: Droppable[],
     context: { activeDroppableId: string | number | null },
   ): Droppable | null => {
-    const draggableCenter = draggable.transformed.center;
+    // Use actual pointer position for Y, but draggable center for X (column detection)
+    const draggableCenter = {
+      x: draggable.transformed.center.x,
+      y: globalPointerY || draggable.transformed.center.y,
+    };
 
     // Separate column droppables from task droppables
     const columnDroppables: Droppable[] = [];
@@ -160,7 +171,8 @@ const createKanbanCollisionDetector = (
 
       // Use top edge for first task - if above the midpoint of first task, select it
       // This ensures dragging to the very top of a column works
-      const firstMidpoint = (effectiveFirst.layout.top + effectiveFirst.layout.bottom) / 2;
+      const firstMidpoint =
+        (effectiveFirst.layout.top + effectiveFirst.layout.bottom) / 2;
       if (draggableCenter.y < firstMidpoint) {
         bestMatch = effectiveFirst;
       } else if (draggableCenter.y > effectiveLast.layout.bottom) {
@@ -171,7 +183,8 @@ const createKanbanCollisionDetector = (
         for (let i = 0; i < nonDraggedTasks.length - 1; i++) {
           const current = nonDraggedTasks[i];
           const next = nonDraggedTasks[i + 1];
-          const currentMidpoint = (current.layout.top + current.layout.bottom) / 2;
+          const currentMidpoint =
+            (current.layout.top + current.layout.bottom) / 2;
           const nextMidpoint = (next.layout.top + next.layout.bottom) / 2;
 
           if (
@@ -342,21 +355,21 @@ export default function KanbanBoard(props: KanbanBoardProps) {
    */
   const allTasks: Accessor<Task[]> = () => (tasksQuery.data ?? []) as Task[];
 
-  // Create task modal state
   const [isCreateModalOpen, setIsCreateModalOpen] = createSignal(false);
   const [selectedColumnId, setSelectedColumnId] = createSignal<string | null>(
     null,
   );
   const [selectedColumnName, setSelectedColumnName] = createSignal("");
 
-  // Dragging state
   const [activeTaskId, setActiveTaskId] = createSignal<string | null>(null);
 
-  // Drop target tracking for visual gap indicators
   const [dropTarget, setDropTarget] = createSignal<DropTarget | null>(null);
 
-  // Column settings popup state - lifted to parent to survive component re-renders
-  // caused by Electric sync updates
+  // Track the current droppable during drag for continuous position updates
+  const [currentDroppable, setCurrentDroppable] =
+    createSignal<Droppable | null>(null);
+
+  // State is lifted to survive re-renders from Electric sync updates
   const [openColumnSettingsId, setOpenColumnSettingsId] = createSignal<
     string | null
   >(null);
@@ -364,7 +377,6 @@ export default function KanbanBoard(props: KanbanBoardProps) {
     HTMLButtonElement | undefined
   >(undefined);
 
-  // Get the column object for the open settings popup
   const openSettingsColumn = createMemo(() => {
     const columnId = openColumnSettingsId();
     if (!columnId) return null;
@@ -385,10 +397,8 @@ export default function KanbanBoard(props: KanbanBoardProps) {
     });
   });
 
-  // Settings panel is controlled by URL via props
   const isSettingsOpen = () => props.settingsTab != null;
 
-  // Find the TODO column
   const todoColumn = () =>
     columns().find((c) => c.name.toUpperCase() === "TODO");
 
@@ -406,7 +416,6 @@ export default function KanbanBoard(props: KanbanBoardProps) {
     setSelectedColumnName("");
   };
 
-  // Task click handler - use prop if provided
   const handleTaskClick = (task: Task) => {
     if (props.onTaskClick) {
       props.onTaskClick(task);
@@ -432,12 +441,10 @@ export default function KanbanBoard(props: KanbanBoardProps) {
     return map;
   });
 
-  // Get tasks for a specific column using memoized map
   const getTasksForColumn = (columnId: string): Task[] => {
     return tasksByColumn().get(columnId) ?? [];
   };
 
-  // Create a map of task IDs to column IDs for the collision detector
   const taskColumnMap = createMemo(() => {
     const map = new Map<string, string>();
     for (const task of allTasks()) {
@@ -446,194 +453,262 @@ export default function KanbanBoard(props: KanbanBoardProps) {
     return map;
   });
 
-  // Create a set of column IDs for the collision detector
   const columnIdSet = createMemo(() => new Set(columns().map((c) => c.id)));
 
-  // Create the custom collision detector
   const collisionDetector = createMemo(() =>
     createKanbanCollisionDetector(columnIdSet(), (taskId) =>
       taskColumnMap().get(taskId),
     ),
   );
 
-  // Get active task being dragged
   const activeTask = createMemo(() => {
     const id = activeTaskId();
     if (!id) return null;
     return allTasks().find((t) => t.id === id) || null;
   });
 
-  // Handle drag start
+  // Function to calculate drop target based on droppable and pointer position
+  const calculateDropTarget = (
+    droppable: Droppable,
+    draggedTaskId: string,
+    currentPointerY: number,
+  ): DropTarget | null => {
+    const droppableId = droppable.id as string;
+
+    // Ignore if we're hovering over the dragged task itself
+    if (droppableId === draggedTaskId) {
+      return null;
+    }
+
+    // Check if we're over a column
+    if (columnIdSet().has(droppableId)) {
+      return {
+        columnId: droppableId,
+        beforeTaskId: null,
+      };
+    }
+
+    // We're over a task
+    const targetTask = allTasks().find((t) => t.id === droppableId);
+    if (!targetTask) return null;
+
+    const columnTasks = getTasksForColumn(targetTask.column_id)
+      .filter((t) => t.id !== draggedTaskId)
+      .sort((a, b) => {
+        const posA = Number(a.position) || 0;
+        const posB = Number(b.position) || 0;
+        if (posA !== posB) return posA - posB;
+        return a.id.localeCompare(b.id);
+      });
+
+    const targetIndex = columnTasks.findIndex((t) => t.id === targetTask.id);
+    const targetMidpoint = (droppable.layout.top + droppable.layout.bottom) / 2;
+    const insertBefore = currentPointerY < targetMidpoint;
+
+    if (insertBefore) {
+      return {
+        columnId: targetTask.column_id,
+        beforeTaskId: targetTask.id,
+      };
+    } else {
+      const nextTask = columnTasks[targetIndex + 1];
+      return {
+        columnId: targetTask.column_id,
+        beforeTaskId: nextTask?.id ?? null,
+      };
+    }
+  };
+
   const onDragStart = ({ draggable }: DragEvent) => {
     setActiveTaskId(draggable.id as string);
   };
 
-  // Handle drag over - update drop target for visual feedback
+  // Track pointer position during drag for continuous drop target updates
+  onMount(() => {
+    const handlePointerMove = (e: PointerEvent) => {
+      globalPointerY = e.clientY;
+
+      // Update drop target reactively during drag
+      const droppable = currentDroppable();
+      const draggedId = activeTaskId();
+      if (droppable && draggedId) {
+        const newTarget = calculateDropTarget(droppable, draggedId, e.clientY);
+        if (newTarget) {
+          setDropTarget(newTarget);
+        }
+      }
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    onCleanup(() => {
+      window.removeEventListener("pointermove", handlePointerMove);
+    });
+  });
+
   const onDragOver = ({ draggable, droppable }: DragEvent) => {
     if (!draggable || !droppable) {
       setDropTarget(null);
+      setCurrentDroppable(null);
       return;
     }
 
     const draggedTaskId = draggable.id as string;
-    const droppableId = droppable.id as string;
 
-    // Check if we're over a column
-    if (columnIdSet().has(droppableId)) {
-      // Dropping at end of column
-      setDropTarget({
-        columnId: droppableId,
-        beforeTaskId: null,
-      });
-    } else {
-      // We're over a task
-      const targetTask = allTasks().find((t) => t.id === droppableId);
-      if (targetTask && targetTask.id !== draggedTaskId) {
-        const columnTasks = getTasksForColumn(targetTask.column_id)
-          .filter((t) => t.id !== draggedTaskId)
-          .sort((a, b) => Number(a.position) - Number(b.position));
+    // Store current droppable for continuous position updates
+    setCurrentDroppable(droppable);
 
-        const targetIndex = columnTasks.findIndex(
-          (t) => t.id === targetTask.id,
-        );
-
-        // Determine if we're inserting before or after the target
-        // Compare draggable Y with the top of the target task's layout
-        // This ensures that when we're above a task's top edge, we insert before it
-        const draggableY = draggable.transformed.center.y;
-        const targetTop = droppable.layout.top;
-        const targetBottom = droppable.layout.bottom;
-        const targetMidpoint = (targetTop + targetBottom) / 2;
-
-        // If dragging above the midpoint of the target, insert before
-        // This fixes the issue where dragging to the top of the list wasn't working
-        if (draggableY < targetMidpoint) {
-          // Above midpoint - insert before this task
-          setDropTarget({
-            columnId: targetTask.column_id,
-            beforeTaskId: targetTask.id,
-          });
-        } else {
-          // Below midpoint - insert after (before the next task, or null if last)
-          const nextTask = columnTasks[targetIndex + 1];
-          setDropTarget({
-            columnId: targetTask.column_id,
-            beforeTaskId: nextTask?.id ?? null,
-          });
-        }
-      }
+    // Calculate initial drop target
+    const newTarget = calculateDropTarget(
+      droppable,
+      draggedTaskId,
+      globalPointerY,
+    );
+    if (newTarget) {
+      setDropTarget(newTarget);
     }
   };
 
   // Handle drag end
   const onDragEnd = async ({ draggable, droppable }: DragEvent) => {
-    const currentDropTarget = dropTarget();
     setActiveTaskId(null);
     setDropTarget(null);
+    setCurrentDroppable(null);
 
-    if (!draggable) return;
+    if (!draggable || !droppable) return;
 
     const taskId = draggable.id as string;
     const task = allTasks().find((t) => t.id === taskId);
     if (!task) return;
 
-    // Use the drop target we calculated during drag for accurate positioning
-    if (currentDropTarget) {
-      const { columnId, beforeTaskId } = currentDropTarget;
-      const isSameColumn = task.column_id === columnId;
+    const droppableId = droppable.id as string;
 
-      // Get tasks in target column (excluding the dragged task)
+    // Recalculate the exact drop position using current pointer position
+    // This is more accurate than using cached dropTarget since onDragOver
+    // only fires when droppable changes, not when pointer moves within same droppable
+    let columnId: string;
+    let beforeTaskId: string | null;
+
+    if (columnIdSet().has(droppableId)) {
+      // Dropped on a column - insert at end
+      columnId = droppableId;
+      beforeTaskId = null;
+    } else {
+      // Dropped on a task - calculate insertion point using pointer position
+      const targetTask = allTasks().find((t) => t.id === droppableId);
+      if (!targetTask) return;
+
+      columnId = targetTask.column_id;
       const columnTasks = getTasksForColumn(columnId)
         .filter((t) => t.id !== task.id)
-        .sort((a, b) => Number(a.position) - Number(b.position));
+        .sort((a, b) => {
+          const posA = Number(a.position) || 0;
+          const posB = Number(b.position) || 0;
+          if (posA !== posB) return posA - posB;
+          return a.id.localeCompare(b.id);
+        });
 
-      let newPosition: number;
+      const targetIndex = columnTasks.findIndex((t) => t.id === targetTask.id);
+      const pointerY = globalPointerY;
+      const targetMidpoint =
+        (droppable.layout.top + droppable.layout.bottom) / 2;
+      const insertBefore = pointerY < targetMidpoint;
 
-      if (beforeTaskId === null) {
-        // Insert at end of column
-        newPosition =
-          columnTasks.length > 0
-            ? Math.max(...columnTasks.map((t) => Number(t.position) || 0)) + 1
-            : 1;
+      if (insertBefore) {
+        beforeTaskId = targetTask.id;
       } else {
-        // Insert before the specified task
-        const beforeTaskIndex = columnTasks.findIndex(
-          (t) => t.id === beforeTaskId,
-        );
-        const beforeTask = columnTasks[beforeTaskIndex];
-
-        if (beforeTaskIndex === 0 || beforeTaskIndex === -1) {
-          // Insert at the beginning
-          const firstPos = beforeTask
-            ? Number(beforeTask.position) || 1
-            : columnTasks.length > 0
-              ? Number(columnTasks[0].position) || 1
-              : 1;
-          newPosition = Math.max(0.1, firstPos / 2);
-        } else {
-          // Insert between two tasks
-          const prevTask = columnTasks[beforeTaskIndex - 1];
-          const prevPos = Number(prevTask.position) || 0;
-          const beforePos = Number(beforeTask.position) || prevPos + 2;
-          newPosition = (prevPos + beforePos) / 2;
-        }
+        const nextTask = columnTasks[targetIndex + 1];
+        beforeTaskId = nextTask?.id ?? null;
       }
-
-      // Ensure position is valid
-      if (!Number.isFinite(newPosition) || newPosition <= 0) {
-        newPosition = 0.1;
-      }
-
-      // Skip if no actual change
-      if (isSameColumn && Math.abs(Number(task.position) - newPosition) < 0.001) {
-        return;
-      }
-
-      try {
-        if (isSameColumn) {
-          await moveTask(taskId, { position: newPosition });
-        } else {
-          await moveTask(taskId, { column_id: columnId, position: newPosition });
-        }
-      } catch (err) {
-        console.error("Failed to move task:", err);
-      }
-      return;
     }
 
-    // Fallback: use droppable if no drop target was calculated
-    if (!droppable) return;
+    const isSameColumn = task.column_id === columnId;
 
-    const droppableId = droppable.id as string;
-    const targetColumn = columns().find((c) => c.id === droppableId);
+    // Get tasks in target column (excluding the dragged task)
+    const columnTasks = getTasksForColumn(columnId)
+      .filter((t) => t.id !== task.id)
+      .sort((a, b) => {
+        const posA = Number(a.position) || 0;
+        const posB = Number(b.position) || 0;
+        if (posA !== posB) return posA - posB;
+        return a.id.localeCompare(b.id);
+      });
 
-    if (targetColumn) {
-      // Moving to a column (drop zone) - place at end
-      if (task.column_id !== targetColumn.id) {
-        const columnTasks = getTasksForColumn(targetColumn.id);
-        const newPosition =
-          columnTasks.length > 0
-            ? Math.max(...columnTasks.map((t) => Number(t.position))) + 1
-            : 1;
+    let newPosition: number;
+    const positions = columnTasks.map((t) => Number(t.position) || 0);
 
-        try {
-          await moveTask(taskId, {
-            column_id: targetColumn.id,
-            position: newPosition,
-          });
-        } catch (err) {
-          console.error("Failed to move task:", err);
+    if (beforeTaskId === null) {
+      // Insert at end of column
+      if (columnTasks.length === 0) {
+        newPosition = 1000;
+      } else {
+        const maxPos = Math.max(...positions);
+        newPosition = maxPos + 1000;
+      }
+    } else {
+      // Insert before the specified task
+      const beforeTaskIndex = columnTasks.findIndex(
+        (t) => t.id === beforeTaskId,
+      );
+
+      if (beforeTaskIndex === -1) {
+        // Task not found, insert at end
+        newPosition =
+          columnTasks.length > 0 ? Math.max(...positions) + 1000 : 1000;
+      } else if (beforeTaskIndex === 0) {
+        // Insert at the very beginning - use negative position
+        const firstPos = positions[0];
+        newPosition = firstPos - 1000;
+      } else {
+        // Insert between two tasks
+        const prevPos = positions[beforeTaskIndex - 1];
+        const beforePos = positions[beforeTaskIndex];
+        const gap = beforePos - prevPos;
+
+        if (gap > 0.001) {
+          newPosition = (prevPos + beforePos) / 2;
+        } else {
+          newPosition = beforePos - 0.001;
         }
       }
+    }
+
+    // Ensure position is valid
+    if (!Number.isFinite(newPosition)) {
+      newPosition = 0;
+    }
+
+    // Skip if no actual change
+    if (isSameColumn) {
+      const currentPos = Number(task.position) || 0;
+      if (Math.abs(currentPos - newPosition) < 0.001) {
+        return;
+      }
+    }
+
+    // Execute the move
+    if (isSameColumn) {
+      await sdk
+        .move_task({
+          identity: taskId,
+          input: { position: toDecimal(newPosition) },
+        })
+        .then(unwrap);
+    } else {
+      await sdk
+        .move_task({
+          identity: taskId,
+          input: { column_id: columnId, position: toDecimal(newPosition) },
+        })
+        .then(unwrap);
     }
   };
 
   const isLoading = () => isBoardLoading() || isColumnsLoading();
 
   return (
-    <div class="min-h-screen bg-gray-950 text-white">
+    <div class="h-screen flex flex-col bg-gray-950 text-white overflow-hidden">
       {/* Header */}
-      <header class="bg-gray-900/50 border-b border-gray-800 px-6 py-4">
+      <header class="flex-shrink-0 bg-gray-900/50 border-b border-gray-800 px-6 py-4">
         <Show
           when={!isLoading() && board()}
           fallback={<div class="h-8 w-48 bg-gray-800 animate-pulse rounded" />}
@@ -701,7 +776,7 @@ export default function KanbanBoard(props: KanbanBoardProps) {
       </header>
 
       {/* Board Content */}
-      <main class="p-6">
+      <main class="flex-1 p-6 overflow-hidden">
         <Show when={!isLoading()} fallback={<BoardLoadingSkeleton />}>
           <TaskRelationProvider tasks={allTasks}>
             <DragDropProvider
@@ -711,7 +786,7 @@ export default function KanbanBoard(props: KanbanBoardProps) {
               collisionDetector={collisionDetector()}
             >
               <DragDropSensors />
-              <div class="flex gap-4 overflow-x-auto pb-4">
+              <div class="flex gap-4 h-full overflow-x-auto pb-4">
                 <For each={columns()}>
                   {(column) => (
                     <KanbanColumn

@@ -1,11 +1,6 @@
 import { createEffect, createSignal, on, Show } from "solid-js";
-import {
-  type Column,
-  type CreateTaskInput,
-  createTask,
-  moveTask,
-  refinePreview,
-} from "~/lib/useKanban";
+import * as sdk from "~/lib/generated/ash";
+import { type Column, toDecimal, unwrap } from "~/lib/useKanban";
 import ImageTextarea, {
   type InlineImage,
   prepareImagesForApi,
@@ -14,11 +9,10 @@ import ErrorBanner from "./ui/ErrorBanner";
 import { LightningIcon, LoadingSpinner, PlayIcon } from "./ui/Icons";
 import Modal from "./ui/Modal";
 
-/** Maximum length for auto-generated branch names */
 const MAX_BRANCH_NAME_LENGTH = 20;
-
-/** Prefix for auto-generated branch names */
 const BRANCH_NAME_PREFIX = "viban-";
+const STORAGE_KEY_TITLE = "create-task-draft-title";
+const STORAGE_KEY_DESCRIPTION = "create-task-draft-description";
 
 interface CreateTaskModalProps {
   isOpen: boolean;
@@ -84,25 +78,53 @@ export default function CreateTaskModal(props: CreateTaskModalProps) {
     }),
   );
 
-  // Initialize form with initial values when modal opens
-  // Use `on` to explicitly track `isOpen` changes and avoid running on unrelated updates
+  let titleInputRef: HTMLInputElement | undefined;
+
   createEffect(
     on(
       () => props.isOpen,
       (isOpen) => {
-        if (isOpen && props.initialValues) {
-          if (props.initialValues.title) {
-            setTitle(props.initialValues.title);
+        if (isOpen) {
+          if (props.initialValues) {
+            if (props.initialValues.title) {
+              setTitle(props.initialValues.title);
+            }
+            if (props.initialValues.description) {
+              setDescription(props.initialValues.description);
+            }
+          } else {
+            const savedTitle = localStorage.getItem(STORAGE_KEY_TITLE);
+            const savedDescription = localStorage.getItem(
+              STORAGE_KEY_DESCRIPTION,
+            );
+            if (savedTitle) setTitle(savedTitle);
+            if (savedDescription) setDescription(savedDescription);
           }
-          if (props.initialValues.description) {
-            setDescription(props.initialValues.description);
-          }
+          setTimeout(() => titleInputRef?.focus(), 0);
         }
       },
     ),
   );
 
-  const resetForm = () => {
+  createEffect(
+    on(title, (value) => {
+      if (!props.isOpen) return;
+      if (value) {
+        localStorage.setItem(STORAGE_KEY_TITLE, value);
+      }
+    }),
+  );
+
+  createEffect(
+    on(description, (value) => {
+      if (!props.isOpen) return;
+      if (value) {
+        localStorage.setItem(STORAGE_KEY_DESCRIPTION, value);
+      }
+    }),
+  );
+
+  const resetForm = (clearStorage = false) => {
     setTitle("");
     setDescription("");
     setDescriptionImages([]);
@@ -110,6 +132,10 @@ export default function CreateTaskModal(props: CreateTaskModalProps) {
     setBranchNameManuallyEdited(false);
     setAutostart(false);
     setError(null);
+    if (clearStorage) {
+      localStorage.removeItem(STORAGE_KEY_TITLE);
+      localStorage.removeItem(STORAGE_KEY_DESCRIPTION);
+    }
   };
 
   // Handle refine button click
@@ -122,18 +148,18 @@ export default function CreateTaskModal(props: CreateTaskModalProps) {
     setIsRefining(true);
     setError(null);
 
-    try {
-      const result = await refinePreview({
-        title: title().trim(),
-        description: description().trim() || undefined,
-      });
+    const result = await sdk
+      .refine_preview({
+        input: {
+          title: title().trim(),
+          description: description().trim() || undefined,
+        },
+      })
+      .then(unwrap);
+
+    setIsRefining(false);
+    if (result) {
       setDescription(result.refined_description);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to refine description",
-      );
-    } finally {
-      setIsRefining(false);
     }
   };
 
@@ -151,37 +177,45 @@ export default function CreateTaskModal(props: CreateTaskModalProps) {
     }
 
     setIsSubmitting(true);
-    setError(null);
 
-    try {
-      const images = descriptionImages();
-      const input: CreateTaskInput = {
-        title: title().trim(),
-        description: description().trim() || undefined,
-        column_id: props.columnId,
-        position: Date.now(), // Simple position based on timestamp
-        custom_branch_name: customBranchName().trim() || undefined,
-        description_images:
-          images.length > 0 ? prepareImagesForApi(images) : undefined,
-      };
+    const images = descriptionImages();
+    const task = await sdk
+      .create_task({
+        input: {
+          title: title().trim(),
+          description: description().trim() || undefined,
+          column_id: props.columnId,
+          position: toDecimal(Date.now()),
+          custom_branch_name: customBranchName().trim() || undefined,
+          description_images:
+            images.length > 0 ? prepareImagesForApi(images) : undefined,
+        },
+        fields: ["id"],
+      })
+      .then(unwrap);
 
-      const task = await createTask(input);
-
-      // If autostart is enabled and we have an "In Progress" column, move the task there
-      const targetColumn = inProgressColumn();
-      if (autostart() && targetColumn) {
-        await moveTask(task.id, {
-          column_id: targetColumn.id,
-          position: Date.now(),
-        });
-      }
-
-      handleClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create task");
-    } finally {
+    if (!task) {
       setIsSubmitting(false);
+      return;
     }
+
+    // If autostart is enabled and we have an "In Progress" column, move the task there
+    const targetColumn = inProgressColumn();
+    if (autostart() && targetColumn) {
+      await sdk
+        .move_task({
+          identity: task.id,
+          input: {
+            column_id: targetColumn.id,
+            position: toDecimal(Date.now()),
+          },
+        })
+        .then(unwrap);
+    }
+
+    setIsSubmitting(false);
+    resetForm(true);
+    props.onClose();
   };
 
   return (
@@ -199,13 +233,13 @@ export default function CreateTaskModal(props: CreateTaskModalProps) {
             Title *
           </label>
           <input
+            ref={titleInputRef}
             id="title"
             type="text"
             value={title()}
             onInput={(e) => setTitle(e.currentTarget.value)}
             placeholder="Enter task title..."
             class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-            autofocus
           />
         </div>
 

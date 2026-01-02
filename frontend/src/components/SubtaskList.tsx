@@ -1,10 +1,6 @@
 import { createResource, createSignal, For, Show } from "solid-js";
-import {
-  fetchSubtasks,
-  generateSubtasks,
-  type Subtask,
-  type Task,
-} from "~/lib/useKanban";
+import * as sdk from "~/lib/generated/ash";
+import { type Subtask, type Task, unwrap } from "~/lib/useKanban";
 import ErrorBanner from "./ui/ErrorBanner";
 import {
   ChevronRightIcon,
@@ -36,8 +32,6 @@ function getStatusColor(agentStatus: SubtaskAgentStatus): string {
     case "thinking":
     case "executing":
       return "bg-blue-500";
-    case "waiting_for_user":
-      return "bg-yellow-500";
     case "error":
       return "bg-red-500";
     default:
@@ -66,7 +60,22 @@ export default function SubtaskList(props: SubtaskListProps) {
   // Fetch subtasks
   const [subtasks, { refetch }] = createResource(
     () => props.task.id,
-    fetchSubtasks,
+    async (taskId: string): Promise<Subtask[]> => {
+      const result = await sdk
+        .list_subtasks({
+          input: { parent_task_id: taskId },
+          fields: [
+            "id",
+            "title",
+            "description",
+            "agent_status",
+            "priority",
+            "position",
+          ],
+        })
+        .then(unwrap);
+      return result as unknown as Subtask[];
+    },
   );
 
   // Check if generation is in progress (from task status or local state)
@@ -90,19 +99,15 @@ export default function SubtaskList(props: SubtaskListProps) {
     setIsGenerating(true);
     setError(null);
 
-    try {
-      await generateSubtasks(props.task.id);
-      // Poll for completion - the task status will update via Electric sync
-      // but we can refetch subtasks after a delay using increasing intervals
-      for (const delay of SUBTASK_POLL_INTERVALS_MS) {
-        setTimeout(() => refetch(), delay);
-      }
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to generate subtasks",
-      );
-    } finally {
-      setIsGenerating(false);
+    await sdk
+      .generate_subtasks({ input: { task_id: props.task.id } })
+      .then(unwrap);
+
+    setIsGenerating(false);
+    // Poll for completion - the task status will update via Electric sync
+    // but we can refetch subtasks after a delay using increasing intervals
+    for (const delay of SUBTASK_POLL_INTERVALS_MS) {
+      setTimeout(() => refetch(), delay);
     }
   };
 
@@ -180,10 +185,6 @@ export default function SubtaskList(props: SubtaskListProps) {
                 >
                   <LoadingSpinner class="w-3 h-3 text-blue-400" />
                 </Show>
-                <Show when={subtask.agent_status === "waiting_for_user"}>
-                  <span class="text-xs text-yellow-400">Needs input</span>
-                </Show>
-
                 {/* Chevron */}
                 <ChevronRightIcon class="w-4 h-4 text-gray-500" />
               </button>
@@ -239,6 +240,26 @@ export default function SubtaskList(props: SubtaskListProps) {
           <span class="text-sm text-purple-400">
             AI is breaking down your task into subtasks...
           </span>
+        </div>
+      </Show>
+
+      {/* Generation failed indicator */}
+      <Show when={props.task.subtask_generation_status === "failed"}>
+        <div class="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+          <span class="text-sm text-red-400">
+            Failed to generate subtasks.
+            <Show when={props.task.agent_status_message}>
+              {" "}
+              {props.task.agent_status_message}
+            </Show>
+          </span>
+          <button
+            type="button"
+            onClick={handleGenerate}
+            class="ml-auto text-xs px-2 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded transition-colors"
+          >
+            Retry
+          </button>
         </div>
       </Show>
     </div>

@@ -4,6 +4,7 @@ defmodule Viban.GitHub.Client do
   """
 
   require Logger
+  alias Viban.GitHub.PRDetector
 
   @doc """
   Create a pull request.
@@ -26,7 +27,7 @@ defmodule Viban.GitHub.Client do
     case run_gh(args, repo_path) do
       {:ok, output} ->
         pr_url = String.trim(output)
-        pr_number = extract_pr_number(pr_url)
+        pr_number = PRDetector.extract_pr_number(pr_url)
         {:ok, %{url: pr_url, number: pr_number, status: :open}}
 
       {:error, error} ->
@@ -83,14 +84,15 @@ defmodule Viban.GitHub.Client do
       "view",
       to_string(pr_number),
       "--json",
-      "state,isDraft,merged"
+      "state,isDraft,mergedAt"
     ]
 
     case run_gh(args, repo_path) do
       {:ok, output} ->
         case Jason.decode(output) do
           {:ok, pr} ->
-            {:ok, parse_pr_status(pr["state"], pr["isDraft"], pr["merged"])}
+            merged = pr["mergedAt"] != nil
+            {:ok, parse_pr_status(pr["state"], pr["isDraft"], merged)}
 
           {:error, _} ->
             {:error, "Failed to parse PR status"}
@@ -111,6 +113,56 @@ defmodule Viban.GitHub.Client do
     end
   end
 
+  @doc """
+  Get the default branch for the repository.
+  """
+  def get_default_branch(repo_path) do
+    args = ["repo", "view", "--json", "defaultBranchRef", "--jq", ".defaultBranchRef.name"]
+
+    case run_gh(args, repo_path) do
+      {:ok, output} ->
+        {:ok, String.trim(output)}
+
+      {:error, error} ->
+        {:error, error}
+    end
+  end
+
+  @doc """
+  List branches in the repository.
+  Returns a list of branch names with the default branch marked.
+  """
+  def list_branches(repo_path) do
+    with {:ok, default} <- get_default_branch(repo_path),
+         {:ok, branches} <- fetch_branch_list(repo_path) do
+      result =
+        branches
+        |> Enum.map(fn name ->
+          %{name: name, is_default: name == default}
+        end)
+        |> Enum.sort_by(fn b -> {!b.is_default, b.name} end)
+
+      {:ok, result}
+    end
+  end
+
+  defp fetch_branch_list(repo_path) do
+    args = ["api", "repos/{owner}/{repo}/branches", "--jq", ".[].name"]
+
+    case run_gh(args, repo_path) do
+      {:ok, output} ->
+        branches =
+          output
+          |> String.split("\n", trim: true)
+          |> Enum.map(&String.trim/1)
+
+        {:ok, branches}
+
+      {:error, error} ->
+        {:error, error}
+    end
+  end
+
   # Run gh CLI command in the specified directory
   defp run_gh(args, working_directory) do
     opts = [cd: working_directory, stderr_to_stdout: true]
@@ -125,13 +177,6 @@ defmodule Viban.GitHub.Client do
         )
 
         {:error, String.trim(error)}
-    end
-  end
-
-  defp extract_pr_number(url) do
-    case Regex.run(~r/\/pull\/(\d+)/, url) do
-      [_, number] -> String.to_integer(number)
-      _ -> nil
     end
   end
 

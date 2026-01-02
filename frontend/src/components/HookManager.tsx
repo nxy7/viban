@@ -1,15 +1,11 @@
 import { createMemo, createResource, createSignal, For, Show } from "solid-js";
+import * as sdk from "~/lib/generated/ash";
 import {
   type AgentExecutor,
   type CombinedHook,
-  type CreateAgentHookInput,
-  type CreateScriptHookInput,
-  createAgentHook,
-  createScriptHook,
-  deleteHook,
   fetchAllHooks,
   type HookKind,
-  updateHook,
+  unwrap,
 } from "~/lib/useKanban";
 import ErrorBanner from "./ui/ErrorBanner";
 import {
@@ -123,55 +119,67 @@ export default function HookManager(props: HookManagerProps) {
     setIsSaving(true);
     setError(null);
 
-    try {
-      if (isCreating()) {
-        if (hookKind() === "script") {
-          const input: CreateScriptHookInput = {
-            name: name().trim(),
-            command: command().trim(),
-            board_id: props.boardId,
-          };
-          await createScriptHook(input);
-        } else {
-          const input: CreateAgentHookInput = {
-            name: name().trim(),
-            agent_prompt: agentPrompt().trim(),
-            agent_executor: agentExecutor(),
-            agent_auto_approve: agentAutoApprove(),
-            board_id: props.boardId,
-          };
-          await createAgentHook(input);
-        }
+    let result;
+    if (isCreating()) {
+      if (hookKind() === "script") {
+        result = await sdk
+          .create_script_hook({
+            input: {
+              name: name().trim(),
+              command: command().trim(),
+              board_id: props.boardId,
+            },
+          })
+          .then(unwrap);
       } else {
-        const hookToEdit = editingHook();
-        if (!hookToEdit) return;
-        await updateHook(hookToEdit.id, {
-          name: name().trim(),
-          command: hookKind() === "script" ? command().trim() : undefined,
-          agent_prompt:
-            hookKind() === "agent" ? agentPrompt().trim() : undefined,
-          agent_executor: hookKind() === "agent" ? agentExecutor() : undefined,
-          agent_auto_approve:
-            hookKind() === "agent" ? agentAutoApprove() : undefined,
-        });
+        result = await sdk
+          .create_agent_hook({
+            input: {
+              name: name().trim(),
+              agent_prompt: agentPrompt().trim(),
+              agent_executor: agentExecutor(),
+              agent_auto_approve: agentAutoApprove(),
+              board_id: props.boardId,
+            },
+          })
+          .then(unwrap);
       }
+    } else {
+      const hookToEdit = editingHook();
+      if (!hookToEdit) {
+        setIsSaving(false);
+        return;
+      }
+      result = await sdk
+        .update_hook({
+          identity: hookToEdit.id,
+          input: {
+            name: name().trim(),
+            command: hookKind() === "script" ? command().trim() : undefined,
+            agent_prompt:
+              hookKind() === "agent" ? agentPrompt().trim() : undefined,
+            agent_executor:
+              hookKind() === "agent" ? agentExecutor() : undefined,
+            agent_auto_approve:
+              hookKind() === "agent" ? agentAutoApprove() : undefined,
+          },
+        })
+        .then(unwrap);
+    }
+
+    setIsSaving(false);
+    if (result) {
       cancelEdit();
       refetch();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save hook");
-    } finally {
-      setIsSaving(false);
     }
   };
 
   const handleDelete = async (hookId: string) => {
     if (!confirm("Are you sure you want to delete this hook?")) return;
 
-    try {
-      await deleteHook(hookId);
+    const result = await sdk.destroy_hook({ identity: hookId }).then(unwrap);
+    if (result !== null) {
       refetch();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete hook");
     }
   };
 

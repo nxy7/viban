@@ -19,6 +19,10 @@ defmodule Viban.Executors.ExecutorSession do
   postgres do
     table "executor_sessions"
     repo Viban.Repo
+
+    references do
+      reference :task, on_delete: :delete
+    end
   end
 
   attributes do
@@ -94,7 +98,6 @@ defmodule Viban.Executors.ExecutorSession do
 
     destroy :destroy do
       primary? true
-      change cascade_destroy(:messages)
     end
 
     create :create do

@@ -3,7 +3,6 @@ import {
   createSortable,
   DragDropProvider,
   DragDropSensors,
-  type DragEvent,
   DragOverlay,
   SortableProvider,
 } from "@thisbeyond/solid-dnd";
@@ -17,16 +16,14 @@ import {
   Show,
 } from "solid-js";
 import { Portal } from "solid-js/web";
+import * as sdk from "~/lib/generated/ash";
+import { useHookReordering } from "~/hooks/useHookReordering";
 import {
   type Column,
   type ColumnHook,
   type CombinedHook,
-  createColumnHook,
-  deleteColumnHook,
   fetchAllHooks,
-  updateColumn,
-  updateColumnHook,
-  updateColumnSettings,
+  unwrap,
   useColumnHooks,
 } from "~/lib/useKanban";
 import { getDefaultSound, type SoundType } from "~/lib/sounds";
@@ -126,7 +123,10 @@ export default function ColumnSettingsPopup(props: ColumnSettingsPopupProps) {
 
       // Check if click is outside popup
       if (popupRef && !popupRef.contains(e.target as Node)) {
-        console.log("[ColumnSettingsPopup] Closing due to click outside", e.target);
+        console.log(
+          "[ColumnSettingsPopup] Closing due to click outside",
+          e.target,
+        );
         props.onClose();
       }
     };
@@ -243,29 +243,49 @@ function GeneralSettings(props: GeneralSettingsProps) {
   );
   const [isSaving, setIsSaving] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = createSignal(false);
+  const [isDeleting, setIsDeleting] = createSignal(false);
 
   const isSystemColumn = (SYSTEM_COLUMNS as readonly string[]).includes(
     props.column.name,
   );
 
+  const handleDeleteAllTasks = async () => {
+    setIsDeleting(true);
+    setError(null);
+
+    const result = await sdk
+      .delete_all_column_tasks({ input: { column_id: props.column.id } })
+      .then(unwrap);
+
+    setIsDeleting(false);
+    if (result !== null) {
+      setShowDeleteConfirm(false);
+      props.onClose();
+    }
+  };
+
   const handleSave = async () => {
     setIsSaving(true);
     setError(null);
 
-    try {
-      await updateColumn(props.column.id, {
-        name: isSystemColumn ? undefined : name(),
-        color: color(),
-        settings: {
-          ...props.column.settings,
-          description: description() || null,
+    const result = await sdk
+      .update_column({
+        identity: props.column.id,
+        input: {
+          name: isSystemColumn ? undefined : name(),
+          color: color(),
+          settings: {
+            ...props.column.settings,
+            description: description() || null,
+          },
         },
-      });
+      })
+      .then(unwrap);
+
+    setIsSaving(false);
+    if (result) {
       props.onClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save");
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -334,6 +354,51 @@ function GeneralSettings(props: GeneralSettingsProps) {
       >
         {isSaving() ? "Saving..." : "Save Changes"}
       </button>
+
+      {/* Danger Zone */}
+      <div class="pt-4 mt-4 border-t border-gray-700">
+        <h4 class="text-sm font-medium text-red-400 mb-2">Danger Zone</h4>
+        <Show
+          when={showDeleteConfirm()}
+          fallback={
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              class="w-full py-2 text-sm bg-red-600/20 hover:bg-red-600/30 border border-red-600/50 rounded-md font-medium text-red-400 transition-colors"
+            >
+              Delete All Tasks
+            </button>
+          }
+        >
+          <div class="p-3 bg-red-900/20 border border-red-500/30 rounded-md space-y-2">
+            <p class="text-sm text-red-400">
+              Delete all tasks in this column? This cannot be undone.
+            </p>
+            <Show when={error()}>
+              <p class="text-sm text-red-300 bg-red-900/50 p-2 rounded">
+                {error()}
+              </p>
+            </Show>
+            <div class="flex gap-2">
+              <button
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setError(null);
+                }}
+                class="flex-1 py-1.5 px-3 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded text-sm transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteAllTasks}
+                disabled={isDeleting()}
+                class="flex-1 py-1.5 px-3 bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:cursor-not-allowed text-white rounded text-sm transition-colors"
+              >
+                {isDeleting() ? "Deleting..." : "Delete All"}
+              </button>
+            </div>
+          </div>
+        </Show>
+      </div>
     </div>
   );
 }
@@ -370,7 +435,12 @@ function HooksSettings(props: HooksSettingsProps) {
     setHooksEnabled(enabled);
     setIsSaving(true);
     try {
-      await updateColumnSettings(props.column.id, { hooks_enabled: enabled });
+      await sdk
+        .update_column_settings({
+          identity: props.column.id,
+          input: { settings: { hooks_enabled: enabled } },
+        })
+        .then(unwrap);
     } finally {
       setIsSaving(false);
     }
@@ -438,9 +508,12 @@ function ConcurrencySettings(props: ConcurrencySettingsProps) {
       // Immediately save when disabling
       setIsSaving(true);
       try {
-        await updateColumnSettings(props.column.id, {
-          max_concurrent_tasks: null,
-        });
+        await sdk
+          .update_column_settings({
+            identity: props.column.id,
+            input: { settings: { max_concurrent_tasks: null } },
+          })
+          .then(unwrap);
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), SUCCESS_FEEDBACK_DURATION_MS);
       } finally {
@@ -452,9 +525,14 @@ function ConcurrencySettings(props: ConcurrencySettingsProps) {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      await updateColumnSettings(props.column.id, {
-        max_concurrent_tasks: enabled() ? limit() : null,
-      });
+      await sdk
+        .update_column_settings({
+          identity: props.column.id,
+          input: {
+            settings: { max_concurrent_tasks: enabled() ? limit() : null },
+          },
+        })
+        .then(unwrap);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), SUCCESS_FEEDBACK_DURATION_MS);
     } finally {
@@ -554,11 +632,15 @@ function HookSection(props: HookSectionProps) {
   const handleAddHook = async (hookId: string) => {
     setIsAdding(true);
     try {
-      await createColumnHook({
-        column_id: props.columnId,
-        hook_id: hookId,
-        position: props.hooks.length,
-      });
+      await sdk
+        .create_column_hook({
+          input: {
+            column_id: props.columnId,
+            hook_id: hookId,
+            position: props.hooks.length,
+          },
+        })
+        .then(unwrap);
       setShowPicker(false);
     } catch (err) {
       console.error("Failed to add hook:", err);
@@ -569,46 +651,13 @@ function HookSection(props: HookSectionProps) {
 
   const handleRemoveHook = async (columnHookId: string) => {
     try {
-      await deleteColumnHook(columnHookId);
+      await sdk.destroy_column_hook({ identity: columnHookId }).then(unwrap);
     } catch (err) {
       console.error("Failed to remove hook:", err);
     }
   };
 
-  // Handle drag end for reordering
-  const handleDragEnd = async ({ draggable, droppable }: DragEvent) => {
-    if (!droppable) return;
-
-    const draggedId = String(draggable.id);
-    const droppedId = String(droppable.id);
-
-    if (draggedId === droppedId) return;
-
-    const hooks = sortedHooks();
-    const draggedIndex = hooks.findIndex((h) => h.id === draggedId);
-    const droppedIndex = hooks.findIndex((h) => h.id === droppedId);
-
-    if (draggedIndex === -1 || droppedIndex === -1) return;
-
-    // Calculate new positions
-    const reorderedHooks = [...hooks];
-    const [removed] = reorderedHooks.splice(draggedIndex, 1);
-    reorderedHooks.splice(droppedIndex, 0, removed);
-
-    // Update positions for all affected hooks
-    try {
-      await Promise.all(
-        reorderedHooks.map((hook, index) => {
-          if (hook.position !== index) {
-            return updateColumnHook(hook.id, { position: index });
-          }
-          return Promise.resolve();
-        }),
-      );
-    } catch (err) {
-      console.error("Failed to reorder hooks:", err);
-    }
-  };
+  const { handleDragEnd } = useHookReordering(sortedHooks);
 
   return (
     <div class="space-y-2">
@@ -683,18 +732,24 @@ function HookSection(props: HookSectionProps) {
                       onRemove={handleRemoveHook}
                       onToggleExecuteOnce={async () => {
                         try {
-                          await updateColumnHook(columnHook.id, {
-                            execute_once: !columnHook.execute_once,
-                          });
+                          await sdk
+                            .update_column_hook({
+                              identity: columnHook.id,
+                              input: { execute_once: !columnHook.execute_once },
+                            })
+                            .then(unwrap);
                         } catch (err) {
                           console.error("Failed to toggle execute_once:", err);
                         }
                       }}
                       onToggleTransparent={async () => {
                         try {
-                          await updateColumnHook(columnHook.id, {
-                            transparent: !columnHook.transparent,
-                          });
+                          await sdk
+                            .update_column_hook({
+                              identity: columnHook.id,
+                              input: { transparent: !columnHook.transparent },
+                            })
+                            .then(unwrap);
                         } catch (err) {
                           console.error("Failed to toggle transparent:", err);
                         }
@@ -741,19 +796,33 @@ interface SortableHookItemProps {
 // Check if hook is the play-sound hook
 const isPlaySoundHook = (hookId: string) => hookId === "system:play-sound";
 
+// Check if hook is the move-task hook
+const isMoveTaskHook = (hookId: string) => hookId === "system:move-task";
+
 function SortableHookItem(props: SortableHookItemProps) {
   const sortable = createSortable(props.columnHook.id);
+
+  const isRemovable = () => props.columnHook.removable !== false;
 
   // Get current sound setting, defaulting to "ding"
   const currentSound = () =>
     (props.columnHook.hook_settings?.sound as SoundType) || getDefaultSound();
 
+  // Get current target column for move-task hook
+  const targetColumn = () =>
+    (props.columnHook.hook_settings?.target_column as string) || "next";
+
   // Handle sound setting change
   const handleSoundChange = async (sound: SoundType) => {
     try {
-      await updateColumnHook(props.columnHook.id, {
-        hook_settings: { ...props.columnHook.hook_settings, sound },
-      });
+      await sdk
+        .update_column_hook({
+          identity: props.columnHook.id,
+          input: {
+            hook_settings: { ...props.columnHook.hook_settings, sound },
+          },
+        })
+        .then(unwrap);
     } catch (err) {
       console.error("Failed to update hook settings:", err);
     }
@@ -777,10 +846,14 @@ function SortableHookItem(props: SortableHookItemProps) {
     >
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2 min-w-0">
-          {/* Drag handle */}
+          {/* Drag handle - disabled for non-removable hooks */}
           <div
-            {...sortable.dragActivators}
-            class="cursor-grab hover:text-gray-300 text-gray-500 p-0.5"
+            {...(isRemovable() ? sortable.dragActivators : {})}
+            class={`p-0.5 ${
+              isRemovable()
+                ? "cursor-grab hover:text-gray-300 text-gray-500"
+                : "text-gray-600 cursor-not-allowed"
+            }`}
           >
             <DragHandleIcon class="w-3.5 h-3.5" />
           </div>
@@ -833,14 +906,24 @@ function SortableHookItem(props: SortableHookItemProps) {
           >
             {props.columnHook.transparent ? "T" : "N"}
           </button>
-          {/* Remove button */}
-          <button
-            onClick={() => props.onRemove(props.columnHook.id)}
-            class="p-1 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
-            title="Remove hook"
-          >
-            <CloseIcon class="w-3.5 h-3.5" />
-          </button>
+          {/* Remove button - only show if removable */}
+          <Show when={isRemovable()}>
+            <button
+              onClick={() => props.onRemove(props.columnHook.id)}
+              class="p-1 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+              title="Remove hook"
+            >
+              <CloseIcon class="w-3.5 h-3.5" />
+            </button>
+          </Show>
+          <Show when={!isRemovable()}>
+            <span
+              class="p-1 text-gray-600 text-xs"
+              title="This hook cannot be removed"
+            >
+              Required
+            </span>
+          </Show>
         </div>
       </div>
 
@@ -851,6 +934,80 @@ function SortableHookItem(props: SortableHookItemProps) {
           onChange={handleSoundChange}
         />
       </Show>
+
+      {/* Target column settings for move-task hook */}
+      <Show when={isMoveTaskHook(props.columnHook.hook_id)}>
+        <MoveTaskSettings
+          columnHook={props.columnHook}
+          targetColumn={targetColumn()}
+          disabled={!isRemovable()}
+        />
+      </Show>
+    </div>
+  );
+}
+
+// Move Task hook settings component
+interface MoveTaskSettingsProps {
+  columnHook: ColumnHook;
+  targetColumn: string;
+  disabled: boolean;
+}
+
+const TARGET_COLUMN_OPTIONS = [
+  { value: "next", label: "Next column" },
+  { value: "TODO", label: "TODO" },
+  { value: "In Progress", label: "In Progress" },
+  { value: "To Review", label: "To Review" },
+  { value: "Done", label: "Done" },
+  { value: "Cancelled", label: "Cancelled" },
+] as const;
+
+function MoveTaskSettings(props: MoveTaskSettingsProps) {
+  const handleTargetChange = async (target: string) => {
+    if (props.disabled) return;
+    try {
+      await sdk
+        .update_column_hook({
+          identity: props.columnHook.id,
+          input: {
+            hook_settings: {
+              ...props.columnHook.hook_settings,
+              target_column: target,
+            },
+          },
+        })
+        .then(unwrap);
+    } catch (err) {
+      console.error("Failed to update target column:", err);
+    }
+  };
+
+  return (
+    <div class="mt-2 pt-2 border-t border-gray-800">
+      <div class="flex items-center gap-2 text-xs">
+        <span class="text-gray-500">Target:</span>
+        <Show
+          when={!props.disabled}
+          fallback={
+            <span class="text-gray-300 px-2 py-0.5 bg-gray-800 rounded">
+              {props.targetColumn === "next"
+                ? "Next column"
+                : props.targetColumn}
+            </span>
+          }
+        >
+          <select
+            value={props.targetColumn}
+            onChange={(e) => handleTargetChange(e.currentTarget.value)}
+            class="px-2 py-1 bg-gray-800 border border-gray-700 rounded text-gray-300 text-xs focus:outline-none focus:ring-1 focus:ring-brand-500"
+          >
+            <For each={TARGET_COLUMN_OPTIONS}>
+              {(option) => <option value={option.value}>{option.label}</option>}
+            </For>
+          </select>
+        </Show>
+      </div>
     </div>
   );
 }

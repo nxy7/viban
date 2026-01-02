@@ -41,24 +41,6 @@ defmodule Viban.Kanban.Actors.ColumnLookup do
   end
 
   @doc """
-  Checks if the given column is a "To Review" column by name.
-
-  Returns `true` if the column exists and its name (case-insensitive) is "to review".
-  """
-  @spec to_review_column?(column_id()) :: boolean()
-  def to_review_column?(nil), do: false
-
-  def to_review_column?(column_id) do
-    case get_column(column_id) do
-      {:ok, column} ->
-        String.downcase(column.name) == "to review"
-
-      {:error, _} ->
-        false
-    end
-  end
-
-  @doc """
   Checks if a column matches a specific name (case-insensitive).
   """
   @spec column_has_name?(column_id(), String.t()) :: boolean()
@@ -147,15 +129,27 @@ defmodule Viban.Kanban.Actors.ColumnLookup do
   end
 
   @doc """
-  Finds the "To Review" column for a board.
+  Finds the column with the next higher position after the given position.
 
-  Returns the column ID if found, nil otherwise.
+  Returns `{:ok, column_id}` if found, `{:error, :no_next_column}` if there's
+  no column with a higher position.
   """
-  @spec find_to_review_column(board_id()) :: column_id() | nil
-  def find_to_review_column(board_id) do
-    case find_column_by_name(board_id, "to review") do
-      {:ok, column_id} -> column_id
-      {:error, _} -> nil
+  @spec find_next_column(board_id(), integer()) :: {:ok, column_id()} | {:error, :no_next_column}
+  def find_next_column(board_id, current_position) do
+    case get_board_columns(board_id) do
+      {:ok, columns} ->
+        next_column =
+          columns
+          |> Enum.filter(&(&1.position > current_position))
+          |> Enum.min_by(& &1.position, fn -> nil end)
+
+        case next_column do
+          %{id: id} -> {:ok, id}
+          nil -> {:error, :no_next_column}
+        end
+
+      {:error, _} ->
+        {:error, :no_next_column}
     end
   end
 

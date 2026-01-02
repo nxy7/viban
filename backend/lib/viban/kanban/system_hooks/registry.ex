@@ -7,19 +7,15 @@ defmodule Viban.Kanban.SystemHooks.Registry do
   alias Viban.Kanban.SystemHooks.{
     ExecuteAIHook,
     RefinePromptHook,
-    RunTestsHook,
-    LintCodeHook,
-    CreateBranchHook,
-    PlaySoundHook
+    PlaySoundHook,
+    MoveTaskHook
   }
 
   @system_hooks [
     ExecuteAIHook,
     RefinePromptHook,
-    RunTestsHook,
-    LintCodeHook,
-    CreateBranchHook,
-    PlaySoundHook
+    PlaySoundHook,
+    MoveTaskHook
   ]
 
   @doc "Get all available system hooks"
@@ -57,8 +53,15 @@ defmodule Viban.Kanban.SystemHooks.Registry do
 
   defp to_hook_map(module) do
     # Get default settings from module if defined, otherwise use defaults
-    default_execute_once = if function_exported?(module, :default_execute_once, 0), do: module.default_execute_once(), else: false
-    default_transparent = if function_exported?(module, :default_transparent, 0), do: module.default_transparent(), else: false
+    default_execute_once =
+      if function_exported?(module, :default_execute_once, 0),
+        do: module.default_execute_once(),
+        else: false
+
+    default_transparent =
+      if function_exported?(module, :default_transparent, 0),
+        do: module.default_transparent(),
+        else: false
 
     %{
       id: module.id(),

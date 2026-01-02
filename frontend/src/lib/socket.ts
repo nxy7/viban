@@ -1,4 +1,5 @@
 import { type Channel, Socket } from "phoenix";
+import { showError } from "./notifications";
 
 // ============================================================================
 // Configuration Constants
@@ -55,9 +56,15 @@ function isErrorResponse(resp: unknown): resp is ErrorResponse {
 // Channel Utilities
 // ============================================================================
 
+interface ChannelPushOptions {
+  showErrorNotification?: boolean;
+  errorTitle?: string;
+}
+
 /**
  * Generic promise wrapper for channel push operations.
  * Handles ok/error/timeout responses consistently.
+ * Shows error notifications by default for failed operations.
  *
  * Note: The type cast to T is necessary because Phoenix channels
  * return untyped responses. The caller is responsible for ensuring
@@ -68,7 +75,10 @@ function channelPush<T>(
   event: string,
   payload: Record<string, unknown> = {},
   timeoutMessage = "Request timeout",
+  options: ChannelPushOptions = {},
 ): Promise<T> {
+  const { showErrorNotification = true, errorTitle } = options;
+
   return new Promise((resolve, reject) => {
     channel
       .push(event, payload)
@@ -78,13 +88,23 @@ function channelPush<T>(
         resolve(resp as T);
       })
       .receive("error", (resp: unknown) => {
+        let errorMessage: string;
         if (isErrorResponse(resp)) {
-          reject(new Error(resp.reason || resp.details || `Failed: ${event}`));
+          errorMessage = resp.reason || resp.details || `Failed: ${event}`;
         } else {
-          reject(new Error(`Failed: ${event}`));
+          errorMessage = `Failed: ${event}`;
         }
+
+        if (showErrorNotification) {
+          showError(errorTitle || "Operation Failed", errorMessage);
+        }
+
+        reject(new Error(errorMessage));
       })
       .receive("timeout", () => {
+        if (showErrorNotification) {
+          showError(errorTitle || "Request Timeout", timeoutMessage);
+        }
         reject(new Error(timeoutMessage));
       });
   });
@@ -239,6 +259,11 @@ export interface StopExecutorResponse {
   status: string;
 }
 
+export interface CreateWorktreeResponse {
+  worktree_path: string;
+  worktree_branch: string;
+}
+
 // ============================================================================
 // Socket Manager
 // ============================================================================
@@ -289,7 +314,8 @@ class SocketManager {
 
       this.socket = new Socket(socketUrl, {
         params: {},
-        reconnectAfterMs: (tries: number) => this.calculateReconnectDelay(tries),
+        reconnectAfterMs: (tries: number) =>
+          this.calculateReconnectDelay(tries),
       });
 
       // Capture socket reference for callbacks to avoid null assertion
@@ -480,14 +506,15 @@ class SocketManager {
   }
 
   /**
-   * Starts an executor (AI agent) for a task.
-   * @param taskId - The task to run the executor for
+   * Queues a message for AI processing on a task.
+   * The message is added to the task's message queue and processed by the Execute AI hook.
+   * @param taskId - The task to queue the message for
    * @param prompt - The prompt/instructions for the executor
    * @param executorType - Type of executor to use (default: "claude_code")
    * @param workingDirectory - Optional working directory override
    * @param images - Optional image attachments for vision capabilities
    */
-  async startExecutor(
+  async queueMessage(
     taskId: string,
     prompt: string,
     executorType = "claude_code",
@@ -498,14 +525,15 @@ class SocketManager {
 
     return channelPush<StartExecutorResponse>(
       channel,
-      "start_executor",
+      "send_message",
       {
         prompt,
         executor_type: executorType,
         working_directory: workingDirectory,
         images: images ?? [],
       },
-      "Start executor timeout",
+      "Send message timeout",
+      { errorTitle: "Failed to Send Message" },
     );
   }
 
@@ -517,6 +545,7 @@ class SocketManager {
       "list_executors",
       {},
       "List executors timeout",
+      { showErrorNotification: false },
     );
   }
 
@@ -528,6 +557,7 @@ class SocketManager {
       "stop_executor",
       {},
       "Stop executor timeout",
+      { errorTitle: "Failed to Stop Executor" },
     );
   }
 
@@ -539,6 +569,7 @@ class SocketManager {
       "get_status",
       {},
       "Get status timeout",
+      { showErrorNotification: false },
     );
   }
 
@@ -550,6 +581,7 @@ class SocketManager {
       "get_history",
       {},
       "Get history timeout",
+      { showErrorNotification: false },
     );
   }
 
@@ -561,6 +593,19 @@ class SocketManager {
       "get_messages",
       {},
       "Get messages timeout",
+      { showErrorNotification: false },
+    );
+  }
+
+  /** Creates a git worktree for a task. */
+  async createWorktree(taskId: string): Promise<CreateWorktreeResponse> {
+    const channel = this.getChannelOrThrow(taskId);
+    return channelPush<CreateWorktreeResponse>(
+      channel,
+      "create_worktree",
+      {},
+      "Create worktree timeout",
+      { errorTitle: "Failed to Create Worktree" },
     );
   }
 

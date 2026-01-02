@@ -30,7 +30,7 @@ defmodule Viban.Kanban.Actors.BoardActor do
   require Logger
 
   alias Viban.Kanban.Task
-  alias Viban.Kanban.Actors.TaskActor
+  alias Viban.Kanban.Servers.TaskServer
 
   # PubSub topic for task updates
   @task_updates_topic "task:updates"
@@ -168,13 +168,17 @@ defmodule Viban.Kanban.Actors.BoardActor do
     Logger.info("BoardActor: Received task_updated for task #{task.id}, column #{task.column_id}")
 
     if belongs_to_board?(task.column_id, state) do
-      Logger.debug("BoardActor: Task #{task.id} belongs to board, notifying TaskActor")
+      Logger.info("BoardActor: Task #{task.id} belongs to board, ensuring TaskActor exists")
       # Ensure TaskActor exists before notifying
       state = ensure_task_actor_exists(state, task)
+      Logger.info("BoardActor: Notifying TaskActor for task #{task.id}")
       notify_task_actor(task)
       {:noreply, state}
     else
-      Logger.debug("BoardActor: Task #{task.id} does NOT belong to board #{state.board_id}")
+      Logger.info(
+        "BoardActor: Task #{task.id} does NOT belong to board #{state.board_id}, columns: #{inspect(MapSet.to_list(state.column_ids))}"
+      )
+
       {:noreply, state}
     end
   end
@@ -293,31 +297,29 @@ defmodule Viban.Kanban.Actors.BoardActor do
   defp spawn_task_actor(state, task) do
     case DynamicSupervisor.start_child(
            state.task_supervisor_name,
-           {TaskActor, {state.board_id, task}}
+           {TaskServer, {state.board_id, task}}
          ) do
       {:ok, pid} ->
-        Logger.debug("Spawned TaskActor for task #{task.id}")
+        Logger.debug("Spawned TaskServer for task #{task.id}")
         %{state | task_pids: Map.put(state.task_pids, task.id, pid)}
 
       {:error, {:already_started, pid}} ->
         %{state | task_pids: Map.put(state.task_pids, task.id, pid)}
 
       {:error, reason} ->
-        Logger.error("Failed to spawn TaskActor for task #{task.id}: #{inspect(reason)}")
+        Logger.error("Failed to spawn TaskServer for task #{task.id}: #{inspect(reason)}")
         state
     end
   end
 
-  # Ensure a TaskActor exists for a task, spawning one if needed
   defp ensure_task_actor_exists(state, task) do
-    case Registry.lookup(@registry, {:task_actor, task.id}) do
-      [{_pid, _}] ->
-        # TaskActor already exists
+    case Registry.lookup(@registry, {:task_server, task.id}) do
+      [{pid, _}] ->
+        Logger.info("TaskServer already exists for task #{task.id}, pid: #{inspect(pid)}")
         state
 
       [] ->
-        # No TaskActor exists, spawn one
-        Logger.info("Spawning TaskActor for existing task #{task.id} (was missing)")
+        Logger.info("Spawning TaskServer for existing task #{task.id} (was missing)")
         spawn_task_actor(state, task)
     end
   end
@@ -337,7 +339,7 @@ defmodule Viban.Kanban.Actors.BoardActor do
 
   @spec terminate_task_actor_by_registry(state(), String.t()) :: :ok
   defp terminate_task_actor_by_registry(state, task_id) do
-    case Registry.lookup(@registry, {:task_actor, task_id}) do
+    case Registry.lookup(@registry, {:task_server, task_id}) do
       [{pid, _}] ->
         DynamicSupervisor.terminate_child(state.task_supervisor_name, pid)
 
@@ -347,11 +349,8 @@ defmodule Viban.Kanban.Actors.BoardActor do
   end
 
   @spec notify_task_actor(Task.t()) :: :ok
-  defp notify_task_actor(task) do
-    case Registry.lookup(@registry, {:task_actor, task.id}) do
-      [{pid, _}] -> GenServer.cast(pid, {:task_updated, task})
-      [] -> :ok
-    end
+  defp notify_task_actor(_task) do
+    :ok
   end
 
   # ============================================================================

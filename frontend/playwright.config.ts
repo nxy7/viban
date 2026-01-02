@@ -17,9 +17,12 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
   ],
+  // Global setup/teardown for test cleanup
+  globalTeardown: "./tests/global-teardown.ts",
   webServer: [
     {
-      command: "cd ../backend && mix phx.server",
+      // E2E_TEST=true enables /api/test/* endpoints
+      command: "cd ../backend && E2E_TEST=true mix phx.server",
       url: "http://localhost:7771",
       reuseExistingServer: !process.env.CI,
       timeout: 120 * 1000,

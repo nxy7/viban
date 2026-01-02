@@ -97,7 +97,10 @@ defmodule Viban.Kanban.Actors.HookRunner do
 
       {:await_executor, task_id} ->
         # Hook started an async executor - return this so caller can handle appropriately
-        Logger.info("[HookRunner] System hook '#{hook.name}' started async executor, awaiting completion")
+        Logger.info(
+          "[HookRunner] System hook '#{hook.name}' started async executor, awaiting completion"
+        )
+
         {:await_executor, task_id}
 
       {:error, reason} ->

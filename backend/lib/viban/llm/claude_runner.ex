@@ -75,7 +75,7 @@ defmodule Viban.LLM.ClaudeRunner do
     Logger.debug("[ClaudeRunner] Prompt: #{String.slice(prompt, 0, 100)}...")
 
     args = build_args(prompt, model)
-    {script_cmd, script_args} = build_pty_command(claude_path, args)
+    {script_cmd, script_args} = ClaudeCode.wrap_with_pty(claude_path, args)
 
     Logger.debug("[ClaudeRunner] Running via script: #{script_cmd}")
 
@@ -111,24 +111,5 @@ defmodule Viban.LLM.ClaudeRunner do
       "--no-session-persistence",
       "--dangerously-skip-permissions"
     ]
-  end
-
-  defp build_pty_command(claude_path, args) do
-    # Use script to provide PTY (required for Claude Code streaming output)
-    # macOS and Linux have different syntax for the script command
-    case :os.type() do
-      {:unix, :darwin} ->
-        # macOS: script -q /dev/null <cmd> <args...>
-        {"/usr/bin/script", ["-q", "/dev/null", claude_path] ++ args}
-
-      {:unix, _} ->
-        # Linux: script -q -c "<cmd> <args...>" /dev/null
-        cmd_string = Enum.join([claude_path | args], " ")
-        {"/usr/bin/script", ["-q", "-c", cmd_string, "/dev/null"]}
-
-      _ ->
-        # Fallback - no PTY wrapper (may not work properly)
-        {claude_path, args}
-    end
   end
 end

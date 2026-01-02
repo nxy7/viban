@@ -45,18 +45,28 @@ defmodule Viban.Release do
     subject = "/C=US/ST=Local/L=Local/O=Viban/CN=localhost"
 
     {_, 0} =
-      System.cmd("openssl", [
-        "req",
-        "-x509",
-        "-newkey", "rsa:4096",
-        "-keyout", key_path,
-        "-out", cert_path,
-        "-sha256",
-        "-days", "365",
-        "-nodes",
-        "-subj", subject,
-        "-addext", "subjectAltName=DNS:localhost,IP:127.0.0.1"
-      ], stderr_to_stdout: true)
+      System.cmd(
+        "openssl",
+        [
+          "req",
+          "-x509",
+          "-newkey",
+          "rsa:4096",
+          "-keyout",
+          key_path,
+          "-out",
+          cert_path,
+          "-sha256",
+          "-days",
+          "365",
+          "-nodes",
+          "-subj",
+          subject,
+          "-addext",
+          "subjectAltName=DNS:localhost,IP:127.0.0.1"
+        ],
+        stderr_to_stdout: true
+      )
   end
 
   defp cert_directory do

@@ -1,40 +1,5 @@
-Tasks completed:
-- [x] make sure that tidewave MCP is working - if not make it work
-- [x] wrap calls to external APIs in Ash Resources (analyzed VCS module - already well-abstracted)
-- [x] make git commit
-- [x] start deep refactoring session - look for any dead code or opportunities to simplify without regressions
-- [x] make sure tests pass
-- [x] make git commit
-- [x] look through our docs to see if they're up to date, if not update all parts that got outdated
-- [x] make git commit
-- [x] fix agent message streaming - agents can fail silently without any UI indication
-  - Fixed handling of result, tool_result, and error event types
-  - System messages now all shown (not filtered)
-  - Added visual distinction for error vs success messages
-  - Backend now saves and broadcasts error events properly
-- [x] make git commit
-- [x] figure out if we can make single Docker image that would serve our app
-  - Created all-in-one Docker image with PostgreSQL, Elixir backend, and SolidJS frontend
-  - Uses Caddy as reverse proxy to route all traffic through port 8000
-  - Uses supervisord to manage all services
-- [x] make Dockerfile, build it and test it
-  - Dockerfile created and tested successfully
-  - Image builds and runs correctly
-  - Health check passes, all services start properly
-  - Claude Code CLI installed and working inside container
-  - Usage:
-    ```bash
-    docker build -t viban .
-    docker run -it --rm \
-      -p 8000:8000 \
-      --env-file .env \
-      -v ~/.local/share/viban:/root/.local/share/viban \
-      -v ~/.claude:/root/.claude \
-      -v viban-pgdata:/var/lib/postgresql/data \
-      -e SECRET_KEY_BASE=$(openssl rand -base64 48) \
-      viban
-    ```
-  - Volume mounts:
-    - `~/.local/share/viban` - Viban data (cloned repos, worktrees) shared with host
-    - `~/.claude` - Claude Code authentication config
-    - `viban-pgdata` - PostgreSQL data (named volume, container-only)
+- [ ] add seed kanban boards with seed columns to test the following scenarios
+     - board with no hooks that will be used in e2e tests to test moving tasks to other columns and reordering tasks
+- [ ] add seed kanban board with seed columns and one hook that's taking some time (like 30sec) and then succeeding
+     - this board will be used to test if moving card cancells hooks and if stop button also cancels hooks
+- [ ] implement e2e tests for those scenarios and make sure they pass

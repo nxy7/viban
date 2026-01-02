@@ -19,6 +19,10 @@ defmodule Viban.Executors.ExecutorMessage do
   postgres do
     table "executor_messages"
     repo Viban.Repo
+
+    references do
+      reference :session, on_delete: :delete
+    end
   end
 
   attributes do

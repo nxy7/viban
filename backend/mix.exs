@@ -52,8 +52,12 @@ defmodule Viban.MixProject do
     ]
 
     case System.get_env("BURRITO_TARGET") do
-      nil -> all_targets
-      "" -> all_targets
+      nil ->
+        all_targets
+
+      "" ->
+        all_targets
+
       target ->
         target_atom = String.to_atom(target)
         Keyword.take(all_targets, [target_atom])
@@ -98,6 +102,10 @@ defmodule Viban.MixProject do
       {:electric, "~> 1.0"},
       {:phoenix_sync, "== 0.6.0"},
 
+      # Ash Sync (Electric integration for Ash read queries)
+      # {:ash_sync, github: "nxy7/ash_sync"},
+      {:ash_sync, path: "/Users/dawiddanieluk/ash_sync"},
+
       # Utilities
       {:cors_plug, "~> 3.0"},
       {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
@@ -118,6 +126,7 @@ defmodule Viban.MixProject do
 
       # Background Jobs
       {:oban, "~> 2.18"},
+      {:oban_web, "~> 2.11"},
 
       # GitHub OAuth
       {:ueberauth, "~> 0.10"},

@@ -1,12 +1,11 @@
 import {
-  createSortable,
-  transformStyle,
+  createDraggable,
+  createDroppable,
   useDragDropContext,
 } from "@thisbeyond/solid-dnd";
 import { createEffect, createMemo, createSignal, on, Show } from "solid-js";
 import {
   ChatBubbleIcon,
-  ErrorIcon,
   LoadingSpinner,
   ParentTaskIcon,
   PRIcon,
@@ -38,14 +37,15 @@ interface TaskCardOverlayProps {
 }
 
 export default function TaskCard(props: TaskCardProps) {
-  const sortable = createSortable(props.task.id);
+  const draggable = createDraggable(props.task.id);
+  const droppable = createDroppable(props.task.id);
   const taskRelation = useTaskRelation();
 
   // useDragDropContext returns [state, actions] tuple or null if not in context.
   // We cache the context once on component creation since it won't change.
   const dragDropContext = useDragDropContext();
 
-  const isBeingDragged = () => sortable.isActiveDraggable;
+  const isBeingDragged = () => draggable.isActiveDraggable;
 
   /**
    * Check if any drag operation is currently active.
@@ -105,13 +105,9 @@ export default function TaskCard(props: TaskCardProps) {
   });
 
   const isError = () => props.task.agent_status === "error";
-  // Task is visually "in progress" only when in_progress=true AND agent is actively working
-  // (not when waiting for user input)
-  const isInProgress = () =>
-    props.task.in_progress && props.task.agent_status !== "waiting_for_user";
-  const isWaitingForUser = () =>
-    props.task.in_progress && props.task.agent_status === "waiting_for_user";
+  const isInProgress = () => !!props.task.in_progress;
   const isQueued = () => props.task.queued_at != null;
+  const isWaitingForUser = () => props.task.agent_status === "thinking";
 
   // Use shared utility for glow style computation
   const glowStyle = () =>
@@ -131,31 +127,29 @@ export default function TaskCard(props: TaskCardProps) {
       isQueued: isQueued(),
     });
 
-  // Combine glow style with sortable transform for live reordering animation
-  const combinedStyle = () => ({
-    ...glowStyle(),
-    ...transformStyle(sortable.transform),
-  });
+  const combinedStyle = () => glowStyle();
+
+  const setRefs = (el: HTMLDivElement) => {
+    draggable.ref(el);
+    droppable.ref(el);
+  };
 
   return (
     <div
-      ref={sortable.ref}
+      ref={setRefs}
       class={`
         relative border rounded-lg p-3 cursor-pointer
         transition-transform duration-150
         hover:border-gray-600 hover:bg-gray-800
-        ${isBeingDragged() ? "opacity-25" : ""}
+        ${isBeingDragged() ? "hidden" : ""}
         ${isAnyDragging() && !isBeingDragged() ? "pointer-events-none" : ""}
         ${borderClass()}
       `}
       style={combinedStyle()}
-      classList={{
-        sortable: true,
-      }}
       onClick={handleClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      {...sortable.dragActivators}
+      {...draggable.dragActivators}
     >
       <div class="flex flex-col gap-2 min-w-0">
         <div class="flex items-start justify-between gap-2 min-w-0">
@@ -172,9 +166,6 @@ export default function TaskCard(props: TaskCardProps) {
           </Show>
           <Show when={isQueued()}>
             <QueuedIcon />
-          </Show>
-          <Show when={isError()}>
-            <ErrorIcon />
           </Show>
         </div>
 
@@ -222,7 +213,7 @@ export default function TaskCard(props: TaskCardProps) {
             class={`text-xs px-2 py-0.5 rounded-full self-start flex items-center gap-1 hover:opacity-80 transition-opacity ${getPRBadgeClasses(props.task.pr_status!)}`}
           >
             <PRIcon status={props.task.pr_status!} />
-            <span>#{props.task.pr_number}</span>
+            <span>{props.task.pr_number}</span>
           </a>
         </Show>
 
@@ -244,12 +235,9 @@ export default function TaskCard(props: TaskCardProps) {
   );
 }
 
-// Simplified version for drag overlay (no sortable hooks)
 export function TaskCardOverlay(props: TaskCardOverlayProps) {
   const isError = () => props.task.agent_status === "error";
-  // Task is visually "in progress" only when in_progress=true AND agent is actively working
-  const isInProgress = () =>
-    props.task.in_progress && props.task.agent_status !== "waiting_for_user";
+  const isInProgress = () => !!props.task.in_progress;
 
   // Use shared utility for overlay style computation
   const overlayStyle = () =>
@@ -282,9 +270,6 @@ export function TaskCardOverlay(props: TaskCardOverlayProps) {
           </h4>
           <Show when={props.task.in_progress}>
             <LoadingSpinner />
-          </Show>
-          <Show when={isError()}>
-            <ErrorIcon />
           </Show>
         </div>
 

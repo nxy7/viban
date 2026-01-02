@@ -3,8 +3,14 @@ import { useLiveQuery } from "@tanstack/solid-db";
 import { createEffect, createMemo, on, onCleanup, onMount } from "solid-js";
 import KanbanBoard from "~/components/KanbanBoard";
 import TaskDetailsPanel from "~/components/TaskDetailsPanel";
+import { SystemProvider } from "~/lib/SystemContext";
 import { type Task, tasksCollection, useColumns } from "~/lib/useKanban";
-import { initAudio, playSound, preloadSounds, type SoundType } from "~/lib/sounds";
+import {
+  initAudio,
+  playSound,
+  preloadSounds,
+  type SoundType,
+} from "~/lib/sounds";
 import { socketManager, type ClientActionPayload } from "~/lib/socket";
 
 /** Route segment for card detail views */
@@ -28,7 +34,7 @@ const PATH_INDEX = {
 } as const;
 
 /** Valid settings tabs */
-type SettingsTab = "general" | "hooks" | "columns";
+type SettingsTab = "general" | "hooks" | "columns" | "system";
 
 /** Parsed route information from URL path */
 interface ParsedBoardPath {
@@ -69,7 +75,11 @@ export default function BoardPage() {
     ) {
       // Default to "general" if no specific tab is provided
       const tabParam = pathParts[PATH_INDEX.SETTINGS_TAB];
-      if (tabParam === "hooks" || tabParam === "columns") {
+      if (
+        tabParam === "hooks" ||
+        tabParam === "columns" ||
+        tabParam === "system"
+      ) {
         settingsTab = tabParam;
       } else {
         settingsTab = "general";
@@ -117,8 +127,6 @@ export default function BoardPage() {
         is_parent: tasks.is_parent,
         subtask_position: tasks.subtask_position,
         subtask_generation_status: tasks.subtask_generation_status,
-        hook_queue: tasks.hook_queue,
-        hook_history: tasks.hook_history,
         inserted_at: tasks.inserted_at,
         updated_at: tasks.updated_at,
       })),
@@ -264,7 +272,7 @@ export default function BoardPage() {
   }
 
   return (
-    <>
+    <SystemProvider>
       <KanbanBoard
         boardId={boardId()}
         onTaskClick={openCardDetails}
@@ -280,6 +288,6 @@ export default function BoardPage() {
         task={selectedTask()}
         columnName={selectedTaskColumnName()}
       />
-    </>
+    </SystemProvider>
   );
 }

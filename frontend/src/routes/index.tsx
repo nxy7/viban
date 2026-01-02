@@ -2,6 +2,7 @@ import { A } from "@solidjs/router";
 import { createSignal, For, Show } from "solid-js";
 import ErrorBanner from "~/components/ui/ErrorBanner";
 import { ClipboardListIcon, CloseIcon, PlusIcon } from "~/components/ui/Icons";
+import { getErrorMessage } from "~/lib/errorUtils";
 import { useAuth } from "~/lib/useAuth";
 import { useBoards } from "~/lib/useKanban";
 import { createBoardWithRepo, useVCSRepos, type VCSRepo } from "~/lib/useVCS";
@@ -84,9 +85,7 @@ export default function Home() {
       resetForm();
       setIsCreating(false);
     } catch (err) {
-      setCreateError(
-        err instanceof Error ? err.message : "Failed to create board",
-      );
+      setCreateError(getErrorMessage(err, "Failed to create board"));
     } finally {
       setIsSubmitting(false);
     }

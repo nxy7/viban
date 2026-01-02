@@ -57,6 +57,10 @@ backend-setup:
 backend:
     cd backend && mix phx.server
 
+# Connect to running backend IEx (when started via 'just dev')
+backend-connect:
+    iex --sname console --cookie viban --remsh viban
+
 # Start frontend dev server
 frontend:
     cd frontend && bun i && bun dev
@@ -80,7 +84,11 @@ test-backend:
 test-frontend:
     cd frontend && bun run test
 
-# Run e2e tests (requires backend and frontend running)
+# Start services for E2E testing (with E2E_TEST=true)
+dev-e2e:
+    overmind start -f Procfile.e2e
+
+# Run e2e tests (requires dev-e2e or servers with E2E_TEST=true)
 test-e2e:
     cd frontend && bun test:e2e
 

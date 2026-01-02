@@ -33,6 +33,16 @@ defmodule VibanWeb.Router do
     get "/:provider/callback", AuthController, :callback
   end
 
+  # Test endpoints (only available when sandbox_enabled)
+  scope "/api/test", VibanWeb do
+    pipe_through :api
+
+    get "/status", TestController, :status
+    post "/login", TestController, :login
+    post "/logout", TestController, :logout
+    delete "/cleanup", TestController, :cleanup
+  end
+
   scope "/api", VibanWeb do
     pipe_through :api
 
@@ -64,32 +74,22 @@ defmodule VibanWeb.Router do
     get "/boards/:board_id/hooks", HookController, :index
     get "/hooks/system", HookController, :system_hooks
 
-    # Task actions
-    post "/tasks/refine-preview", TaskController, :refine_preview
-    post "/tasks/:task_id/refine", TaskController, :refine
-    post "/tasks/:task_id/generate_subtasks", TaskController, :generate_subtasks
-    get "/tasks/:task_id/subtasks", TaskController, :get_subtasks
+    # Task actions (only image serving - other actions via RPC)
     get "/tasks/:task_id/images/:image_id", TaskController, :get_image
 
     post "/rpc/run", RpcController, :run
+    post "/rpc/validate", RpcController, :validate
     post "/messages/randomize", MessagesController, :randomize
     post "/editor/open", EditorController, :open
     post "/folder/open", FolderController, :open
   end
 
-  scope "/api/shapes", VibanWeb do
+  # AshSync routes for Electric SQL sync with Ash
+  # All sync queries are handled through a single endpoint with ?query=<query_name> parameter
+  scope "/api", VibanWeb do
     pipe_through :sync
 
-    get "/test_messages", SyncController, :test_messages
-
-    # Kanban shape endpoints
-    get "/boards", KanbanSyncController, :boards
-    get "/columns", KanbanSyncController, :columns
-    get "/tasks", KanbanSyncController, :tasks
-    get "/hooks", KanbanSyncController, :hooks
-    get "/column_hooks", KanbanSyncController, :column_hooks
-    get "/repositories", KanbanSyncController, :repositories
-    get "/messages", KanbanSyncController, :messages
+    get "/sync", AshSyncController, :sync
   end
 
   # MCP Server for AI agents
@@ -103,11 +103,13 @@ defmodule VibanWeb.Router do
 
   if Application.compile_env(:viban, :dev_routes) do
     import Phoenix.LiveDashboard.Router
+    import Oban.Web.Router
 
     scope "/dev" do
       pipe_through :browser
 
       live_dashboard "/dashboard", metrics: VibanWeb.Telemetry
+      oban_dashboard("/oban")
     end
   end
 

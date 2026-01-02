@@ -26,13 +26,12 @@ defmodule Viban.Executors.Implementations.GeminiCLI do
 
   @impl true
   def available? do
-    case System.find_executable("npx") do
+    case System.find_executable("gemini") do
       nil ->
-        Logger.debug("npx not found in PATH - Gemini CLI unavailable")
+        Logger.debug("gemini not found in PATH - Gemini CLI unavailable")
         false
 
       _path ->
-        # npx is available, Gemini CLI can be used
         true
     end
   end

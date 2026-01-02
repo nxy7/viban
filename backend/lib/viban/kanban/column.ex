@@ -140,9 +140,6 @@ defmodule Viban.Kanban.Column do
       description "Delete column and all its tasks"
 
       primary? true
-
-      change cascade_destroy(:tasks)
-      change cascade_destroy(:column_hooks)
     end
 
     read :for_board do
@@ -156,6 +153,47 @@ defmodule Viban.Kanban.Column do
       filter expr(board_id == ^arg(:board_id))
       prepare build(sort: [position: :asc])
     end
+
+    action :delete_all_tasks, :integer do
+      description "Delete all tasks in this column. Returns the number of tasks deleted."
+
+      argument :column_id, :uuid do
+        allow_nil? false
+        description "The column's ID"
+      end
+
+      run fn input, _context ->
+        import Ash.Query
+
+        column_id = input.arguments.column_id
+
+        query =
+          Viban.Kanban.Task
+          |> filter(column_id == ^column_id)
+
+        case Ash.read(query) do
+          {:ok, tasks} ->
+            errors =
+              tasks
+              |> Enum.map(fn task -> Viban.Kanban.Task.destroy(task) end)
+              |> Enum.filter(fn
+                {:ok, _} -> false
+                {:error, _} -> true
+              end)
+
+            case errors do
+              [] ->
+                {:ok, length(tasks)}
+
+              [{:error, first_error} | _] ->
+                {:error, first_error}
+            end
+
+          {:error, error} ->
+            {:error, error}
+        end
+      end
+    end
   end
 
   code_interface do
@@ -166,5 +204,6 @@ defmodule Viban.Kanban.Column do
     define :update_settings, args: [:settings]
     define :for_board, args: [:board_id]
     define :get, action: :read, get_by: [:id]
+    define :delete_all_tasks, args: [:column_id]
   end
 end

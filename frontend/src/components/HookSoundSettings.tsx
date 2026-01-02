@@ -19,8 +19,9 @@ interface HookSoundSettingsProps {
 export default function HookSoundSettings(props: HookSoundSettingsProps) {
   const options = getSoundOptions();
   const [isPlaying, setIsPlaying] = createSignal(false);
-  const [currentAudio, setCurrentAudio] =
-    createSignal<HTMLAudioElement | null>(null);
+  const [currentAudio, setCurrentAudio] = createSignal<HTMLAudioElement | null>(
+    null,
+  );
 
   const handlePreview = () => {
     if (isPlaying()) {

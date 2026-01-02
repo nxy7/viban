@@ -3,7 +3,7 @@ import Config
 config :viban,
   ecto_repos: [Viban.Repo],
   generators: [timestamp_type: :utc_datetime],
-  ash_domains: [Viban.Messages, Viban.Kanban, Viban.Accounts, Viban.Executors],
+  ash_domains: [Viban.Messages, Viban.Kanban, Viban.Accounts, Viban.Executors, Viban.AppRuntime],
   # Store cloned repos in ~/.local/share/viban/repos
   repos_base_path: Path.expand("~/.local/share/viban/repos"),
   # Store worktrees in ~/.local/share/viban/worktrees (persistent, not tmpfs)
@@ -38,7 +38,18 @@ config :ash_typescript,
   run_endpoint: "/api/rpc/run",
   validate_endpoint: "/api/rpc/validate",
   output_field_formatter: :snake_case,
-  input_field_formatter: :snake_case
+  input_field_formatter: :snake_case,
+  rpc_action_after_request_hook: "RpcHooks.afterActionRequest",
+  import_into_generated: [
+    %{
+      import_name: "RpcHooks",
+      file: "../rpcHooks"
+    }
+  ]
+
+config :ash_sync,
+  skip: [:query, :ingest],
+  output_dir: "../frontend/src/lib/generated/sync"
 
 config :phoenix_sync,
   env: Mix.env(),
@@ -86,8 +97,7 @@ config :viban, Oban,
   repo: Viban.Repo,
   queues: [
     default: 10,
-    # Limit concurrent LLM requests
-    llm_messages: 5
+    generate_subtasks: 3
   ],
   plugins: [
     Oban.Plugins.Pruner,
@@ -95,7 +105,8 @@ config :viban, Oban,
     # Run worktree cleanup daily at 3 AM
     {Oban.Plugins.Cron,
      crontab: [
-       {"0 3 * * *", Viban.Workers.WorktreeCleanupWorker}
+       {"0 3 * * *", Viban.Workers.WorktreeCleanupWorker},
+       {"* * * * *", Viban.Workers.PRSyncWorker}
      ]}
   ]
 

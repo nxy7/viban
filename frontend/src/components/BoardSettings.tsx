@@ -3,9 +3,10 @@ import { type Column, useColumns } from "~/lib/useKanban";
 import ColumnHookConfig from "./ColumnHookConfig";
 import HookManager from "./HookManager";
 import RepositoryConfig from "./RepositoryConfig";
+import SystemToolsPanel from "./SystemToolsPanel";
 import SidePanel from "./ui/SidePanel";
 
-type TabId = "general" | "hooks" | "columns";
+type TabId = "general" | "hooks" | "columns" | "system";
 
 interface BoardSettingsProps {
   isOpen: boolean;
@@ -28,6 +29,7 @@ export default function BoardSettings(props: BoardSettingsProps) {
     { id: "general", label: "General" },
     { id: "hooks", label: "Hooks" },
     { id: "columns", label: "Column Hooks" },
+    { id: "system", label: "System" },
   ];
 
   return (
@@ -110,6 +112,10 @@ export default function BoardSettings(props: BoardSettingsProps) {
               </div>
             </Show>
           </div>
+        </Show>
+
+        <Show when={activeTab() === "system"}>
+          <SystemToolsPanel />
         </Show>
       </div>
     </SidePanel>

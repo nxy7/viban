@@ -1,12 +1,7 @@
-import { createMemo, Show } from "solid-js";
+import { createMemo, createSignal, Show } from "solid-js";
 
 /** Agent status type - matches backend agent_status field */
-export type AgentStatusType =
-  | "idle"
-  | "thinking"
-  | "executing"
-  | "waiting_for_user"
-  | "error";
+export type AgentStatusType = "idle" | "thinking" | "executing" | "error";
 
 /** Configuration for rendering a status indicator */
 interface StatusConfig {
@@ -44,11 +39,6 @@ const STATUS_CONFIG: Record<AgentStatusType, StatusConfig> = {
     bgColor: "bg-green-500",
     animate: true,
   },
-  waiting_for_user: {
-    label: "Waiting",
-    color: "text-yellow-400",
-    bgColor: "bg-yellow-500",
-  },
   error: {
     label: "Error",
     color: "text-red-400",
@@ -61,7 +51,6 @@ const STATUS_BG_COLORS: Record<AgentStatusType, string> = {
   idle: "rgba(107, 114, 128, 0.2)",
   thinking: "rgba(59, 130, 246, 0.2)",
   executing: "rgba(34, 197, 94, 0.2)",
-  waiting_for_user: "rgba(234, 179, 8, 0.2)",
   error: "rgba(239, 68, 68, 0.2)",
 };
 
@@ -108,13 +97,16 @@ export default function AgentStatus(props: AgentStatusProps) {
 
 interface AgentStatusBadgeProps {
   status: AgentStatusType;
+  onDismiss?: () => void;
 }
 
 /**
  * Compact inline status badge for use in tight spaces like task cards.
  * Only displays when status is not idle.
+ * When in error state and onDismiss is provided, clicking dismisses the error.
  */
 export function AgentStatusBadge(props: AgentStatusBadgeProps) {
+  const [isHovered, setIsHovered] = createSignal(false);
   const config = createMemo(
     () => STATUS_CONFIG[props.status] ?? STATUS_CONFIG[DEFAULT_STATUS],
   );
@@ -122,19 +114,46 @@ export function AgentStatusBadge(props: AgentStatusBadgeProps) {
     () => STATUS_BG_COLORS[props.status] ?? STATUS_BG_COLORS[DEFAULT_STATUS],
   );
 
-  // Only show non-idle status - use Show for proper reactivity
+  const canDismiss = () => props.status === "error" && props.onDismiss;
+
+  const handleClick = () => {
+    if (canDismiss()) {
+      props.onDismiss?.();
+    }
+  };
+
   return (
     <Show when={props.status !== "idle"}>
       <span
-        class={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${config().color}`}
+        class={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${config().color} ${
+          canDismiss()
+            ? "cursor-pointer hover:opacity-80 transition-opacity"
+            : ""
+        }`}
         style={{ "background-color": bgColor() }}
+        onClick={handleClick}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        title={canDismiss() ? "Click to dismiss error" : undefined}
       >
-        <span
-          class={`w-1.5 h-1.5 rounded-full ${config().bgColor} ${
-            config().animate ? "animate-pulse" : ""
-          }`}
-        />
+        <Show when={!canDismiss()}>
+          <span
+            class={`w-1.5 h-1.5 rounded-full ${config().bgColor} ${
+              config().animate ? "animate-pulse" : ""
+            }`}
+          />
+        </Show>
         {config().label}
+        <Show when={canDismiss()}>
+          <Show
+            when={isHovered()}
+            fallback={
+              <span class={`w-1.5 h-1.5 rounded-full ${config().bgColor}`} />
+            }
+          >
+            <span class="text-[10px] leading-none font-bold">✕</span>
+          </Show>
+        </Show>
       </span>
     </Show>
   );

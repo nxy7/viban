@@ -149,7 +149,16 @@ defmodule Viban.Kanban.Hook do
     end
 
     create :create_agent_hook do
-      accept [:name, :agent_prompt, :agent_executor, :agent_auto_approve, :board_id, :default_execute_once, :default_transparent]
+      accept [
+        :name,
+        :agent_prompt,
+        :agent_executor,
+        :agent_auto_approve,
+        :board_id,
+        :default_execute_once,
+        :default_transparent
+      ]
+
       description "Create an AI agent hook (agent_prompt required)"
       change set_attribute(:hook_kind, :agent)
       validate Validations.RequireAgentPrompt
@@ -163,7 +172,16 @@ defmodule Viban.Kanban.Hook do
     end
 
     update :update do
-      accept [:name, :command, :agent_prompt, :agent_executor, :agent_auto_approve, :default_execute_once, :default_transparent]
+      accept [
+        :name,
+        :command,
+        :agent_prompt,
+        :agent_executor,
+        :agent_auto_approve,
+        :default_execute_once,
+        :default_transparent
+      ]
+
       primary? true
       validate Validations.ValidateHookKindAttributes
     end

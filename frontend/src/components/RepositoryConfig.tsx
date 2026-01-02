@@ -1,14 +1,8 @@
 import { createEffect, createSignal, on, Show } from "solid-js";
+import * as sdk from "~/lib/generated/ash";
 import ErrorBanner from "~/components/ui/ErrorBanner";
 import { ChevronRightIcon, ExternalLinkIcon } from "~/components/ui/Icons";
-import {
-  type CreateRepositoryInput,
-  createRepository,
-  deleteRepository,
-  type Repository,
-  updateRepository,
-  useRepositories,
-} from "~/lib/useKanban";
+import { type Repository, unwrap, useRepositories } from "~/lib/useKanban";
 
 interface RepositoryConfigProps {
   boardId: string;
@@ -45,9 +39,7 @@ function RepositoryDisplay(props: RepositoryDisplayProps) {
       <div class="flex-1 min-w-0">
         <Show
           when={!isLocal() && repoUrl()}
-          fallback={
-            <span class="font-medium text-white">{displayName()}</span>
-          }
+          fallback={<span class="font-medium text-white">{displayName()}</span>}
         >
           <a
             href={repoUrl()!}
@@ -61,7 +53,10 @@ function RepositoryDisplay(props: RepositoryDisplayProps) {
         </Show>
         <div class="flex flex-wrap gap-2 mt-2 text-xs text-gray-500">
           <Show when={isLocal() && props.repository.local_path}>
-            <span class="px-2 py-0.5 bg-gray-700 rounded font-mono truncate max-w-full" title={props.repository.local_path ?? undefined}>
+            <span
+              class="px-2 py-0.5 bg-gray-700 rounded font-mono truncate max-w-full"
+              title={props.repository.local_path ?? undefined}
+            >
               {props.repository.local_path}
             </span>
           </Show>
@@ -250,32 +245,35 @@ export default function RepositoryConfig(props: RepositoryConfigProps) {
     setIsSaving(true);
     setError(null);
 
-    try {
-      const repo = repository();
-      if (repo) {
-        // Update existing
-        await updateRepository(repo.id, {
-          name: name().trim(),
-          local_path: path().trim(),
-          default_branch: defaultBranch().trim() || "main",
-        });
-      } else {
-        // Create new
-        const input: CreateRepositoryInput = {
-          name: name().trim(),
-          local_path: path().trim(),
-          default_branch: defaultBranch().trim() || "main",
-          board_id: props.boardId,
-        };
-        await createRepository(input);
-      }
+    const repo = repository();
+    let result;
+    if (repo) {
+      result = await sdk
+        .update_repository({
+          identity: repo.id,
+          input: {
+            name: name().trim(),
+            local_path: path().trim(),
+            default_branch: defaultBranch().trim() || "main",
+          },
+        })
+        .then(unwrap);
+    } else {
+      result = await sdk
+        .create_repository({
+          input: {
+            name: name().trim(),
+            local_path: path().trim(),
+            default_branch: defaultBranch().trim() || "main",
+            board_id: props.boardId,
+          },
+        })
+        .then(unwrap);
+    }
+
+    setIsSaving(false);
+    if (result) {
       setIsEditing(false);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to save repository",
-      );
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -287,13 +285,11 @@ export default function RepositoryConfig(props: RepositoryConfigProps) {
     )
       return;
 
-    try {
-      await deleteRepository(repo.id);
+    const result = await sdk
+      .destroy_repository({ identity: repo.id })
+      .then(unwrap);
+    if (result !== null) {
       resetForm();
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to delete repository",
-      );
     }
   };
 

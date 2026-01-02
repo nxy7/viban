@@ -7,7 +7,7 @@ defmodule Viban.Workers.SubtaskGenerationWorker do
   """
 
   use Oban.Worker,
-    queue: :llm,
+    queue: :generate_subtasks,
     max_attempts: 3
 
   alias Viban.Kanban.Task
@@ -19,10 +19,23 @@ defmodule Viban.Workers.SubtaskGenerationWorker do
   def perform(%Oban.Job{args: %{"task_id" => task_id}}) do
     Logger.info("[SubtaskGenerationWorker] Starting subtask generation for task #{task_id}")
 
+    try do
+      do_perform(task_id)
+    rescue
+      exception ->
+        Logger.error(
+          "[SubtaskGenerationWorker] Exception during subtask generation for task #{task_id}: #{Exception.message(exception)}"
+        )
+
+        mark_task_failed(task_id, Exception.message(exception))
+        reraise exception, __STACKTRACE__
+    end
+  end
+
+  defp do_perform(task_id) do
     with {:ok, task} <- Task.get(task_id),
          :ok <- update_status(task, :generating, "Breaking down task into subtasks..."),
          {:ok, subtask_ids} <- SubtaskGenerationService.generate_subtasks(task) do
-      # Update task status to completed
       Task.set_generation_status(task, %{subtask_generation_status: :completed})
       Task.mark_as_parent(task)
       Task.update_agent_status(task, %{agent_status: :idle, agent_status_message: nil})
@@ -31,7 +44,6 @@ defmodule Viban.Workers.SubtaskGenerationWorker do
         "[SubtaskGenerationWorker] Successfully generated #{length(subtask_ids)} subtasks for task #{task_id}"
       )
 
-      # Broadcast completion
       Phoenix.PubSub.broadcast(
         Viban.PubSub,
         "task:#{task_id}:subtasks",
@@ -45,21 +57,23 @@ defmodule Viban.Workers.SubtaskGenerationWorker do
           "[SubtaskGenerationWorker] Failed to generate subtasks for task #{task_id}: #{inspect(reason)}"
         )
 
-        # Update task to failed status
-        case Task.get(task_id) do
-          {:ok, task} ->
-            Task.set_generation_status(task, %{subtask_generation_status: :failed})
-
-            Task.update_agent_status(task, %{
-              agent_status: :error,
-              agent_status_message: "Failed to generate subtasks: #{inspect(reason)}"
-            })
-
-          _ ->
-            nil
-        end
-
+        mark_task_failed(task_id, inspect(reason))
         {:error, reason}
+    end
+  end
+
+  defp mark_task_failed(task_id, reason) do
+    case Task.get(task_id) do
+      {:ok, task} ->
+        Task.set_generation_status(task, %{subtask_generation_status: :failed})
+
+        Task.update_agent_status(task, %{
+          agent_status: :error,
+          agent_status_message: "Failed to generate subtasks: #{reason}"
+        })
+
+      _ ->
+        nil
     end
   end
 

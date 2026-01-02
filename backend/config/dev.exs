@@ -43,6 +43,15 @@ config :phoenix_live_view,
   debug_heex_annotations: true,
   enable_expensive_runtime_checks: true
 
+# Enable test endpoints when E2E_TEST=true
+if System.get_env("E2E_TEST") == "true" do
+  config :viban, :sandbox_enabled, true
+
+  # Disable Bandit compression for E2E tests to avoid Playwright decompression issues
+  config :viban, VibanWeb.Endpoint,
+    http: [ip: {127, 0, 0, 1}, port: 7771, http_options: [compress: false]]
+end
+
 # Import secrets if they exist (GitHub OAuth credentials)
 if File.exists?(Path.expand("dev.secret.exs", __DIR__)) do
   import_config "dev.secret.exs"

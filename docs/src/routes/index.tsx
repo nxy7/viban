@@ -9,7 +9,7 @@ function FeatureCard(props: {
 }) {
   return (
     <div class="p-6 rounded-xl bg-gray-900/50 border border-gray-800 hover:border-gray-700 transition-colors">
-      <div class="w-12 h-12 rounded-lg bg-brand-500/10 flex items-center justify-center mb-4">
+      <div class="w-12 h-12 flex items-center justify-center mb-4">
         <span class="text-2xl">{props.icon}</span>
       </div>
       <h3 class="text-lg font-semibold text-white mb-2">{props.title}</h3>

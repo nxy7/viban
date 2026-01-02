@@ -51,6 +51,10 @@ defmodule Viban.Kanban.Message do
   postgres do
     table "messages"
     repo Viban.Repo
+
+    references do
+      reference :task, on_delete: :delete
+    end
   end
 
   attributes do
@@ -103,7 +107,12 @@ defmodule Viban.Kanban.Message do
   end
 
   actions do
-    defaults [:read, :destroy]
+    defaults [:read]
+
+    destroy :destroy do
+      primary? true
+      require_atomic? false
+    end
 
     create :create do
       description "Create a new message in a task conversation"

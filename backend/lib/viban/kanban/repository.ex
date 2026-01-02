@@ -33,7 +33,10 @@ defmodule Viban.Kanban.Repository do
   - `reset_clone_status` - Reset to pending state for retry
   - `for_board` - List all repositories for a specific board
   - `cloned` - List all successfully cloned repositories
+  - `list_branches` - List branches for a task's repository
   """
+
+  alias __MODULE__.Actions
 
   use Ash.Resource,
     domain: Viban.Kanban,
@@ -186,6 +189,7 @@ defmodule Viban.Kanban.Repository do
       # For local repos, set clone_status to :cloned since there's nothing to clone
       change fn changeset, _ ->
         provider = Ash.Changeset.get_attribute(changeset, :provider)
+
         if provider == :local do
           Ash.Changeset.force_change_attribute(changeset, :clone_status, :cloned)
         else
@@ -248,6 +252,17 @@ defmodule Viban.Kanban.Repository do
     read :cloned do
       filter expr(clone_status == :cloned)
     end
+
+    action :list_branches, {:array, :map} do
+      description "List available branches for a task's repository"
+
+      argument :task_id, :uuid do
+        allow_nil? false
+        description "ID of the task to get branches for"
+      end
+
+      run Actions.ListBranches
+    end
   end
 
   code_interface do
@@ -262,5 +277,6 @@ defmodule Viban.Kanban.Repository do
     define :for_board, args: [:board_id]
     define :cloned
     define :get, action: :read, get_by: [:id]
+    define :list_branches, args: [:task_id]
   end
 end

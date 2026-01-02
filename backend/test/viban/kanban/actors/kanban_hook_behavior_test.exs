@@ -10,7 +10,8 @@ defmodule Viban.Kanban.Actors.KanbanHookBehaviorTest do
   use Viban.DataCase, async: false
 
   alias Viban.Kanban.{Board, Column, Task, Hook, ColumnHook}
-  alias Viban.Kanban.Actors.{BoardActor, CommandQueue}
+  alias Viban.Kanban.Actors.BoardActor
+  alias Viban.Kanban.Actors.CommandQueue
 
   # Integration tests require the full actor system to be running.
   # Run them with: mix test --include integration
