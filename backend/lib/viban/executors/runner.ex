@@ -520,6 +520,12 @@ defmodule Viban.Executors.Runner do
     update_task_agent_status(task_id, :waiting_for_user, "Waiting for user input")
   end
 
+  defp handle_parsed_output({:ok, %{type: :error, message: message} = event}, task_id, session_id) do
+    save_message(session_id, :system, "Error: #{message}")
+    broadcast_output(task_id, session_id, :parsed, event)
+    update_task_agent_status(task_id, :error, message)
+  end
+
   defp handle_parsed_output({:ok, event}, task_id, session_id) do
     broadcast_output(task_id, session_id, :parsed, event)
   end

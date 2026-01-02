@@ -139,15 +139,15 @@ const shouldShowOutput = (line: OutputLine): boolean => {
   if (line.type === "system" || line.role === "system") {
     const content = typeof line.content === "string" ? line.content : "";
     if (content.startsWith("Using tool:")) return false;
-    return (
-      content.includes("Completed") ||
-      content.includes("Failed") ||
-      content.includes("Error") ||
-      content.includes("Started")
-    );
+    return true;
   }
 
-  return false;
+  if (line.type === "raw") {
+    const content = typeof line.content === "string" ? line.content : "";
+    return content.trim().length > 0;
+  }
+
+  return true;
 };
 
 export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
@@ -1758,9 +1758,25 @@ function OutputBubble(props: OutputBubbleProps) {
   }
 
   if (isSystem()) {
+    const content = getTextContent();
+    const isError = content.toLowerCase().includes("error") || content.toLowerCase().includes("failed");
+    const isSuccess = content.toLowerCase().includes("completed") || content.toLowerCase().includes("success");
+    const colorClass = isError ? "text-red-400" : isSuccess ? "text-green-400" : "text-amber-400";
+
     return (
-      <div class="flex items-center gap-2 py-1 px-2 text-xs">
-        <span class="text-amber-400">{getTextContent()}</span>
+      <div class="flex items-center gap-2 py-1.5 px-3 text-xs bg-gray-900/50 rounded-lg border border-gray-800">
+        <svg class={`w-4 h-4 flex-shrink-0 ${colorClass}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <Show when={isError} fallback={
+            <Show when={isSuccess} fallback={
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            }>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </Show>
+          }>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </Show>
+        </svg>
+        <span class={colorClass}>{content}</span>
         <Show when={!props.hideDetails}>
           <span class="text-gray-600 ml-auto">
             {props.formatTime(props.line.timestamp)}

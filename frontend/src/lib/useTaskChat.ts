@@ -242,16 +242,32 @@ export function useTaskChat(
               setAgentStatusMessage("Agent is responding...");
               addOutput("parsed", parsed.content as string, "assistant");
             } else if (parsed.type === "result") {
+              setIsThinking(false);
+              setAgentStatus("waiting_for_user");
+              setAgentStatusMessage("Waiting for input...");
+              const resultContent = parsed.content as string | undefined;
+              if (resultContent) {
+                addOutput("parsed", resultContent, "assistant");
+              }
             } else if (parsed.type === "tool_use") {
               setIsThinking(false);
               setAgentStatus("executing");
-              setAgentStatusMessage("Using tools...");
+              const toolName = parsed.tool as string | undefined;
+              setAgentStatusMessage(toolName ? `Using ${toolName}...` : "Using tools...");
               addOutput("parsed", parsed, "tool");
+            } else if (parsed.type === "tool_result") {
+              const toolContent = parsed.content as string | undefined;
+              if (toolContent && toolContent.trim()) {
+                addOutput("parsed", parsed, "tool");
+              }
             } else if (parsed.type === "error") {
               setIsThinking(false);
-              addOutput("system", `Error: ${parsed.message}`, "system");
+              setAgentStatus("error");
+              const errorMsg = parsed.message as string | undefined;
+              setAgentStatusMessage(errorMsg || "An error occurred");
+              addOutput("system", `Error: ${errorMsg || "Unknown error"}`, "system");
             } else if (parsed.type === "unknown") {
-            } else {
+              console.log("[useTaskChat] Unknown event type:", parsed);
             }
           } else {
             const text =
