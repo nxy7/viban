@@ -1,12 +1,24 @@
-Tasks to do:
-- [x] go over every single comment in repository and delete it if it's not absolutely necessary
-- [x] modify agents and Claude.md to specify that we don't like comments anywhere unless something cannot be
-      encoded by code well (if things cannot be expressed by variable and function names)
-- [x] after 2 tasks above make git commit
-- [x] can we show messages from agents in streaming fashion somehow? I'd like to have some more
-realtime feedback, because right now there's absolutely nothing until message pops up. We don't even have
-any kind of ... while agent is thinking. bad UX.
-- [x] Right now when agent is thinking the 'send' button is changed into 'stop' button. They should be
-2 separate buttons instead. If we send message while agent is running we just add message to the queue.
-This would just extend 'Execute AI' duration, agent should then receive our message after finishing his
-current work.
+Tasks completed:
+- [x] make sure that tidewave MCP is working - if not make it work
+- [x] wrap calls to external APIs in Ash Resources (analyzed VCS module - already well-abstracted)
+- [x] make git commit
+- [x] start deep refactoring session - look for any dead code or opportunities to simplify without regressions
+- [x] make sure tests pass
+- [x] make git commit
+- [x] look through our docs to see if they're up to date, if not update all parts that got outdated
+- [x] make git commit
+- [x] fix agent message streaming - agents can fail silently without any UI indication
+  - Fixed handling of result, tool_result, and error event types
+  - System messages now all shown (not filtered)
+  - Added visual distinction for error vs success messages
+  - Backend now saves and broadcasts error events properly
+- [x] make git commit
+- [x] figure out if we can make single Docker image that would serve our app
+  - Created all-in-one Docker image with PostgreSQL, Elixir backend, and SolidJS frontend
+  - Uses Caddy as reverse proxy to route all traffic through port 8000
+  - Uses supervisord to manage all services
+- [x] make Dockerfile, build it and test it
+  - Dockerfile created and tested successfully
+  - Image builds and runs correctly
+  - Health check passes, all services start properly
+  - Usage: docker run -p 8000:8000 -v viban-data:/var/lib/postgresql/data -e SECRET_KEY_BASE="..." viban

@@ -1,0 +1,50 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Nix
+.direnv
+result
+
+# Backend build artifacts
+backend/_build
+backend/deps
+backend/.elixir_ls
+backend/cover
+backend/*.ez
+backend/priv/static/assets
+
+# Frontend build artifacts
+frontend/node_modules
+frontend/.output
+frontend/.vinxi
+frontend/.solid
+
+# Test artifacts
+backend/test/support/fixtures
+**/coverage
+
+# Local development
+*.local
+.env*
+Procfile.dev
+
+# Documentation site
+docs/node_modules
+docs/.next
+docs/out
+
+# Overmind
+.overmind.sock
+
+# Misc
+*.log
+*.tmp
+.DS_Store
+Thumbs.db

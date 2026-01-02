@@ -37,6 +37,9 @@ defmodule VibanWeb.Router do
   scope "/api", VibanWeb do
     pipe_through :api
 
+    # Health check (no auth required)
+    get "/health", HealthController, :check
+
     # Auth endpoints
     get "/auth/me", AuthController, :me
     post "/auth/logout", AuthController, :logout
