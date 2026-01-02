@@ -289,7 +289,7 @@ class SocketManager {
 
       this.socket = new Socket(socketUrl, {
         params: {},
-        reconnectAfterMs: (tries) => this.calculateReconnectDelay(tries),
+        reconnectAfterMs: (tries: number) => this.calculateReconnectDelay(tries),
       });
 
       // Capture socket reference for callbacks to avoid null assertion
@@ -301,7 +301,7 @@ class SocketManager {
         resolve(socketRef);
       });
 
-      socketRef.onError((error) => {
+      socketRef.onError((error: unknown) => {
         console.error("[Socket] Error:", error);
       });
 
@@ -345,42 +345,42 @@ class SocketManager {
     // Type casts are safe here as the channel protocol defines the payload shapes
     const onStarted = handlers.onExecutorStarted;
     if (onStarted) {
-      channel.on("executor_started", (data) => {
+      channel.on("executor_started", (data: unknown) => {
         onStarted(data as ExecutorStartedPayload);
       });
     }
 
     const onOutput = handlers.onExecutorOutput;
     if (onOutput) {
-      channel.on("executor_output", (data) => {
+      channel.on("executor_output", (data: unknown) => {
         onOutput(data as ExecutorOutputPayload);
       });
     }
 
     const onCompleted = handlers.onExecutorCompleted;
     if (onCompleted) {
-      channel.on("executor_completed", (data) => {
+      channel.on("executor_completed", (data: unknown) => {
         onCompleted(data as ExecutorCompletedPayload);
       });
     }
 
     const onError = handlers.onExecutorError;
     if (onError) {
-      channel.on("executor_error", (data) => {
+      channel.on("executor_error", (data: unknown) => {
         onError(data as ExecutorErrorPayload);
       });
     }
 
     const onStopped = handlers.onExecutorStopped;
     if (onStopped) {
-      channel.on("executor_stopped", (data) => {
+      channel.on("executor_stopped", (data: unknown) => {
         onStopped(data as ExecutorStoppedPayload);
       });
     }
 
     const onTodos = handlers.onExecutorTodos;
     if (onTodos) {
-      channel.on("executor_todos", (data) => {
+      channel.on("executor_todos", (data: unknown) => {
         onTodos(data as ExecutorTodosPayload);
       });
     }
@@ -388,12 +388,12 @@ class SocketManager {
     return new Promise((resolve, reject) => {
       channel
         .join()
-        .receive("ok", (resp) => {
+        .receive("ok", (resp: unknown) => {
           console.log(`[Channel] Joined ${topic}`, resp);
           this.channels.set(topic, channel);
           resolve(channel);
         })
-        .receive("error", (resp) => {
+        .receive("error", (resp: unknown) => {
           console.error(`[Channel] Failed to join ${topic}`, resp);
           const errorResp = resp as { reason?: string };
           reject(new Error(errorResp.reason || "Failed to join channel"));
@@ -440,7 +440,7 @@ class SocketManager {
     // Set up client_action event handler
     const onClientAction = handlers.onClientAction;
     if (onClientAction) {
-      channel.on("client_action", (data) => {
+      channel.on("client_action", (data: unknown) => {
         console.log(`[BoardChannel] Received client_action:`, data);
         onClientAction(data as ClientActionPayload);
       });
@@ -449,12 +449,12 @@ class SocketManager {
     return new Promise((resolve, reject) => {
       channel
         .join()
-        .receive("ok", (resp) => {
+        .receive("ok", (resp: unknown) => {
           console.log(`[Channel] Joined ${topic}`, resp);
           this.channels.set(topic, channel);
           resolve(channel);
         })
-        .receive("error", (resp) => {
+        .receive("error", (resp: unknown) => {
           console.error(`[Channel] Failed to join ${topic}`, resp);
           const errorResp = resp as { reason?: string };
           reject(new Error(errorResp.reason || "Failed to join channel"));
