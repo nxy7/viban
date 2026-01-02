@@ -2,15 +2,19 @@
 # This provides HTTPS for secure cookie handling, HTTP/2 for Electric SQL,
 # and proper routing between frontend and backend.
 #
+# WHY HTTP/2: Electric SQL requires HTTP/2 for proper multiplexing.
+# HTTP/1.1 limits browsers to 6 simultaneous connections, which blocks
+# shape updates when you have more than 6 shapes. Caddy auto-enables HTTP/2.
+#
 # Usage:
 #   # First time - trust local CA:
 #   caddy trust
 #
-#   # Start Caddy:
+#   # Development (separate frontend dev server):
 #   caddy run --config Caddyfile
 #
-# Or with environment variable override:
-#   CADDY_PORT=8080 BACKEND_PORT=7771 FRONTEND_PORT=3000 caddy run --config Caddyfile
+#   # Production (Phoenix serves SPA):
+#   VIBAN_MODE=prod caddy run --config Caddyfile
 #
 # Access the app at: https://localhost:8000
 

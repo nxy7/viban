@@ -1,0 +1,165 @@
+name: Build Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v0.1.0)'
+        required: false
+        default: 'dev'
+
+env:
+  OTP_VERSION: '27.2'
+  ELIXIR_VERSION: '1.17.3'
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Enabled platforms
+          - target: macos_arm
+            os: macos-14  # M1/M2 runner
+
+          # Uncomment to enable additional platforms:
+          # - target: macos_intel
+          #   os: macos-13
+          # - target: linux_intel
+          #   os: ubuntu-latest
+          # - target: linux_arm
+          #   os: ubuntu-24.04-arm  # ARM runner
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Erlang/OTP and Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          otp-version: ${{ env.OTP_VERSION }}
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+
+      - name: Install zig (for Burrito cross-compilation)
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: 0.13.0
+
+      - name: Install xz (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y xz-utils
+
+      - name: Install xz (macOS)
+        if: runner.os == 'macOS'
+        run: brew install xz
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Cache Elixir deps
+        uses: actions/cache@v4
+        with:
+          path: |
+            backend/deps
+            backend/_build
+          key: ${{ runner.os }}-mix-${{ hashFiles('backend/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-mix-
+
+      - name: Cache frontend deps
+        uses: actions/cache@v4
+        with:
+          path: frontend/node_modules
+          key: ${{ runner.os }}-bun-${{ hashFiles('frontend/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          bun install
+          bun run build
+
+      - name: Copy frontend to backend
+        run: |
+          rm -rf backend/priv/static/_build backend/priv/static/index.html backend/priv/static/sounds
+          cp -r frontend/.output/public/_build backend/priv/static/_build
+          cp -r frontend/.output/public/sounds backend/priv/static/sounds 2>/dev/null || true
+          cp frontend/.output/public/index.html backend/priv/static/index.html
+          cp frontend/.output/public/favicon.ico backend/priv/static/favicon.ico 2>/dev/null || true
+
+      - name: Install Elixir dependencies
+        working-directory: backend
+        run: |
+          mix local.hex --force
+          mix local.rebar --force
+          mix deps.get --only prod
+
+      - name: Compile
+        working-directory: backend
+        env:
+          MIX_ENV: prod
+        run: mix compile
+
+      - name: Build Burrito release
+        working-directory: backend
+        env:
+          MIX_ENV: prod
+          BURRITO_BUILD: "1"
+          BURRITO_TARGET: ${{ matrix.target }}
+        run: mix release --overwrite
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event.inputs.version }}" != "" ] && [ "${{ github.event.inputs.version }}" != "dev" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=dev-$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Rename binary
+        run: |
+          cd backend/burrito_out
+          for f in viban_*; do
+            mv "$f" "viban-${{ steps.version.outputs.version }}-${{ matrix.target }}"
+          done
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: viban-${{ matrix.target }}
+          path: backend/burrito_out/viban-*
+          retention-days: 30
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(github.ref, '-rc') || contains(github.ref, '-beta') || contains(github.ref, '-alpha') }}

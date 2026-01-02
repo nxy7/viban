@@ -29,21 +29,34 @@ defmodule Viban.MixProject do
     if System.get_env("BURRITO_BUILD") == "1" do
       # Single-binary build with Burrito (requires OTP <= 27 and zig installed)
       # Usage: BURRITO_BUILD=1 MIX_ENV=prod mix release
+      # For specific target: BURRITO_BUILD=1 BURRITO_TARGET=macos_arm MIX_ENV=prod mix release
       base ++
         [
           steps: [:assemble, &Burrito.wrap/1],
           burrito: [
-            targets: [
-              macos_arm: [os: :darwin, cpu: :aarch64],
-              macos_intel: [os: :darwin, cpu: :x86_64],
-              linux_arm: [os: :linux, cpu: :aarch64],
-              linux_intel: [os: :linux, cpu: :x86_64]
-            ]
+            targets: burrito_targets()
           ]
         ]
     else
       # Standard release (works with any OTP version)
       base
+    end
+  end
+
+  defp burrito_targets do
+    all_targets = [
+      macos_arm: [os: :darwin, cpu: :aarch64],
+      macos_intel: [os: :darwin, cpu: :x86_64],
+      linux_arm: [os: :linux, cpu: :aarch64],
+      linux_intel: [os: :linux, cpu: :x86_64]
+    ]
+
+    case System.get_env("BURRITO_TARGET") do
+      nil -> all_targets
+      "" -> all_targets
+      target ->
+        target_atom = String.to_atom(target)
+        Keyword.take(all_targets, [target_atom])
     end
   end
 
