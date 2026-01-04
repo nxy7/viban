@@ -27,7 +27,7 @@ defmodule Viban.Kanban.Column do
     data_layer: AshPostgres.DataLayer,
     extensions: [AshTypescript.Resource]
 
-  alias Viban.Kanban.Column.Changes
+  alias Viban.Kanban.Column.{Actions, Changes}
 
   @type color :: String.t()
   @type settings :: %{optional(atom()) => term()}
@@ -162,37 +162,7 @@ defmodule Viban.Kanban.Column do
         description "The column's ID"
       end
 
-      run fn input, _context ->
-        import Ash.Query
-
-        column_id = input.arguments.column_id
-
-        query =
-          Viban.Kanban.Task
-          |> filter(column_id == ^column_id)
-
-        case Ash.read(query) do
-          {:ok, tasks} ->
-            errors =
-              tasks
-              |> Enum.map(fn task -> Viban.Kanban.Task.destroy(task) end)
-              |> Enum.filter(fn
-                {:ok, _} -> false
-                {:error, _} -> true
-              end)
-
-            case errors do
-              [] ->
-                {:ok, length(tasks)}
-
-              [{:error, first_error} | _] ->
-                {:error, first_error}
-            end
-
-          {:error, error} ->
-            {:error, error}
-        end
-      end
+      run Actions.DeleteAllTasks
     end
   end
 

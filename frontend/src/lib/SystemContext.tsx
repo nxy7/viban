@@ -7,15 +7,11 @@ import {
 } from "solid-js";
 import * as sdk from "~/lib/generated/ash";
 import { type SystemTool, unwrap } from "~/hooks/useKanban";
+import type { ExecutorInfo } from "~/lib/socket";
 
 const EXECUTOR_PREFERENCE_KEY = "viban:preferredExecutor";
 
-export interface ExecutorInfo {
-  name: string;
-  type: string;
-  available: boolean;
-  capabilities: string[];
-}
+export type { ExecutorInfo };
 
 interface SystemContextValue {
   tools: () => SystemTool[];

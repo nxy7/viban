@@ -36,12 +36,12 @@ defmodule Viban.Kanban.Repository do
   - `list_branches` - List branches for a task's repository
   """
 
-  alias __MODULE__.Actions
-
   use Ash.Resource,
     domain: Viban.Kanban,
     data_layer: AshPostgres.DataLayer,
     extensions: [AshTypescript.Resource]
+
+  alias __MODULE__.{Actions, Changes}
 
   typescript do
     type_name("Repository")
@@ -176,26 +176,8 @@ defmodule Viban.Kanban.Repository do
 
       primary? true
 
-      # For local repos, set full_name from name if not provided
-      change fn changeset, _ ->
-        if Ash.Changeset.get_attribute(changeset, :full_name) in [nil, ""] do
-          name = Ash.Changeset.get_attribute(changeset, :name)
-          Ash.Changeset.force_change_attribute(changeset, :full_name, name)
-        else
-          changeset
-        end
-      end
-
-      # For local repos, set clone_status to :cloned since there's nothing to clone
-      change fn changeset, _ ->
-        provider = Ash.Changeset.get_attribute(changeset, :provider)
-
-        if provider == :local do
-          Ash.Changeset.force_change_attribute(changeset, :clone_status, :cloned)
-        else
-          changeset
-        end
-      end
+      change Changes.SetFullNameFromName
+      change Changes.AutoCloneLocalRepo
     end
 
     update :update do
@@ -203,19 +185,7 @@ defmodule Viban.Kanban.Repository do
       primary? true
       require_atomic? false
 
-      # Update full_name when name changes (for local repos)
-      change fn changeset, _ ->
-        name_changing = Ash.Changeset.changing_attribute?(changeset, :name)
-        full_name_changing = Ash.Changeset.changing_attribute?(changeset, :full_name)
-        provider = changeset.data.provider
-
-        if name_changing && !full_name_changing && provider == :local do
-          name = Ash.Changeset.get_attribute(changeset, :name)
-          Ash.Changeset.force_change_attribute(changeset, :full_name, name)
-        else
-          changeset
-        end
-      end
+      change Changes.SyncFullNameOnUpdate
     end
 
     update :set_cloned do

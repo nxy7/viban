@@ -36,6 +36,7 @@ function setStoredBoolean(key: string, value: boolean): void {
   localStorage.setItem(key, String(value));
 }
 import * as sdk from "~/lib/generated/ash";
+import { formatDate, formatTime } from "~/lib/dateFormat";
 import { getErrorMessage } from "~/lib/errorUtils";
 import { CHAT_PROSE_CLASSES, renderMarkdown } from "~/lib/markdown";
 import { useSystem } from "~/lib/SystemContext";
@@ -720,22 +721,6 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
     } finally {
       setIsCreatingWorktree(false);
     }
-  };
-
-  const formatTime = (dateStr?: string) => {
-    if (!dateStr) return "";
-    const date = new Date(dateStr);
-    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  };
-
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString([], {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
   };
 
   const openInEditor = async (path: string) => {

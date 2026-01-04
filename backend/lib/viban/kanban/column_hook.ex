@@ -112,20 +112,11 @@ defmodule Viban.Kanban.ColumnHook do
   actions do
     defaults [:read]
 
-    # Custom destroy that prevents deleting non-removable hooks
     destroy :destroy do
       primary? true
       require_atomic? false
 
-      validate fn changeset, _ ->
-        column_hook = changeset.data
-
-        if column_hook.removable == false do
-          {:error, field: :removable, message: "This hook cannot be removed"}
-        else
-          :ok
-        end
-      end
+      validate Validations.RequireRemovable
     end
 
     create :create do
