@@ -313,7 +313,7 @@ defmodule Viban.Kanban.Actors.BoardActor do
   end
 
   defp ensure_task_actor_exists(state, task) do
-    case Registry.lookup(@registry, {:task_supervisor, task.id}) do
+    case Registry.lookup(@registry, {:task_sup, task.id}) do
       [{pid, _}] ->
         Logger.info("TaskSupervisor already exists for task #{task.id}, pid: #{inspect(pid)}")
         state
@@ -339,7 +339,7 @@ defmodule Viban.Kanban.Actors.BoardActor do
 
   @spec terminate_task_actor_by_registry(state(), String.t()) :: :ok
   defp terminate_task_actor_by_registry(state, task_id) do
-    case Registry.lookup(@registry, {:task_supervisor, task_id}) do
+    case Registry.lookup(@registry, {:task_sup, task_id}) do
       [{pid, _}] ->
         DynamicSupervisor.terminate_child(state.task_supervisor_name, pid)
 

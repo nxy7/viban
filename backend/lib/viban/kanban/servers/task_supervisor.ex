@@ -16,7 +16,7 @@ defmodule Viban.Kanban.Servers.TaskSupervisor do
   end
 
   def via_tuple(task_id) do
-    {:via, Registry, {@registry, {:task_supervisor, task_id}}}
+    {:via, Registry, {@registry, {:task_sup, task_id}}}
   end
 
   @doc """

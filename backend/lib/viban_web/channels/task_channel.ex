@@ -42,6 +42,8 @@ defmodule VibanWeb.TaskChannel do
 
   @impl true
   def join("task:" <> task_id, _params, socket) do
+    Logger.info("[TaskChannel] Joining task:#{task_id}")
+
     case Task.get(task_id) do
       {:ok, task} ->
         socket =
@@ -49,9 +51,11 @@ defmodule VibanWeb.TaskChannel do
           |> assign(:task_id, task_id)
           |> assign(:task, task)
 
+        Logger.info("[TaskChannel] Successfully joined task:#{task_id}")
         {:ok, %{task_id: task_id}, socket}
 
-      {:error, _} ->
+      {:error, reason} ->
+        Logger.warning("[TaskChannel] Failed to join task:#{task_id}: #{inspect(reason)}")
         {:error, %{reason: "task_not_found"}}
     end
   end
@@ -71,6 +75,7 @@ defmodule VibanWeb.TaskChannel do
   def handle_in("send_message", params, socket) do
     alias Viban.Kanban.Column
     alias Viban.Kanban.Actors.ColumnLookup
+    alias Viban.Kanban.Message
 
     task_id = socket.assigns.task_id
 
@@ -88,7 +93,32 @@ defmodule VibanWeb.TaskChannel do
         if user_prompt == "" and Enum.empty?(images) do
           {:reply, {:error, %{reason: "prompt_required"}}, socket}
         else
-          # Queue the message on the task
+          # Save the user message immediately to the Message table (synced via Electric)
+          image_count = length(images)
+
+          display_content =
+            if image_count > 0 do
+              suffix = if image_count > 1, do: "s", else: ""
+              "#{user_prompt}#{if user_prompt != "", do: "\n\n", else: ""}[#{image_count} image#{suffix} attached]"
+            else
+              user_prompt
+            end
+
+          case Message.create(%{
+                 task_id: task_id,
+                 role: :user,
+                 content: display_content,
+                 status: :pending,
+                 metadata: %{executor_type: executor_type, images: images}
+               }) do
+            {:ok, _message} ->
+              Logger.info("[TaskChannel] Saved user message for task #{task_id}")
+
+            {:error, error} ->
+              Logger.warning("[TaskChannel] Failed to save message: #{inspect(error)}")
+          end
+
+          # Queue the message on the task for processing
           case Task.queue_message(task, user_prompt, executor_type, images) do
             {:ok, updated_task} ->
               Logger.info(
@@ -115,6 +145,8 @@ defmodule VibanWeb.TaskChannel do
   # List available executors on the system.
   @impl true
   def handle_in("list_executors", _params, socket) do
+    Logger.info("[TaskChannel] list_executors called for task #{socket.assigns.task_id}")
+
     case Executor.list_available() do
       {:ok, executors} ->
         {:reply, {:ok, %{executors: executors}}, socket}
@@ -212,6 +244,7 @@ defmodule VibanWeb.TaskChannel do
   @impl true
   def handle_in("get_messages", _params, socket) do
     task_id = socket.assigns.task_id
+    Logger.info("[TaskChannel] get_messages called for task #{task_id}")
 
     # Get all sessions for this task, ordered by most recent first
     sessions =
@@ -221,7 +254,7 @@ defmodule VibanWeb.TaskChannel do
       end
 
     # Get messages for each session
-    messages =
+    session_messages =
       sessions
       |> Enum.flat_map(fn session ->
         case ExecutorMessage.for_session(session.id) do
@@ -229,6 +262,30 @@ defmodule VibanWeb.TaskChannel do
           _ -> []
         end
       end)
+
+    # Get queued messages that haven't been processed yet
+    queued_messages =
+      case Task.get(task_id) do
+        {:ok, task} ->
+          (task.message_queue || [])
+          |> Enum.map(fn entry ->
+            %{
+              id: entry.id || Ash.UUID.generate(),
+              role: :user,
+              content: entry.prompt || "",
+              metadata: %{images: entry.images || [], queued: true},
+              timestamp: entry.queued_at || DateTime.utc_now() |> DateTime.to_iso8601(),
+              executor_type: entry.executor_type || "claude_code"
+            }
+          end)
+
+        _ ->
+          []
+      end
+
+    # Combine and sort all messages
+    messages =
+      (session_messages ++ queued_messages)
       |> Enum.sort_by(& &1.timestamp)
 
     {:reply, {:ok, %{messages: messages}}, socket}

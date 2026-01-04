@@ -17,7 +17,7 @@ defmodule Viban.Kanban.Servers.HookExecutionServer do
   The `stop/1` function is synchronous and waits for any currently running
   hook to complete or be cancelled. This ensures clean state on task moves.
   """
-  use GenServer
+  use GenServer, restart: :permanent
   require Logger
 
   alias Viban.Kanban.{ColumnHook, Hook, HookExecution, Task}
@@ -85,6 +85,20 @@ defmodule Viban.Kanban.Servers.HookExecutionServer do
     end
   end
 
+  @doc """
+  Cancel current execution without stopping the server.
+  Used when task moves to another column.
+  """
+  @spec cancel_current(pid()) :: :ok | {:error, term()}
+  def cancel_current(pid) do
+    try do
+      GenServer.call(pid, :cancel_current, 30_000)
+    catch
+      :exit, {:noproc, _} -> :ok
+      :exit, {:normal, _} -> :ok
+    end
+  end
+
   # ============================================================================
   # Server Callbacks
   # ============================================================================
@@ -143,6 +157,32 @@ defmodule Viban.Kanban.Servers.HookExecutionServer do
 
     GenServer.reply(from, :ok)
     {:stop, :normal, state}
+  end
+
+  @impl true
+  def handle_call(:cancel_current, _from, state) do
+    Logger.info("Cancel current requested", task_id: state.task_id)
+
+    if state.awaiting_external_executor do
+      stop_external_executor(state.task_id)
+    end
+
+    if state.script_task_pid do
+      kill_script_task(state)
+    end
+
+    if state.current_execution_id do
+      cancel_current_execution(state)
+    end
+
+    new_state = %{state |
+      current_execution_id: nil,
+      awaiting_external_executor: false,
+      script_task_ref: nil,
+      script_task_pid: nil
+    }
+
+    {:reply, :ok, new_state}
   end
 
   @impl true

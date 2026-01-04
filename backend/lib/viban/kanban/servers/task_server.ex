@@ -194,7 +194,7 @@ defmodule Viban.Kanban.Servers.TaskServer do
   def handle_call({:move, new_column_id, _new_position}, _from, state) do
     Logger.info("Moving to column #{new_column_id}", task_id: state.task_id)
 
-    stop_hook_executor_sync(state.task_id)
+    cancel_hook_executor(state.task_id)
     cancel_pending_executions(state.task_id, :column_change)
 
     if state.current_column_id do
@@ -241,6 +241,19 @@ defmodule Viban.Kanban.Servers.TaskServer do
   # ============================================================================
   # HookExecutionServer Management
   # ============================================================================
+
+  defp cancel_hook_executor(task_id) do
+    case TaskSupervisor.get_hook_executor(task_id) do
+      {:ok, pid} ->
+        case HookExecutionServer.cancel_current(pid) do
+          :ok -> :ok
+          {:error, reason} -> Logger.warning("Failed to cancel HookExecutionServer: #{inspect(reason)}")
+        end
+
+      {:error, :not_found} ->
+        :ok
+    end
+  end
 
   defp stop_hook_executor_sync(task_id) do
     case TaskSupervisor.get_hook_executor(task_id) do

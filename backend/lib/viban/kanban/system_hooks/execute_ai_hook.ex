@@ -119,9 +119,9 @@ defmodule Viban.Kanban.SystemHooks.ExecuteAIHook do
   end
 
   defp start_with_queued_message(task, message, worktree_path) do
-    prompt = message["prompt"] || ""
-    executor_type = parse_executor_type(message["executor_type"])
-    images = message["images"] || []
+    prompt = message.prompt || ""
+    executor_type = parse_executor_type(message.executor_type)
+    images = message.images || []
 
     # For first session, prepend title and description
     full_prompt =
