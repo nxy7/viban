@@ -49,6 +49,14 @@ Google's Gemini model accessible through the CLI for code tasks.
 - Documentation from mockups
 - Multi-file understanding
 
+**Configuration:**
+```bash
+# Install Gemini CLI
+# Follow Google's official installation guide
+```
+
+Note: Additional executors (Codex, OpenCode, etc.) may be added in future releases.
+
 ## Agent Selection
 
 When starting a task, you can choose which agent to use:

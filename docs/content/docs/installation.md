@@ -24,8 +24,7 @@ This guide covers detailed installation instructions for all Viban components.
 At least one of the following AI agents must be installed:
 
 - **Claude Code CLI**: `npm install -g @anthropic-ai/claude-code`
-- **Codex CLI**: OpenAI Codex setup
-- **Cursor**: Cursor editor with Agent mode
+- **Gemini CLI**: Google's Gemini CLI for AI tasks
 
 ## Backend Setup
 
@@ -65,7 +64,7 @@ mix ecto.migrate
 mix phx.server
 ```
 
-The backend will be available at `http://localhost:4000`.
+The backend will be available at `http://localhost:7771` (development) or `http://localhost:4000` (production).
 
 ## Frontend Setup
 
@@ -88,7 +87,7 @@ npm install
 Create a `.env` file:
 
 ```bash
-VITE_API_URL=http://localhost:4000
+VITE_API_URL=http://localhost:7771
 VITE_ELECTRIC_URL=http://localhost:3000
 ```
 
