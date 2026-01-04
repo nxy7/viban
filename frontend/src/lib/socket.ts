@@ -134,48 +134,10 @@ export interface ExecutorSession {
   inserted_at: string;
 }
 
-export interface ExecutorStartedPayload {
-  session_id: string;
-  executor_type: string;
-  started_at: string;
-}
-
-export interface ExecutorOutputPayload {
-  session_id: string;
-  type: "raw" | "parsed";
-  content: string | Record<string, unknown>;
-  timestamp: string;
-}
-
-export interface ExecutorCompletedPayload {
-  session_id: string;
-  exit_code: number | null;
-  status: "completed" | "failed" | "stopped";
-  completed_at: string;
-}
-
-export interface ExecutorErrorPayload {
-  session_id: string;
-  error: string;
-  timestamp: string;
-}
-
-export interface ExecutorStoppedPayload {
-  session_id: string;
-  reason: string;
-  stopped_at: string;
-}
-
 export interface LLMTodoItem {
   content: string;
   activeForm: string;
   status: "pending" | "in_progress" | "completed";
-}
-
-export interface ExecutorTodosPayload {
-  session_id: string;
-  todos: LLMTodoItem[];
-  timestamp: string;
 }
 
 // Image attachment for executor
@@ -196,14 +158,7 @@ export interface TaskStatus {
 }
 
 
-export interface TaskChannelHandlers {
-  onExecutorStarted?: (data: ExecutorStartedPayload) => void;
-  onExecutorOutput?: (data: ExecutorOutputPayload) => void;
-  onExecutorCompleted?: (data: ExecutorCompletedPayload) => void;
-  onExecutorError?: (data: ExecutorErrorPayload) => void;
-  onExecutorStopped?: (data: ExecutorStoppedPayload) => void;
-  onExecutorTodos?: (data: ExecutorTodosPayload) => void;
-}
+export type TaskChannelHandlers = Record<string, never>;
 
 // ============================================================================
 // Board Channel Types
@@ -337,12 +292,12 @@ class SocketManager {
   }
 
   /**
-   * Joins a task-specific Phoenix channel for real-time executor updates.
-   * Sets up event handlers for executor lifecycle events.
+   * Joins a task-specific Phoenix channel for sending commands.
+   * Data sync is handled via Electric SQL, this channel is only for RPC-style commands.
    */
   async joinTaskChannel(
     taskId: string,
-    handlers: TaskChannelHandlers,
+    _handlers: TaskChannelHandlers,
   ): Promise<Channel> {
     const topic = `task:${taskId}`;
 
@@ -354,50 +309,6 @@ class SocketManager {
 
     const socket = await this.connect();
     const channel = socket.channel(topic, {});
-
-    // Set up executor event handlers
-    // Type casts are safe here as the channel protocol defines the payload shapes
-    const onStarted = handlers.onExecutorStarted;
-    if (onStarted) {
-      channel.on("executor_started", (data: unknown) => {
-        onStarted(data as ExecutorStartedPayload);
-      });
-    }
-
-    const onOutput = handlers.onExecutorOutput;
-    if (onOutput) {
-      channel.on("executor_output", (data: unknown) => {
-        onOutput(data as ExecutorOutputPayload);
-      });
-    }
-
-    const onCompleted = handlers.onExecutorCompleted;
-    if (onCompleted) {
-      channel.on("executor_completed", (data: unknown) => {
-        onCompleted(data as ExecutorCompletedPayload);
-      });
-    }
-
-    const onError = handlers.onExecutorError;
-    if (onError) {
-      channel.on("executor_error", (data: unknown) => {
-        onError(data as ExecutorErrorPayload);
-      });
-    }
-
-    const onStopped = handlers.onExecutorStopped;
-    if (onStopped) {
-      channel.on("executor_stopped", (data: unknown) => {
-        onStopped(data as ExecutorStoppedPayload);
-      });
-    }
-
-    const onTodos = handlers.onExecutorTodos;
-    if (onTodos) {
-      channel.on("executor_todos", (data: unknown) => {
-        onTodos(data as ExecutorTodosPayload);
-      });
-    }
 
     return new Promise((resolve, reject) => {
       channel

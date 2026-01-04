@@ -529,6 +529,44 @@ export function useHookExecutions(taskId: () => string | undefined) {
   };
 }
 
+export interface ExecutorSession {
+  id: string;
+  task_id: string;
+  executor_type: string | null;
+  status: string | null;
+  exit_code: number | null;
+  error_message: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  inserted_at: string;
+}
+
+export function useExecutorSessions(taskId: () => string | undefined) {
+  const { events, isLoading, error } = useTaskEvents(taskId);
+
+  const sessions = (): ExecutorSession[] => {
+    return events()
+      .filter((e) => e.type === "session")
+      .map((e) => ({
+        id: e.id,
+        task_id: e.task_id,
+        executor_type: e.executor_type,
+        status: e.status,
+        exit_code: e.exit_code,
+        error_message: e.error_message,
+        started_at: e.started_at,
+        completed_at: e.completed_at,
+        inserted_at: e.inserted_at,
+      }));
+  };
+
+  return {
+    sessions,
+    isLoading,
+    error,
+  };
+}
+
 // Pull Request types
 export interface Branch {
   name: string;

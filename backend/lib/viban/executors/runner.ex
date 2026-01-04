@@ -4,15 +4,16 @@ defmodule Viban.Executors.Runner do
 
   This module handles:
   - Spawning the executor process (CLI tools like Claude Code, Gemini, etc.)
-  - Streaming stdout/stderr to subscribers (Phoenix Channels)
+  - Streaming stdout/stderr and saving to database (for Electric SQL sync)
   - Process termination and cleanup
   - Storing logs for later review
 
   ## Architecture
 
   Each runner is started via DynamicSupervisor and manages a single executor
-  subprocess. The runner uses Erlang ports to communicate with the subprocess
-  and broadcasts events to the associated Phoenix Channel topic.
+  subprocess. The runner uses Erlang ports to communicate with the subprocess.
+  All output is saved to the database as `ExecutorMessage` records, which are
+  synced to the frontend via Electric SQL.
 
   ## Registry
 
@@ -24,7 +25,7 @@ defmodule Viban.Executors.Runner do
 
   1. Runner starts and creates an `ExecutorSession` in the database
   2. Executor process is spawned via Erlang port
-  3. Output is streamed and broadcast to Phoenix Channel subscribers
+  3. Output is saved to database (synced to frontend via Electric SQL)
   4. On completion/failure, session and task status are updated
   5. Runner process terminates
 
@@ -49,7 +50,6 @@ defmodule Viban.Executors.Runner do
 
   alias Viban.Executors.{Registry, ExecutorSession, ExecutorMessage, ImageHandler}
   alias Viban.GitHub.PRDetector
-  alias VibanWeb.Endpoint
 
   require Logger
 
@@ -275,12 +275,11 @@ defmodule Viban.Executors.Runner do
     case find_executable(executable) do
       {:ok, path} ->
         port = Port.open({:spawn_executable, String.to_charlist(path)}, port_opts)
-        broadcast_started(task_id, session_id, state.executor_type)
         {:noreply, %{state | port: port, status: :running}}
 
       {:error, error} ->
         Logger.error("#{@log_prefix} #{error}")
-        broadcast_error(task_id, session_id, error)
+        save_message(task_id, session_id, :system, "Error: #{error}")
         {:stop, {:error, :executable_not_found}, %{state | status: :failed}}
     end
   end
@@ -317,7 +316,8 @@ defmodule Viban.Executors.Runner do
     )
 
     status = if exit_code == 0, do: :completed, else: :failed
-    broadcast_completed(task_id, session_id, exit_code, status)
+    status_msg = if exit_code == 0, do: "Completed successfully", else: "Failed with exit code #{exit_code}"
+    save_message(task_id, session_id, :system, status_msg)
     update_session_status(session_id, status, exit_code)
     update_task_status(task_id, status, exit_code)
 
@@ -335,7 +335,7 @@ defmodule Viban.Executors.Runner do
 
     if port, do: Port.close(port)
 
-    broadcast_stopped(task_id, session_id, reason)
+    save_message(task_id, session_id, :system, "Stopped: #{reason_to_string(reason)}")
     update_task_status(task_id, :stopped, nil, reason)
 
     {:stop, reason, :ok, %{state | status: :stopped, port: nil}}
@@ -496,107 +496,48 @@ defmodule Viban.Executors.Runner do
   end
 
   defp handle_parsed_output(
-         {:ok, %{type: :assistant_message, content: content} = event},
+         {:ok, %{type: :assistant_message, content: content}},
          task_id,
          session_id
        ) do
     save_message(task_id, session_id, :assistant, content)
-    broadcast_output(task_id, session_id, :parsed, event)
     PRDetector.process_output(task_id, content)
   end
 
   defp handle_parsed_output(
-         {:ok, %{type: :todo_update, todos: todos} = event},
+         {:ok, %{type: :todo_update, todos: todos}},
          task_id,
          session_id
        ) do
-    broadcast_todos(task_id, session_id, todos)
-    broadcast_output(task_id, session_id, :parsed, event)
+    save_message(task_id, session_id, :system, "todos", %{todos: todos})
   end
 
   defp handle_parsed_output({:ok, %{type: :tool_use} = event}, task_id, session_id) do
     tool_name = Map.get(event, :tool, "unknown")
     save_message(task_id, session_id, :tool, "Using tool: #{tool_name}", %{tool: tool_name})
-    broadcast_output(task_id, session_id, :parsed, event)
   end
 
   defp handle_parsed_output(
-         {:ok, %{type: :result, content: content} = event},
+         {:ok, %{type: :result, content: content}},
          task_id,
          session_id
        ) do
-    broadcast_output(task_id, session_id, :parsed, event)
+    save_message(task_id, session_id, :assistant, content)
     PRDetector.process_output(task_id, content)
     update_task_agent_status(task_id, :idle, "Agent completed")
   end
 
-  defp handle_parsed_output({:ok, %{type: :error, message: message} = event}, task_id, session_id) do
+  defp handle_parsed_output({:ok, %{type: :error, message: message}}, task_id, session_id) do
     save_message(task_id, session_id, :system, "Error: #{message}")
-    broadcast_output(task_id, session_id, :parsed, event)
     update_task_agent_status(task_id, :error, message)
   end
 
-  defp handle_parsed_output({:ok, event}, task_id, session_id) do
-    broadcast_output(task_id, session_id, :parsed, event)
+  defp handle_parsed_output({:ok, _event}, _task_id, _session_id) do
+    :ok
   end
 
-  defp handle_parsed_output({:raw, raw_data}, task_id, session_id) do
-    broadcast_output(task_id, session_id, :raw, raw_data)
+  defp handle_parsed_output({:raw, raw_data}, task_id, _session_id) do
     PRDetector.process_output(task_id, raw_data)
-  end
-
-  # ---------------------------------------------------------------------------
-  # Private Functions - Broadcasting
-  # ---------------------------------------------------------------------------
-
-  defp broadcast_started(task_id, session_id, executor_type) do
-    Endpoint.broadcast!("task:#{task_id}", "executor_started", %{
-      session_id: session_id,
-      executor_type: executor_type,
-      started_at: DateTime.utc_now() |> DateTime.to_iso8601()
-    })
-  end
-
-  defp broadcast_output(task_id, session_id, type, content) do
-    Endpoint.broadcast!("task:#{task_id}", "executor_output", %{
-      session_id: session_id,
-      type: type,
-      content: content,
-      timestamp: DateTime.utc_now() |> DateTime.to_iso8601()
-    })
-  end
-
-  defp broadcast_todos(task_id, session_id, todos) do
-    Endpoint.broadcast!("task:#{task_id}", "executor_todos", %{
-      session_id: session_id,
-      todos: todos,
-      timestamp: DateTime.utc_now() |> DateTime.to_iso8601()
-    })
-  end
-
-  defp broadcast_completed(task_id, session_id, exit_code, status) do
-    Endpoint.broadcast!("task:#{task_id}", "executor_completed", %{
-      session_id: session_id,
-      exit_code: exit_code,
-      status: status,
-      completed_at: DateTime.utc_now() |> DateTime.to_iso8601()
-    })
-  end
-
-  defp broadcast_stopped(task_id, session_id, reason) do
-    Endpoint.broadcast!("task:#{task_id}", "executor_stopped", %{
-      session_id: session_id,
-      reason: reason_to_string(reason),
-      stopped_at: DateTime.utc_now() |> DateTime.to_iso8601()
-    })
-  end
-
-  defp broadcast_error(task_id, session_id, error) do
-    Endpoint.broadcast!("task:#{task_id}", "executor_error", %{
-      session_id: session_id,
-      error: error,
-      timestamp: DateTime.utc_now() |> DateTime.to_iso8601()
-    })
   end
 
   defp reason_to_string(:column_moved), do: "Task moved out of In Progress column"

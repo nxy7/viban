@@ -1,39 +1,13 @@
 import { type Accessor, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
 import { getErrorMessage } from "~/lib/errorUtils";
 import {
-  type ExecutorCompletedPayload,
-  type ExecutorErrorPayload,
   type ExecutorInfo,
-  type ExecutorOutputPayload,
-  type ExecutorStartedPayload,
-  type ExecutorStoppedPayload,
-  type ExecutorTodosPayload,
   type LLMTodoItem,
   socketManager,
 } from "~/lib/socket";
-import { useTaskEvents, type TaskEvent } from "~/hooks/useKanban";
+import { useTaskEvents, useExecutorSessions, type TaskEvent } from "~/hooks/useKanban";
 
 export type AgentStatusType = "idle" | "thinking" | "executing" | "error";
-
-const DEFAULT_AGENT_STATUS: AgentStatusType = "idle";
-
-const VALID_AGENT_STATUSES: readonly AgentStatusType[] = [
-  "idle",
-  "thinking",
-  "executing",
-  "error",
-];
-
-function isValidAgentStatus(status: unknown): status is AgentStatusType {
-  return (
-    typeof status === "string" &&
-    VALID_AGENT_STATUSES.includes(status as AgentStatusType)
-  );
-}
-
-function toAgentStatus(status: unknown): AgentStatusType {
-  return isValidAgentStatus(status) ? status : DEFAULT_AGENT_STATUS;
-}
 
 type OutputType = "raw" | "parsed" | "system" | "user";
 
@@ -45,6 +19,7 @@ export interface OutputLine {
   content: string | Record<string, unknown>;
   timestamp: string;
   role?: MessageRole;
+  metadata?: Record<string, unknown>;
 }
 
 export interface UseTaskChatOptions {
@@ -86,37 +61,45 @@ export interface UseTaskChatReturn {
 // ============================================================================
 
 function taskEventToOutputLine(event: TaskEvent): OutputLine | null {
-  if (event.type === "message") {
-    const role = event.role as MessageRole | null;
-    const outputType: OutputType = role === "user" ? "user" : role === "assistant" || role === "tool" ? "parsed" : "system";
-
-    return {
-      id: `event-${event.id}`,
-      type: outputType,
-      content: event.content || "",
-      timestamp: event.inserted_at,
-      role: role || undefined,
-    };
-  }
-
-  if (event.type === "executor_output") {
+  if (event.type === "message" || event.type === "executor_output") {
     const role = event.role as MessageRole | null;
     let content: string | Record<string, unknown> = event.content || "";
+    let outputType: OutputType;
 
-    if (role === "tool" && typeof content === "string") {
+    if (role === "user") {
+      outputType = "user";
+    } else if (role === "assistant" || role === "tool") {
+      outputType = "parsed";
+      if (role === "tool" && typeof content === "string") {
+        try {
+          content = JSON.parse(content);
+        } catch {
+          // Keep as string
+        }
+      }
+    } else {
+      outputType = "system";
+    }
+
+    // Parse metadata for todos
+    let metadata: Record<string, unknown> | undefined;
+    if (event.metadata) {
       try {
-        content = JSON.parse(content);
+        metadata = typeof event.metadata === "string"
+          ? JSON.parse(event.metadata)
+          : event.metadata as Record<string, unknown>;
       } catch {
-        // Keep as string
+        // Ignore parsing errors
       }
     }
 
     return {
-      id: `event-${event.id}`,
-      type: role === "user" ? "user" : role === "assistant" || role === "tool" ? "parsed" : "raw",
+      id: event.id,
+      type: outputType,
       content,
       timestamp: event.inserted_at,
       role: role || undefined,
+      metadata,
     };
   }
 
@@ -129,30 +112,23 @@ export function useTaskChat(
 ): UseTaskChatReturn {
   const { autoConnect = true } = options;
 
-  const [realtimeOutput, setRealtimeOutput] = createSignal<OutputLine[]>([]);
   const [isConnected, setIsConnected] = createSignal(false);
   const [isLoading, setIsLoading] = createSignal(false);
-  const [isRunning, setIsRunning] = createSignal(false);
-  const [isThinking, setIsThinking] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
-  const [agentStatus, setAgentStatus] = createSignal<AgentStatusType>("idle");
-  const [agentStatusMessage, setAgentStatusMessage] = createSignal<
-    string | null
-  >(null);
   const [executors, setExecutors] = createSignal<ExecutorInfo[]>([]);
-  const [todos, setTodos] = createSignal<LLMTodoItem[]>([]);
 
   const [currentTaskId, setCurrentTaskId] = createSignal<string | undefined>(
     undefined,
   );
-  const [outputIdCounter, setOutputIdCounter] = createSignal(0);
-  const [lastEventTimestamp, setLastEventTimestamp] = createSignal<string | null>(null);
 
-  const seenMessagesRef = { current: new Set<string>() };
-
+  // Electric SQL sync for task events (messages, output)
   const { events: electricEvents, isLoading: electricLoading } = useTaskEvents(taskId);
 
-  const electricOutputLines = createMemo((): OutputLine[] => {
+  // Electric SQL sync for executor sessions (to determine running state)
+  const { sessions } = useExecutorSessions(taskId);
+
+  // Convert events to output lines
+  const output = createMemo((): OutputLine[] => {
     const events = electricEvents();
     const lines: OutputLine[] = [];
 
@@ -163,189 +139,94 @@ export function useTaskChat(
       }
     }
 
-    if (events.length > 0) {
-      const lastEvent = events[events.length - 1];
-      setLastEventTimestamp(lastEvent.inserted_at);
-    }
-
     return lines;
   });
 
-  const output = createMemo((): OutputLine[] => {
-    const electric = electricOutputLines();
-    const realtime = realtimeOutput();
-
-    if (realtime.length === 0) {
-      return electric;
-    }
-
-    const lastElectricTimestamp = lastEventTimestamp();
-
-    const newRealtime = lastElectricTimestamp
-      ? realtime.filter(line => {
-          const lineTime = new Date(line.timestamp).getTime();
-          const lastTime = new Date(lastElectricTimestamp).getTime();
-          return lineTime > lastTime;
-        })
-      : realtime;
-
-    return [...electric, ...newRealtime];
+  // Derive running state from sessions
+  const isRunning = createMemo(() => {
+    const sessionList = sessions();
+    return sessionList.some(s => s.status === "running" || s.status === "pending");
   });
 
-  const HASH_CONTENT_PREFIX_LENGTH = 200;
-
-  const getContentHash = (
-    content: string | Record<string, unknown>,
-  ): string => {
-    const text =
-      typeof content === "string" ? content : JSON.stringify(content);
-    return `${text.slice(0, HASH_CONTENT_PREFIX_LENGTH)}_${text.length}`;
-  };
-
-  const addRealtimeOutput = (
-    type: OutputType,
-    content: string | Record<string, unknown>,
-    role?: MessageRole,
-  ) => {
-    const hash = getContentHash(content);
-    if (seenMessagesRef.current.has(hash)) {
-      return;
+  // Derive agent status from task or session state
+  const agentStatus = createMemo((): AgentStatusType => {
+    if (isRunning()) {
+      return "executing";
     }
-    seenMessagesRef.current.add(hash);
+    const sessionList = sessions();
+    const lastSession = sessionList[sessionList.length - 1];
+    if (lastSession?.status === "failed") {
+      return "error";
+    }
+    return "idle";
+  });
 
-    const newId = outputIdCounter() + 1;
-    setOutputIdCounter(newId);
+  const agentStatusMessage = createMemo((): string | null => {
+    const sessionList = sessions();
+    const lastSession = sessionList[sessionList.length - 1];
+    if (!lastSession) return null;
 
-    const line: OutputLine = {
-      id: `realtime-${newId}`,
-      type,
-      content,
-      timestamp: new Date().toISOString(),
-      role,
-    };
-    setRealtimeOutput((prev) => [...prev, line]);
-  };
+    if (lastSession.status === "running") {
+      return `${lastSession.executor_type} is running...`;
+    }
+    if (lastSession.status === "failed") {
+      return lastSession.error_message || `Failed with exit code ${lastSession.exit_code}`;
+    }
+    if (lastSession.status === "completed") {
+      return "Completed successfully";
+    }
+    if (lastSession.status === "stopped") {
+      return "Stopped by user";
+    }
+    return null;
+  });
+
+  // Extract todos from task events with metadata
+  const todos = createMemo((): LLMTodoItem[] => {
+    const events = electricEvents();
+    // Find the most recent todo update event
+    for (let i = events.length - 1; i >= 0; i--) {
+      const event = events[i];
+      if (event.content === "todos" && event.metadata) {
+        try {
+          const meta = typeof event.metadata === "string"
+            ? JSON.parse(event.metadata)
+            : event.metadata;
+          if (meta?.todos && Array.isArray(meta.todos)) {
+            return meta.todos as LLMTodoItem[];
+          }
+        } catch {
+          // Ignore parsing errors
+        }
+      }
+    }
+    return [];
+  });
+
+  const isThinking = createMemo(() => {
+    // Consider thinking if running but no output yet
+    if (!isRunning()) return false;
+    const lines = output();
+    const sessionList = sessions();
+    const runningSession = sessionList.find(s => s.status === "running");
+    if (!runningSession) return false;
+
+    // Check if we have any output from this session
+    const hasSessionOutput = lines.some(line => {
+      // Session output would be after session start
+      return new Date(line.timestamp) >= new Date(runningSession.started_at || runningSession.inserted_at);
+    });
+    return !hasSessionOutput;
+  });
 
   const connect = async (id: string) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      await socketManager.joinTaskChannel(id, {
-        onExecutorStarted: (data: ExecutorStartedPayload) => {
-          console.log("[useTaskChat] Executor started:", data);
-          setIsRunning(true);
-          setIsThinking(true);
-          setAgentStatus("thinking");
-          setAgentStatusMessage(`${data.executor_type} is thinking...`);
-          setTodos([]);
-        },
-        onExecutorOutput: (data: ExecutorOutputPayload) => {
-          if (data.type === "parsed" && typeof data.content === "object") {
-            const parsed = data.content as Record<string, unknown>;
-            if (parsed.type === "assistant_message" && parsed.content) {
-              setIsThinking(false);
-              setAgentStatus("executing");
-              setAgentStatusMessage("Agent is responding...");
-              addRealtimeOutput("parsed", parsed.content as string, "assistant");
-            } else if (parsed.type === "result") {
-              setIsThinking(false);
-              setAgentStatus("idle");
-              setAgentStatusMessage("Agent completed");
-              const resultContent = parsed.content as string | undefined;
-              if (resultContent) {
-                addRealtimeOutput("parsed", resultContent, "assistant");
-              }
-            } else if (parsed.type === "tool_use") {
-              setIsThinking(false);
-              setAgentStatus("executing");
-              const toolName = parsed.tool as string | undefined;
-              setAgentStatusMessage(
-                toolName ? `Using ${toolName}...` : "Using tools...",
-              );
-              addRealtimeOutput("parsed", parsed, "tool");
-            } else if (parsed.type === "tool_result") {
-              const toolContent = parsed.content as string | undefined;
-              if (toolContent && toolContent.trim()) {
-                addRealtimeOutput("parsed", parsed, "tool");
-              }
-            } else if (parsed.type === "error") {
-              setIsThinking(false);
-              setAgentStatus("error");
-              const errorMsg = parsed.message as string | undefined;
-              setAgentStatusMessage(errorMsg || "An error occurred");
-              addRealtimeOutput(
-                "system",
-                `Error: ${errorMsg || "Unknown error"}`,
-                "system",
-              );
-            } else if (parsed.type === "unknown") {
-              console.log("[useTaskChat] Unknown event type:", parsed);
-            }
-          } else {
-            const text =
-              typeof data.content === "string"
-                ? data.content
-                : JSON.stringify(data.content);
-            if (text.trim()) {
-              setIsThinking(false);
-              addRealtimeOutput("raw", text);
-            }
-          }
-        },
-        onExecutorCompleted: (data: ExecutorCompletedPayload) => {
-          console.log("[useTaskChat] Executor completed:", data);
-          setIsRunning(false);
-          setIsThinking(false);
-
-          if (data.status === "completed") {
-            setAgentStatus("idle");
-            setAgentStatusMessage("Completed successfully");
-            addRealtimeOutput(
-              "system",
-              `Completed with exit code ${data.exit_code ?? 0}`,
-            );
-          } else if (data.status === "failed") {
-            setAgentStatus("error");
-            setAgentStatusMessage(`Failed with exit code ${data.exit_code}`);
-            addRealtimeOutput("system", `Failed with exit code ${data.exit_code}`);
-          } else {
-            setAgentStatus("idle");
-            setAgentStatusMessage("Stopped");
-            addRealtimeOutput("system", "Stopped by user");
-          }
-        },
-        onExecutorError: (data: ExecutorErrorPayload) => {
-          console.error("[useTaskChat] Executor error:", data);
-          setIsRunning(false);
-          setIsThinking(false);
-          setAgentStatus("error");
-          setAgentStatusMessage(data.error);
-          setError(data.error);
-          addRealtimeOutput("system", `Error: ${data.error}`);
-        },
-        onExecutorStopped: (data: ExecutorStoppedPayload) => {
-          console.log("[useTaskChat] Executor stopped:", data);
-          setIsRunning(false);
-          setIsThinking(false);
-          setAgentStatus("idle");
-          setAgentStatusMessage(data.reason);
-          addRealtimeOutput("system", `Stopped: ${data.reason}`);
-          setTodos([]);
-        },
-        onExecutorTodos: (data: ExecutorTodosPayload) => {
-          console.log("[useTaskChat] Received todos:", data.todos);
-          setTodos(data.todos);
-        },
-      });
-
+      // Join channel for commands only (send message, stop executor)
+      await socketManager.joinTaskChannel(id, {});
       setIsConnected(true);
-
-      try {
-        const status = await socketManager.getStatus(id);
-        setAgentStatus(toAgentStatus(status.agent_status));
-        setAgentStatusMessage(status.agent_status_message);
-      } catch {}
 
       try {
         const { executors: availableExecutors } =
@@ -368,16 +249,7 @@ export function useTaskChat(
   const disconnect = (id: string) => {
     socketManager.leaveTaskChannel(id);
     setIsConnected(false);
-    setRealtimeOutput([]);
     setError(null);
-    setAgentStatus("idle");
-    setAgentStatusMessage(null);
-    setIsRunning(false);
-    setIsThinking(false);
-    setTodos([]);
-    seenMessagesRef.current.clear();
-    setOutputIdCounter(0);
-    setLastEventTimestamp(null);
   };
 
   createEffect(() => {
@@ -417,14 +289,6 @@ export function useTaskChat(
     }
 
     setError(null);
-
-    const imageCount = images?.length || 0;
-    const displayContent =
-      imageCount > 0
-        ? `${prompt}${prompt ? "\n\n" : ""}[${imageCount} image${imageCount > 1 ? "s" : ""} attached]`
-        : prompt;
-
-    addRealtimeOutput("user", displayContent, "user");
 
     try {
       await socketManager.queueMessage(
