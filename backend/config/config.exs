@@ -3,7 +3,7 @@ import Config
 config :viban,
   ecto_repos: [Viban.Repo],
   generators: [timestamp_type: :utc_datetime],
-  ash_domains: [Viban.Messages, Viban.Kanban, Viban.Accounts, Viban.Executors, Viban.AppRuntime],
+  ash_domains: [Viban.Messages, Viban.Kanban, Viban.Accounts, Viban.Executors, Viban.AppRuntime, Viban.StateServer],
   # Store cloned repos in ~/.local/share/viban/repos
   repos_base_path: Path.expand("~/.local/share/viban/repos"),
   # Store worktrees in ~/.local/share/viban/worktrees (persistent, not tmpfs)

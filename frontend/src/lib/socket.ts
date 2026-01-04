@@ -195,15 +195,6 @@ export interface TaskStatus {
   sessions: ExecutorSession[];
 }
 
-export interface StoredMessage {
-  id: string;
-  session_id: string;
-  role: "user" | "assistant" | "system" | "tool";
-  content: string;
-  metadata: Record<string, unknown>;
-  timestamp: string;
-  executor_type: string;
-}
 
 export interface TaskChannelHandlers {
   onExecutorStarted?: (data: ExecutorStartedPayload) => void;
@@ -251,9 +242,6 @@ export interface GetHistoryResponse {
   sessions: ExecutorSession[];
 }
 
-export interface GetMessagesResponse {
-  messages: StoredMessage[];
-}
 
 export interface StopExecutorResponse {
   status: string;
@@ -585,17 +573,6 @@ class SocketManager {
     );
   }
 
-  /** Gets stored messages for a task. */
-  async getMessages(taskId: string): Promise<GetMessagesResponse> {
-    const channel = this.getChannelOrThrow(taskId);
-    return channelPush<GetMessagesResponse>(
-      channel,
-      "get_messages",
-      {},
-      "Get messages timeout",
-      { showErrorNotification: false },
-    );
-  }
 
   /** Creates a git worktree for a task. */
   async createWorktree(taskId: string): Promise<CreateWorktreeResponse> {

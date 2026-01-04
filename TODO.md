@@ -1,5 +1,7 @@
-- [x] add seed kanban boards with seed columns to test the following scenarios
-     - board with no hooks that will be used in e2e tests to test moving tasks to other columns and reordering tasks
-- [x] add seed kanban board with seed columns and one hook that's taking some time (like 30sec) and then succeeding
-     - this board will be used to test if moving card cancells hooks and if stop button also cancels hooks
-- [x] implement e2e tests for those scenarios and make sure they pass
+ - We should be using electric SQL for all realtime communication, not websockets. Make sure we don't have any other things like that in the system. Now we've also added "StateServer" abstraction that
+  allows to sync agent state into FE, so if there's need for that we can also use it.
+  Definitely we don't want to complicate things right now with 2 schemes - websockets and Electric.
+  Go over whole project to make sure we're following this rule. Use @.claude/agents/autonomous-task-executor.md to do that.
+- make sure the project works, run tests, test things manually in the browser and make git commit
+- start deep refactoring session using elixir-ash-quality-guardian and solidjs-quality-guardian. Don't change behavior, just make things better!
+  Also compact context frequently so you don't fail because of lack of it.

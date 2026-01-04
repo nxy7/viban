@@ -49,8 +49,10 @@ defmodule Viban.Kanban.Message do
   end
 
   postgres do
-    table "messages"
+    table "task_events"
     repo Viban.Repo
+
+    base_filter_sql "type = 'message'"
 
     references do
       reference :task, on_delete: :delete
@@ -59,6 +61,15 @@ defmodule Viban.Kanban.Message do
 
   attributes do
     uuid_primary_key :id
+
+    attribute :type, :atom do
+      public? true
+      allow_nil? false
+      default :message
+      writable? false
+      constraints one_of: [:message]
+      description "Event type discriminator (always 'message' for this resource)"
+    end
 
     attribute :role, :atom do
       public? true

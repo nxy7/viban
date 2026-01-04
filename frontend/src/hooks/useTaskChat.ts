@@ -1,4 +1,4 @@
-import { type Accessor, createEffect, createSignal, onCleanup } from "solid-js";
+import { type Accessor, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
 import { getErrorMessage } from "~/lib/errorUtils";
 import {
   type ExecutorCompletedPayload,
@@ -9,9 +9,9 @@ import {
   type ExecutorStoppedPayload,
   type ExecutorTodosPayload,
   type LLMTodoItem,
-  type StoredMessage,
   socketManager,
 } from "~/lib/socket";
+import { useTaskEvents, type TaskEvent } from "~/hooks/useKanban";
 
 export type AgentStatusType = "idle" | "thinking" | "executing" | "error";
 
@@ -23,8 +23,6 @@ const VALID_AGENT_STATUSES: readonly AgentStatusType[] = [
   "executing",
   "error",
 ];
-
-const HASH_CONTENT_PREFIX_LENGTH = 200;
 
 function isValidAgentStatus(status: unknown): status is AgentStatusType {
   return (
@@ -83,13 +81,55 @@ export interface UseTaskChatReturn {
   }>;
 }
 
+// ============================================================================
+// Convert TaskEvent to OutputLine
+// ============================================================================
+
+function taskEventToOutputLine(event: TaskEvent): OutputLine | null {
+  if (event.type === "message") {
+    const role = event.role as MessageRole | null;
+    const outputType: OutputType = role === "user" ? "user" : role === "assistant" || role === "tool" ? "parsed" : "system";
+
+    return {
+      id: `event-${event.id}`,
+      type: outputType,
+      content: event.content || "",
+      timestamp: event.inserted_at,
+      role: role || undefined,
+    };
+  }
+
+  if (event.type === "executor_output") {
+    const role = event.role as MessageRole | null;
+    let content: string | Record<string, unknown> = event.content || "";
+
+    if (role === "tool" && typeof content === "string") {
+      try {
+        content = JSON.parse(content);
+      } catch {
+        // Keep as string
+      }
+    }
+
+    return {
+      id: `event-${event.id}`,
+      type: role === "user" ? "user" : role === "assistant" || role === "tool" ? "parsed" : "raw",
+      content,
+      timestamp: event.inserted_at,
+      role: role || undefined,
+    };
+  }
+
+  return null;
+}
+
 export function useTaskChat(
   taskId: Accessor<string | undefined>,
   options: UseTaskChatOptions = {},
 ): UseTaskChatReturn {
   const { autoConnect = true } = options;
 
-  const [output, setOutput] = createSignal<OutputLine[]>([]);
+  const [realtimeOutput, setRealtimeOutput] = createSignal<OutputLine[]>([]);
   const [isConnected, setIsConnected] = createSignal(false);
   const [isLoading, setIsLoading] = createSignal(false);
   const [isRunning, setIsRunning] = createSignal(false);
@@ -106,8 +146,53 @@ export function useTaskChat(
     undefined,
   );
   const [outputIdCounter, setOutputIdCounter] = createSignal(0);
+  const [lastEventTimestamp, setLastEventTimestamp] = createSignal<string | null>(null);
 
   const seenMessagesRef = { current: new Set<string>() };
+
+  const { events: electricEvents, isLoading: electricLoading } = useTaskEvents(taskId);
+
+  const electricOutputLines = createMemo((): OutputLine[] => {
+    const events = electricEvents();
+    const lines: OutputLine[] = [];
+
+    for (const event of events) {
+      const line = taskEventToOutputLine(event);
+      if (line) {
+        lines.push(line);
+      }
+    }
+
+    if (events.length > 0) {
+      const lastEvent = events[events.length - 1];
+      setLastEventTimestamp(lastEvent.inserted_at);
+    }
+
+    return lines;
+  });
+
+  const output = createMemo((): OutputLine[] => {
+    const electric = electricOutputLines();
+    const realtime = realtimeOutput();
+
+    if (realtime.length === 0) {
+      return electric;
+    }
+
+    const lastElectricTimestamp = lastEventTimestamp();
+
+    const newRealtime = lastElectricTimestamp
+      ? realtime.filter(line => {
+          const lineTime = new Date(line.timestamp).getTime();
+          const lastTime = new Date(lastElectricTimestamp).getTime();
+          return lineTime > lastTime;
+        })
+      : realtime;
+
+    return [...electric, ...newRealtime];
+  });
+
+  const HASH_CONTENT_PREFIX_LENGTH = 200;
 
   const getContentHash = (
     content: string | Record<string, unknown>,
@@ -117,7 +202,7 @@ export function useTaskChat(
     return `${text.slice(0, HASH_CONTENT_PREFIX_LENGTH)}_${text.length}`;
   };
 
-  const addOutput = (
+  const addRealtimeOutput = (
     type: OutputType,
     content: string | Record<string, unknown>,
     role?: MessageRole,
@@ -132,44 +217,13 @@ export function useTaskChat(
     setOutputIdCounter(newId);
 
     const line: OutputLine = {
-      id: `output-${newId}`,
+      id: `realtime-${newId}`,
       type,
       content,
       timestamp: new Date().toISOString(),
       role,
     };
-    setOutput((prev) => [...prev, line]);
-  };
-
-  const loadStoredMessages = (messages: StoredMessage[]) => {
-    const lines: OutputLine[] = messages.map((msg, index) => {
-      const hash = getContentHash(msg.content);
-      seenMessagesRef.current.add(hash);
-
-      let content: string | Record<string, unknown> = msg.content;
-
-      if (msg.role === "tool" && typeof msg.content === "string") {
-        try {
-          content = JSON.parse(msg.content);
-        } catch {
-          content = msg.content;
-        }
-      }
-
-      return {
-        id: `stored-${msg.id || index}`,
-        type:
-          msg.role === "user"
-            ? "user"
-            : msg.role === "assistant" || msg.role === "tool"
-              ? "parsed"
-              : "system",
-        content,
-        timestamp: msg.timestamp,
-        role: msg.role,
-      };
-    });
-    setOutput(lines);
+    setRealtimeOutput((prev) => [...prev, line]);
   };
 
   const connect = async (id: string) => {
@@ -193,14 +247,14 @@ export function useTaskChat(
               setIsThinking(false);
               setAgentStatus("executing");
               setAgentStatusMessage("Agent is responding...");
-              addOutput("parsed", parsed.content as string, "assistant");
+              addRealtimeOutput("parsed", parsed.content as string, "assistant");
             } else if (parsed.type === "result") {
               setIsThinking(false);
               setAgentStatus("idle");
               setAgentStatusMessage("Agent completed");
               const resultContent = parsed.content as string | undefined;
               if (resultContent) {
-                addOutput("parsed", resultContent, "assistant");
+                addRealtimeOutput("parsed", resultContent, "assistant");
               }
             } else if (parsed.type === "tool_use") {
               setIsThinking(false);
@@ -209,18 +263,18 @@ export function useTaskChat(
               setAgentStatusMessage(
                 toolName ? `Using ${toolName}...` : "Using tools...",
               );
-              addOutput("parsed", parsed, "tool");
+              addRealtimeOutput("parsed", parsed, "tool");
             } else if (parsed.type === "tool_result") {
               const toolContent = parsed.content as string | undefined;
               if (toolContent && toolContent.trim()) {
-                addOutput("parsed", parsed, "tool");
+                addRealtimeOutput("parsed", parsed, "tool");
               }
             } else if (parsed.type === "error") {
               setIsThinking(false);
               setAgentStatus("error");
               const errorMsg = parsed.message as string | undefined;
               setAgentStatusMessage(errorMsg || "An error occurred");
-              addOutput(
+              addRealtimeOutput(
                 "system",
                 `Error: ${errorMsg || "Unknown error"}`,
                 "system",
@@ -235,7 +289,7 @@ export function useTaskChat(
                 : JSON.stringify(data.content);
             if (text.trim()) {
               setIsThinking(false);
-              addOutput("raw", text);
+              addRealtimeOutput("raw", text);
             }
           }
         },
@@ -247,18 +301,18 @@ export function useTaskChat(
           if (data.status === "completed") {
             setAgentStatus("idle");
             setAgentStatusMessage("Completed successfully");
-            addOutput(
+            addRealtimeOutput(
               "system",
               `Completed with exit code ${data.exit_code ?? 0}`,
             );
           } else if (data.status === "failed") {
             setAgentStatus("error");
             setAgentStatusMessage(`Failed with exit code ${data.exit_code}`);
-            addOutput("system", `Failed with exit code ${data.exit_code}`);
+            addRealtimeOutput("system", `Failed with exit code ${data.exit_code}`);
           } else {
             setAgentStatus("idle");
             setAgentStatusMessage("Stopped");
-            addOutput("system", "Stopped by user");
+            addRealtimeOutput("system", "Stopped by user");
           }
         },
         onExecutorError: (data: ExecutorErrorPayload) => {
@@ -268,7 +322,7 @@ export function useTaskChat(
           setAgentStatus("error");
           setAgentStatusMessage(data.error);
           setError(data.error);
-          addOutput("system", `Error: ${data.error}`);
+          addRealtimeOutput("system", `Error: ${data.error}`);
         },
         onExecutorStopped: (data: ExecutorStoppedPayload) => {
           console.log("[useTaskChat] Executor stopped:", data);
@@ -276,7 +330,7 @@ export function useTaskChat(
           setIsThinking(false);
           setAgentStatus("idle");
           setAgentStatusMessage(data.reason);
-          addOutput("system", `Stopped: ${data.reason}`);
+          addRealtimeOutput("system", `Stopped: ${data.reason}`);
           setTodos([]);
         },
         onExecutorTodos: (data: ExecutorTodosPayload) => {
@@ -302,19 +356,6 @@ export function useTaskChat(
         console.error("[useTaskChat] Failed to list executors:", err);
       }
 
-      try {
-        const { messages } = await socketManager.getMessages(id);
-        if (messages && messages.length > 0) {
-          console.log(
-            "[useTaskChat] Loaded",
-            messages.length,
-            "previous messages",
-          );
-          loadStoredMessages(messages);
-        }
-      } catch (err) {
-        console.error("[useTaskChat] Failed to load messages:", err);
-      }
     } catch (err) {
       console.error("[useTaskChat] Connection error:", err);
       setError(getErrorMessage(err, "Failed to connect"));
@@ -327,7 +368,7 @@ export function useTaskChat(
   const disconnect = (id: string) => {
     socketManager.leaveTaskChannel(id);
     setIsConnected(false);
-    setOutput([]);
+    setRealtimeOutput([]);
     setError(null);
     setAgentStatus("idle");
     setAgentStatusMessage(null);
@@ -336,6 +377,7 @@ export function useTaskChat(
     setTodos([]);
     seenMessagesRef.current.clear();
     setOutputIdCounter(0);
+    setLastEventTimestamp(null);
   };
 
   createEffect(() => {
@@ -382,7 +424,7 @@ export function useTaskChat(
         ? `${prompt}${prompt ? "\n\n" : ""}[${imageCount} image${imageCount > 1 ? "s" : ""} attached]`
         : prompt;
 
-    addOutput("user", displayContent, "user");
+    addRealtimeOutput("user", displayContent, "user");
 
     try {
       await socketManager.queueMessage(
@@ -443,10 +485,12 @@ export function useTaskChat(
     return socketManager.createWorktree(id);
   };
 
+  const isLoadingCombined = createMemo(() => isLoading() || electricLoading());
+
   return {
     output,
     isConnected,
-    isLoading,
+    isLoading: isLoadingCombined,
     isRunning,
     isThinking,
     error,

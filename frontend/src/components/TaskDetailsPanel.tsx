@@ -1,5 +1,5 @@
 import { useNavigate } from "@solidjs/router";
-import { useLiveQuery, useQuery } from "@tanstack/solid-db";
+import { useLiveQuery } from "@tanstack/solid-db";
 import { marked } from "marked";
 import {
   createEffect,

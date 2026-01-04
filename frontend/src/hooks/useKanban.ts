@@ -13,7 +13,7 @@ import {
   syncHooksCollection as hooksCollection,
   syncColumnHooksCollection as columnHooksCollection,
   syncRepositoriesCollection as repositoriesCollection,
-  syncMessagesCollection as messagesCollection,
+  syncTaskEventsCollection as taskEventsCollection,
 } from "~/lib/generated/sync/collections";
 
 import type {
@@ -23,8 +23,7 @@ import type {
   KanbanHook,
   KanbanColumnHook,
   KanbanRepository,
-  KanbanMessage,
-  KanbanHookExecution,
+  KanbanTaskEvent,
 } from "~/lib/generated/sync/schema";
 
 export {
@@ -34,7 +33,7 @@ export {
   hooksCollection,
   columnHooksCollection,
   repositoriesCollection,
-  messagesCollection,
+  taskEventsCollection,
 };
 
 export type {
@@ -44,8 +43,7 @@ export type {
   KanbanHook,
   KanbanColumnHook,
   KanbanRepository,
-  KanbanMessage,
-  KanbanHookExecution,
+  KanbanTaskEvent,
 };
 
 export type Board = KanbanBoard;
@@ -54,7 +52,7 @@ export type Task = KanbanTask;
 export type Hook = KanbanHook;
 export type ColumnHook = KanbanColumnHook;
 export type Repository = KanbanRepository;
-export type Message = KanbanMessage;
+export type TaskEvent = KanbanTaskEvent;
 
 export function unwrap<T>(
   result:
@@ -462,36 +460,72 @@ export async function fetchSystemHooks(): Promise<CombinedHook[]> {
 }
 
 // ============================================================================
-// Message Queries & Mutations
+// Task Event Queries (unified messages, hooks, sessions)
 // ============================================================================
 
-export function useMessages(taskId: () => string | undefined) {
+export function useTaskEvents(taskId: () => string | undefined) {
   const query = useLiveQuery((q) => {
     const id = taskId();
     if (!id) return undefined;
 
     return q
-      .from({ messages: messagesCollection })
-      .where(({ messages }) => eq(messages.task_id, id))
-      .orderBy(({ messages }) => messages.sequence, "asc")
-      .select(({ messages }) => ({
-        id: messages.id,
-        task_id: messages.task_id,
-        role: messages.role,
-        content: messages.content,
-        status: messages.status,
-        metadata: messages.metadata,
-        sequence: messages.sequence,
-        inserted_at: messages.inserted_at,
-        updated_at: messages.updated_at,
+      .from({ events: taskEventsCollection })
+      .where(({ events }) => eq(events.task_id, id))
+      .orderBy(({ events }) => events.inserted_at, "asc")
+      .select(({ events }) => ({
+        id: events.id,
+        task_id: events.task_id,
+        type: events.type,
+        status: events.status,
+        role: events.role,
+        content: events.content,
+        hook_name: events.hook_name,
+        hook_id: events.hook_id,
+        hook_settings: events.hook_settings,
+        skip_reason: events.skip_reason,
+        error_message: events.error_message,
+        queued_at: events.queued_at,
+        started_at: events.started_at,
+        completed_at: events.completed_at,
+        triggering_column_id: events.triggering_column_id,
+        executor_type: events.executor_type,
+        prompt: events.prompt,
+        exit_code: events.exit_code,
+        working_directory: events.working_directory,
+        session_id: events.session_id,
+        sequence: events.sequence,
+        metadata: events.metadata,
+        inserted_at: events.inserted_at,
+        updated_at: events.updated_at,
+        column_hook_id: events.column_hook_id,
       }));
   });
 
-  const result = createQueryResult<Message[]>(query, []);
+  const result = createQueryResult<TaskEvent[]>(query, []);
   return {
-    messages: result.data,
+    events: result.data,
     isLoading: result.isLoading,
     error: result.error,
+  };
+}
+
+export function useMessages(taskId: () => string | undefined) {
+  const { events, isLoading, error } = useTaskEvents(taskId);
+
+  return {
+    messages: () => events().filter((e) => e.type === "message"),
+    isLoading,
+    error,
+  };
+}
+
+export function useHookExecutions(taskId: () => string | undefined) {
+  const { events, isLoading, error } = useTaskEvents(taskId);
+
+  return {
+    hookExecutions: () => events().filter((e) => e.type === "hook_execution"),
+    isLoading,
+    error,
   };
 }
 

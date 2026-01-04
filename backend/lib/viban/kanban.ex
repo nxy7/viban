@@ -61,12 +61,8 @@ defmodule Viban.Kanban do
       query(:sync_repositories, :read)
     end
 
-    resource Viban.Kanban.Message do
-      query(:sync_messages, :read)
-    end
-
-    resource Viban.Kanban.HookExecution do
-      query(:sync_hook_executions, :read)
+    resource Viban.Kanban.TaskEvent do
+      query(:sync_task_events, :read)
     end
   end
 
@@ -86,10 +82,13 @@ defmodule Viban.Kanban do
 
     # Integration resources
     resource Viban.Kanban.Repository
-    resource Viban.Kanban.Message
 
-    # Hook execution tracking
+    # Task events (all stored in task_events table)
+    resource Viban.Kanban.TaskEvent
+    resource Viban.Kanban.Message
     resource Viban.Kanban.HookExecution
+    resource Viban.Executors.ExecutorSession
+    resource Viban.Executors.ExecutorMessage
   end
 
   # ============================================================================
@@ -222,6 +221,18 @@ defmodule Viban.Kanban do
       rpc_action(:list_hook_executions, :read)
       rpc_action(:get_hook_execution, :read, get?: true)
       rpc_action(:hook_executions_for_task, :history_for_task)
+    end
+
+    resource Viban.Kanban.TaskEvent do
+      rpc_action(:list_task_events, :read)
+      rpc_action(:get_task_event, :read, get?: true)
+      rpc_action(:task_events_for_task, :for_task)
+    end
+
+    resource Viban.Executors.ExecutorSession do
+      rpc_action(:list_executor_sessions, :read)
+      rpc_action(:get_executor_session, :read, get?: true)
+      rpc_action(:executor_sessions_for_task, :for_task)
     end
   end
 end

@@ -17,7 +17,7 @@ defmodule Viban.Kanban.Servers.HookExecutionServer do
   The `stop/1` function is synchronous and waits for any currently running
   hook to complete or be cancelled. This ensures clean state on task moves.
   """
-  use GenServer, restart: :permanent
+  use Viban.StateServer.Core, restart: :permanent
   require Logger
 
   alias Viban.Kanban.{ColumnHook, Hook, HookExecution, Task}
@@ -105,11 +105,12 @@ defmodule Viban.Kanban.Servers.HookExecutionServer do
 
   @impl true
   def init(args) do
-    state = %__MODULE__{
+    default_state = %__MODULE__{
       task_id: args.task_id,
       board_id: args.board_id
     }
 
+    state = Viban.StateServer.Core.init_state(__MODULE__, default_state, args.task_id)
     PubSub.subscribe(@pubsub, "executor:#{args.task_id}:completed")
 
     {:ok, state}
@@ -127,7 +128,7 @@ defmodule Viban.Kanban.Servers.HookExecutionServer do
 
     case HookExecution.start(execution) do
       {:ok, execution} ->
-        state = %{state | current_execution_id: execution.id}
+        state = update_state(state, current_execution_id: execution.id)
         run_hook(state, execution)
 
       {:error, reason} ->
@@ -141,6 +142,7 @@ defmodule Viban.Kanban.Servers.HookExecutionServer do
   def handle_call(:stop, from, state) do
     Logger.info("Stop requested", task_id: state.task_id)
 
+    set_status(:stopping)
     state = %{state | stopping: true}
 
     if state.awaiting_external_executor do
@@ -175,12 +177,10 @@ defmodule Viban.Kanban.Servers.HookExecutionServer do
       cancel_current_execution(state)
     end
 
-    new_state = %{state |
-      current_execution_id: nil,
-      awaiting_external_executor: false,
-      script_task_ref: nil,
-      script_task_pid: nil
-    }
+    new_state =
+      state
+      |> update_state(current_execution_id: nil, awaiting_external_executor: false)
+      |> Map.merge(%{script_task_ref: nil, script_task_pid: nil})
 
     {:reply, :ok, new_state}
   end
@@ -290,7 +290,7 @@ defmodule Viban.Kanban.Servers.HookExecutionServer do
 
       {:await_executor, _task_id} ->
         Logger.info("Awaiting external executor", task_id: state.task_id)
-        {:noreply, %{state | awaiting_external_executor: true}}
+        {:noreply, update_state(state, awaiting_external_executor: true)}
 
       {:error, reason} ->
         handle_hook_error(state, execution, column_hook, hook, reason)
@@ -320,8 +320,12 @@ defmodule Viban.Kanban.Servers.HookExecutionServer do
       {:error, _} ->
         Logger.error("Execution #{exec_id} not found for script result")
 
-        {:noreply,
-         %{state | script_task_ref: nil, script_task_pid: nil, current_execution_id: nil}}
+        new_state =
+          state
+          |> update_state(current_execution_id: nil)
+          |> Map.merge(%{script_task_ref: nil, script_task_pid: nil})
+
+        {:noreply, new_state}
     end
   end
 
@@ -345,7 +349,7 @@ defmodule Viban.Kanban.Servers.HookExecutionServer do
     end
 
     TaskServer.hook_completed(state.task_id, execution.id, :ok)
-    {:noreply, %{state | current_execution_id: nil}}
+    {:noreply, update_state(state, current_execution_id: nil)}
   end
 
   defp handle_hook_error(state, execution, column_hook, hook, reason) do
@@ -360,7 +364,7 @@ defmodule Viban.Kanban.Servers.HookExecutionServer do
       end
 
       TaskServer.hook_completed(state.task_id, execution.id, {:error, reason})
-      {:noreply, %{state | current_execution_id: nil}}
+      {:noreply, update_state(state, current_execution_id: nil)}
     else
       set_task_error(state.task_id, hook.name, reason)
 
@@ -373,7 +377,7 @@ defmodule Viban.Kanban.Servers.HookExecutionServer do
       clear_task_executing(state.task_id)
 
       TaskServer.hook_completed(state.task_id, execution.id, {:error, reason})
-      {:noreply, %{state | current_execution_id: nil}}
+      {:noreply, update_state(state, current_execution_id: nil)}
     end
   end
 
@@ -384,7 +388,7 @@ defmodule Viban.Kanban.Servers.HookExecutionServer do
     end
 
     TaskServer.hook_completed(state.task_id, execution.id, {:error, error_message})
-    {:noreply, %{state | current_execution_id: nil}}
+    {:noreply, update_state(state, current_execution_id: nil)}
   end
 
   # ============================================================================
@@ -419,7 +423,7 @@ defmodule Viban.Kanban.Servers.HookExecutionServer do
       end
     end
 
-    {:noreply, %{state | current_execution_id: nil, awaiting_external_executor: false}}
+    {:noreply, update_state(state, current_execution_id: nil, awaiting_external_executor: false)}
   end
 
   defp stop_external_executor(task_id) do

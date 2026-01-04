@@ -34,12 +34,23 @@ defmodule Viban.Kanban.HookExecution do
   end
 
   postgres do
-    table "hook_executions"
+    table "task_events"
     repo Viban.Repo
+
+    base_filter_sql "type = 'hook_execution'"
   end
 
   attributes do
     uuid_primary_key :id
+
+    attribute :type, :atom do
+      allow_nil? false
+      default :hook_execution
+      writable? false
+      public? true
+      constraints one_of: [:hook_execution]
+      description "Event type discriminator (always 'hook_execution' for this resource)"
+    end
 
     attribute :hook_name, :string do
       allow_nil? false

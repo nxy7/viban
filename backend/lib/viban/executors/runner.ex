@@ -383,7 +383,7 @@ defmodule Viban.Executors.Runner do
       case create_session(task_id, executor_type, prompt, working_directory) do
         {:ok, session} ->
           display_prompt = ImageHandler.build_display_prompt(prompt, image_paths)
-          save_message(session.id, :user, display_prompt)
+          save_message(task_id, session.id, :user, display_prompt)
 
           state = %__MODULE__{
             task_id: task_id,
@@ -500,7 +500,7 @@ defmodule Viban.Executors.Runner do
          task_id,
          session_id
        ) do
-    save_message(session_id, :assistant, content)
+    save_message(task_id, session_id, :assistant, content)
     broadcast_output(task_id, session_id, :parsed, event)
     PRDetector.process_output(task_id, content)
   end
@@ -516,7 +516,7 @@ defmodule Viban.Executors.Runner do
 
   defp handle_parsed_output({:ok, %{type: :tool_use} = event}, task_id, session_id) do
     tool_name = Map.get(event, :tool, "unknown")
-    save_message(session_id, :tool, "Using tool: #{tool_name}", %{tool: tool_name})
+    save_message(task_id, session_id, :tool, "Using tool: #{tool_name}", %{tool: tool_name})
     broadcast_output(task_id, session_id, :parsed, event)
   end
 
@@ -531,7 +531,7 @@ defmodule Viban.Executors.Runner do
   end
 
   defp handle_parsed_output({:ok, %{type: :error, message: message} = event}, task_id, session_id) do
-    save_message(session_id, :system, "Error: #{message}")
+    save_message(task_id, session_id, :system, "Error: #{message}")
     broadcast_output(task_id, session_id, :parsed, event)
     update_task_agent_status(task_id, :error, message)
   end
@@ -610,8 +610,9 @@ defmodule Viban.Executors.Runner do
   # Private Functions - Database Operations
   # ---------------------------------------------------------------------------
 
-  defp save_message(session_id, role, content, metadata \\ %{}) do
+  defp save_message(task_id, session_id, role, content, metadata \\ %{}) do
     case ExecutorMessage.create(%{
+           task_id: task_id,
            session_id: session_id,
            role: role,
            content: content,

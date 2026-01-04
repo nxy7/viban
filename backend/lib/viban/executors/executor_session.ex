@@ -13,12 +13,19 @@ defmodule Viban.Executors.ExecutorSession do
   """
 
   use Ash.Resource,
-    domain: Viban.Executors,
-    data_layer: AshPostgres.DataLayer
+    domain: Viban.Kanban,
+    data_layer: AshPostgres.DataLayer,
+    extensions: [AshTypescript.Resource]
+
+  typescript do
+    type_name("ExecutorSession")
+  end
 
   postgres do
-    table "executor_sessions"
+    table "task_events"
     repo Viban.Repo
+
+    base_filter_sql "type = 'session'"
 
     references do
       reference :task, on_delete: :delete
@@ -28,8 +35,18 @@ defmodule Viban.Executors.ExecutorSession do
   attributes do
     uuid_primary_key :id
 
+    attribute :type, :atom do
+      allow_nil? false
+      default :session
+      writable? false
+      public? true
+      constraints one_of: [:session]
+      description "Event type discriminator (always 'session' for this resource)"
+    end
+
     attribute :executor_type, :atom do
       allow_nil? false
+      public? true
 
       constraints one_of: [
                     :claude_code,
@@ -45,37 +62,45 @@ defmodule Viban.Executors.ExecutorSession do
 
     attribute :prompt, :string do
       allow_nil? false
+      public? true
       description "The prompt/instruction given to the executor"
     end
 
     attribute :status, :atom do
       allow_nil? false
+      public? true
       constraints one_of: [:pending, :running, :completed, :failed, :stopped]
       default :pending
       description "Current status of the executor session"
     end
 
     attribute :exit_code, :integer do
+      public? true
       description "Exit code from the executor process (if applicable)"
     end
 
     attribute :error_message, :string do
+      public? true
       description "Error message if the session failed"
     end
 
     attribute :working_directory, :string do
+      public? true
       description "Working directory used for this session"
     end
 
-    attribute :started_at, :utc_datetime do
+    attribute :started_at, :utc_datetime_usec do
+      public? true
       description "When the executor was started"
     end
 
-    attribute :completed_at, :utc_datetime do
+    attribute :completed_at, :utc_datetime_usec do
+      public? true
       description "When the executor completed/failed/stopped"
     end
 
     attribute :metadata, :map do
+      public? true
       default %{}
       description "Additional metadata about the session"
     end
@@ -86,10 +111,8 @@ defmodule Viban.Executors.ExecutorSession do
   relationships do
     belongs_to :task, Viban.Kanban.Task do
       allow_nil? false
-    end
-
-    has_many :messages, Viban.Executors.ExecutorMessage do
-      destination_attribute :session_id
+      public? true
+      attribute_writable? true
     end
   end
 

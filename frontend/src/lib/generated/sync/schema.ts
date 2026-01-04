@@ -1,11 +1,11 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 export const messageQueueEntrySchema = z.object({
   id: z.string(),
   prompt: z.string(),
   executor_type: z.enum(["claude_code", "gemini_cli"]),
   images: z.array(z.record(z.string(), z.unknown())).nullable(),
-  queued_at: z.string(),
+  queued_at: z.string()
 });
 export type MessageQueueEntry = z.infer<typeof messageQueueEntrySchema>;
 
@@ -15,7 +15,7 @@ export const kanbanBoardSchema = z.object({
   description: z.string().nullable(),
   inserted_at: z.string().datetime(),
   updated_at: z.string().datetime(),
-  user_id: z.string().uuid(),
+  user_id: z.string().uuid()
 });
 export type KanbanBoard = z.infer<typeof kanbanBoardSchema>;
 
@@ -27,7 +27,7 @@ export const kanbanColumnSchema = z.object({
   settings: z.record(z.string(), z.unknown()).nullable(),
   inserted_at: z.string().datetime(),
   updated_at: z.string().datetime(),
-  board_id: z.string().uuid(),
+  board_id: z.string().uuid()
 });
 export type KanbanColumn = z.infer<typeof kanbanColumnSchema>;
 
@@ -52,15 +52,13 @@ export const kanbanTaskSchema = z.object({
   pr_status: z.enum(["open", "merged", "closed", "draft"]).nullable(),
   is_parent: z.boolean().nullable(),
   subtask_position: z.number().int().nullable(),
-  subtask_generation_status: z
-    .enum(["generating", "completed", "failed"])
-    .nullable(),
+  subtask_generation_status: z.enum(["generating", "completed", "failed"]).nullable(),
   executed_hooks: z.array(z.string()).nullable(),
   message_queue: z.array(messageQueueEntrySchema).nullable(),
   inserted_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   column_id: z.string().uuid(),
-  parent_task_id: z.string().uuid().nullable(),
+  parent_task_id: z.string().uuid().nullable()
 });
 export type KanbanTask = z.infer<typeof kanbanTaskSchema>;
 
@@ -70,15 +68,13 @@ export const kanbanHookSchema = z.object({
   hook_kind: z.enum(["script", "agent"]),
   command: z.string().nullable(),
   agent_prompt: z.string().nullable(),
-  agent_executor: z
-    .enum(["claude_code", "gemini_cli", "codex", "opencode", "cursor_agent"])
-    .nullable(),
+  agent_executor: z.enum(["claude_code", "gemini_cli", "codex", "opencode", "cursor_agent"]).nullable(),
   agent_auto_approve: z.boolean().nullable(),
   default_execute_once: z.boolean().nullable(),
   default_transparent: z.boolean().nullable(),
   inserted_at: z.string().datetime(),
   updated_at: z.string().datetime(),
-  board_id: z.string().uuid(),
+  board_id: z.string().uuid()
 });
 export type KanbanHook = z.infer<typeof kanbanHookSchema>;
 
@@ -93,7 +89,7 @@ export const kanbanColumnHookSchema = z.object({
   removable: z.boolean().nullable(),
   inserted_at: z.string().datetime(),
   updated_at: z.string().datetime(),
-  column_id: z.string().uuid(),
+  column_id: z.string().uuid()
 });
 export type KanbanColumnHook = z.infer<typeof kanbanColumnHookSchema>;
 
@@ -111,53 +107,49 @@ export const kanbanRepositorySchema = z.object({
   clone_error: z.string().nullable(),
   inserted_at: z.string().datetime(),
   updated_at: z.string().datetime(),
-  board_id: z.string().uuid(),
+  board_id: z.string().uuid()
 });
 export type KanbanRepository = z.infer<typeof kanbanRepositorySchema>;
 
-export const kanbanMessageSchema = z.object({
+export const kanbanTaskEventSchema = z.object({
   id: z.string().uuid(),
-  role: z.enum(["user", "assistant", "system"]),
-  content: z.string(),
-  status: z.enum(["pending", "processing", "completed", "failed"]).nullable(),
-  metadata: z.record(z.string(), z.unknown()).nullable(),
-  sequence: z.number().int(),
-  inserted_at: z.string().datetime(),
-  updated_at: z.string().datetime(),
-  task_id: z.string().uuid(),
-});
-export type KanbanMessage = z.infer<typeof kanbanMessageSchema>;
-
-export const kanbanHookExecutionSchema = z.object({
-  id: z.string().uuid(),
-  hook_name: z.string(),
-  hook_id: z.string(),
-  status: z.enum([
-    "pending",
-    "running",
-    "completed",
-    "failed",
-    "cancelled",
-    "skipped",
-  ]),
-  skip_reason: z
-    .enum([
-      "error",
-      "disabled",
-      "column_change",
-      "server_restart",
-      "user_cancelled",
-    ])
-    .nullable(),
-  error_message: z.string().nullable(),
+  type: z.enum(["message", "hook_execution", "session", "executor_output"]),
+  status: z.enum(["pending", "processing", "running", "completed", "failed", "cancelled", "skipped", "stopped"]).nullable(),
+  role: z.enum(["user", "assistant", "system", "tool"]).nullable(),
+  content: z.string().nullable(),
+  hook_name: z.string().nullable(),
+  hook_id: z.string().nullable(),
   hook_settings: z.record(z.string(), z.unknown()).nullable(),
-  queued_at: z.string().datetime(),
+  skip_reason: z.enum(["error", "disabled", "column_change", "server_restart", "user_cancelled"]).nullable(),
+  error_message: z.string().nullable(),
+  queued_at: z.string().datetime().nullable(),
   started_at: z.string().datetime().nullable(),
   completed_at: z.string().datetime().nullable(),
   triggering_column_id: z.string().uuid().nullable(),
+  executor_type: z.enum(["claude_code", "gemini_cli", "codex", "opencode", "api_anthropic", "api_openai"]).nullable(),
+  prompt: z.string().nullable(),
+  exit_code: z.number().int().nullable(),
+  working_directory: z.string().nullable(),
+  session_id: z.string().uuid().nullable(),
+  sequence: z.number().int().nullable(),
+  metadata: z.record(z.string(), z.unknown()).nullable(),
   inserted_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   task_id: z.string().uuid(),
-  column_hook_id: z.string().uuid().nullable(),
+  column_hook_id: z.string().uuid().nullable()
 });
-export type KanbanHookExecution = z.infer<typeof kanbanHookExecutionSchema>;
+export type KanbanTaskEvent = z.infer<typeof kanbanTaskEventSchema>;
+
+export const stateServerActorStateSchema = z.object({
+  id: z.string().uuid(),
+  actor_type: z.string(),
+  actor_id: z.string(),
+  state: z.record(z.string(), z.unknown()),
+  status: z.enum(["starting", "ok", "stopping", "stopped", "error"]),
+  message: z.string().nullable(),
+  version: z.number().int(),
+  inserted_at: z.string().datetime(),
+  updated_at: z.string().datetime()
+});
+export type StateServerActorState = z.infer<typeof stateServerActorStateSchema>;
+

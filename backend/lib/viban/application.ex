@@ -65,7 +65,13 @@ defmodule Viban.Application do
 
       # Dynamic supervisor for board actors
       {DynamicSupervisor,
-       name: Viban.Kanban.Actors.BoardDynamicSupervisor, strategy: :one_for_one}
+       name: Viban.Kanban.Actors.BoardDynamicSupervisor, strategy: :one_for_one},
+
+      # StateServer monitor for lifecycle tracking
+      Viban.StateServer.Monitor,
+
+      # Demo agent for StateServer testing
+      Viban.StateServer.DemoAgent
     ]
   end
 

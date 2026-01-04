@@ -7,8 +7,9 @@ defmodule VibanWeb.TaskChannel do
   - Sending messages (queued for AI execution)
   - Receiving executor output streams
   - Getting task/executor status
-  - Message history
   - Stopping running executors
+
+  Note: Message history is now synced via Electric SQL, not this channel.
 
   ## AI Execution Flow
 
@@ -36,7 +37,7 @@ defmodule VibanWeb.TaskChannel do
   use Phoenix.Channel
 
   alias Viban.Kanban.Task
-  alias Viban.Executors.{Executor, ExecutorSession, ExecutorMessage}
+  alias Viban.Executors.{Executor, ExecutorSession}
 
   require Logger
 
@@ -240,56 +241,6 @@ defmodule VibanWeb.TaskChannel do
     end
   end
 
-  # Get messages for this task (across all sessions).
-  @impl true
-  def handle_in("get_messages", _params, socket) do
-    task_id = socket.assigns.task_id
-    Logger.info("[TaskChannel] get_messages called for task #{task_id}")
-
-    # Get all sessions for this task, ordered by most recent first
-    sessions =
-      case ExecutorSession.for_task(task_id) do
-        {:ok, sessions} -> sessions
-        _ -> []
-      end
-
-    # Get messages for each session
-    session_messages =
-      sessions
-      |> Enum.flat_map(fn session ->
-        case ExecutorMessage.for_session(session.id) do
-          {:ok, msgs} -> Enum.map(msgs, &serialize_message(&1, session))
-          _ -> []
-        end
-      end)
-
-    # Get queued messages that haven't been processed yet
-    queued_messages =
-      case Task.get(task_id) do
-        {:ok, task} ->
-          (task.message_queue || [])
-          |> Enum.map(fn entry ->
-            %{
-              id: entry.id || Ash.UUID.generate(),
-              role: :user,
-              content: entry.prompt || "",
-              metadata: %{images: entry.images || [], queued: true},
-              timestamp: entry.queued_at || DateTime.utc_now() |> DateTime.to_iso8601(),
-              executor_type: entry.executor_type || "claude_code"
-            }
-          end)
-
-        _ ->
-          []
-      end
-
-    # Combine and sort all messages
-    messages =
-      (session_messages ++ queued_messages)
-      |> Enum.sort_by(& &1.timestamp)
-
-    {:reply, {:ok, %{messages: messages}}, socket}
-  end
 
   defp serialize_session(session) do
     %{
@@ -306,17 +257,6 @@ defmodule VibanWeb.TaskChannel do
     }
   end
 
-  defp serialize_message(message, session) do
-    %{
-      id: message.id,
-      session_id: session.id,
-      role: message.role,
-      content: message.content,
-      metadata: message.metadata,
-      timestamp: message.inserted_at |> DateTime.to_iso8601(),
-      executor_type: session.executor_type
-    }
-  end
 
   defp maybe_move_to_in_progress(task) do
     alias Viban.Kanban.Column
