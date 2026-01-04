@@ -1,5 +1,5 @@
-- [ ] add seed kanban boards with seed columns to test the following scenarios
+- [x] add seed kanban boards with seed columns to test the following scenarios
      - board with no hooks that will be used in e2e tests to test moving tasks to other columns and reordering tasks
-- [ ] add seed kanban board with seed columns and one hook that's taking some time (like 30sec) and then succeeding
+- [x] add seed kanban board with seed columns and one hook that's taking some time (like 30sec) and then succeeding
      - this board will be used to test if moving card cancells hooks and if stop button also cancels hooks
-- [ ] implement e2e tests for those scenarios and make sure they pass
+- [x] implement e2e tests for those scenarios and make sure they pass
