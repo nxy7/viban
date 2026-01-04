@@ -8,7 +8,7 @@ import {
 } from "solid-js";
 import * as sdk from "~/lib/generated/ash";
 import { type Branch, type Task, unwrap } from "~/lib/useKanban";
-import { Input, Textarea } from "~/components/design-system";
+import { Button, Input, Select, Textarea } from "~/components/design-system";
 import ErrorBanner from "./ui/ErrorBanner";
 import { LoadingSpinner, PRIcon } from "./ui/Icons";
 import Modal from "./ui/Modal";
@@ -163,11 +163,11 @@ export default function CreatePRModal(props: CreatePRModalProps) {
             >
               Base branch
             </label>
-            <select
+            <Select
               id="baseBranch"
               value={baseBranch() || ""}
               onChange={(e) => handleBaseBranchChange(e.currentTarget.value)}
-              class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+              fullWidth
             >
               <For each={branches()}>
                 {(branch) => (
@@ -177,7 +177,7 @@ export default function CreatePRModal(props: CreatePRModalProps) {
                   </option>
                 )}
               </For>
-            </select>
+            </Select>
           </div>
         </Show>
 
@@ -218,26 +218,25 @@ export default function CreatePRModal(props: CreatePRModalProps) {
         <ErrorBanner message={error()} />
 
         <div class="flex gap-3 pt-2">
-          <button
+          <Button
             type="button"
             onClick={props.onClose}
-            class="flex-1 py-2 px-4 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors"
+            variant="secondary"
+            fullWidth
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
             disabled={isSubmitting() || !baseBranch()}
-            class="flex-1 py-2 px-4 bg-brand-600 hover:bg-brand-700 disabled:bg-brand-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+            loading={isSubmitting()}
+            fullWidth
           >
-            <Show
-              when={isSubmitting()}
-              fallback={branches.loading ? "Loading..." : "Create PR"}
-            >
-              <LoadingSpinner class="h-4 w-4 text-white" />
-              Creating...
+            <Show when={!isSubmitting()}>
+              {branches.loading ? "Loading..." : "Create PR"}
             </Show>
-          </button>
+            <Show when={isSubmitting()}>Creating...</Show>
+          </Button>
         </div>
       </form>
     </Modal>

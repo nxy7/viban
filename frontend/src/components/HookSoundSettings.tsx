@@ -5,6 +5,7 @@ import {
   stopSound,
   type SoundType,
 } from "~/lib/sounds";
+import { Button, Select } from "~/components/design-system";
 import { PlayIcon, StopIcon } from "./ui/Icons";
 
 interface HookSoundSettingsProps {
@@ -51,10 +52,9 @@ export default function HookSoundSettings(props: HookSoundSettingsProps) {
         Notification Sound
       </label>
       <div class="flex gap-2">
-        <select
+        <Select
           value={props.currentSound}
           onChange={(e) => {
-            // Stop any playing sound when changing selection
             if (isPlaying()) {
               stopSound(currentAudio());
               setCurrentAudio(null);
@@ -62,26 +62,25 @@ export default function HookSoundSettings(props: HookSoundSettingsProps) {
             }
             props.onChange(e.currentTarget.value as SoundType);
           }}
-          class="flex-1 px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+          variant="dark"
+          selectSize="sm"
+          fullWidth
         >
           <For each={options}>
             {(opt) => <option value={opt.value}>{opt.label}</option>}
           </For>
-        </select>
-        <button
+        </Select>
+        <Button
           type="button"
           onClick={handlePreview}
-          class={`px-2.5 py-1.5 rounded text-sm transition-colors flex items-center gap-1 ${
-            isPlaying()
-              ? "bg-red-600 hover:bg-red-700 text-white"
-              : "bg-gray-700 hover:bg-gray-600 text-gray-300"
-          }`}
+          variant={isPlaying() ? "danger" : "secondary"}
+          buttonSize="sm"
           title={isPlaying() ? "Stop" : "Preview sound"}
         >
           <Show when={isPlaying()} fallback={<PlayIcon class="w-3 h-3" />}>
             <StopIcon class="w-3 h-3" />
           </Show>
-        </button>
+        </Button>
       </div>
     </div>
   );

@@ -19,7 +19,7 @@ import {
   PRIcon,
   TrashIcon,
 } from "~/components/ui/Icons";
-import { Input, Textarea } from "~/components/design-system";
+import { Button, Input, Select, Textarea } from "~/components/design-system";
 
 const HIDE_DETAILS_KEY = "viban:hideDetails";
 const FULLSCREEN_KEY = "viban:fullscreen";
@@ -811,30 +811,31 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
                     }
                   >
                     <div class="flex gap-2">
-                      <input
+                      <Input
                         type="text"
                         value={title()}
                         onInput={(e) => setTitle(e.currentTarget.value)}
-                        class="flex-1 px-3 py-1 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-brand-500 text-lg font-semibold"
                         autofocus
+                        inputSize="lg"
                         onKeyDown={(e) => {
                           if (e.key === "Enter") handleSaveTitle();
                           if (e.key === "Escape") handleCancelEdit();
                         }}
                       />
-                      <button
+                      <Button
                         onClick={handleSaveTitle}
                         disabled={isSaving()}
-                        class="px-3 py-1 bg-brand-600 hover:bg-brand-700 disabled:bg-brand-800 text-white rounded-lg text-sm"
+                        buttonSize="sm"
                       >
                         Save
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         onClick={handleCancelEdit}
-                        class="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm"
+                        variant="secondary"
+                        buttonSize="sm"
                       >
                         Cancel
-                      </button>
+                      </Button>
                     </div>
                   </Show>
                   {/* Branch name - shown as small text below title */}
@@ -855,28 +856,28 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
                   />
                   <Show when={task().worktree_path}>
                     {/* Open Folder button */}
-                    <button
+                    <Button
                       onClick={() => openFolder(task().worktree_path!)}
-                      class="p-1.5 text-gray-400 hover:text-brand-400 hover:bg-brand-500/10 rounded-lg transition-colors"
+                      variant="icon"
                       title="Open Folder"
                     >
                       <FolderIcon class="w-4 h-4" />
-                    </button>
+                    </Button>
                     {/* Open in Code Editor button */}
-                    <button
+                    <Button
                       onClick={() => openInEditor(task().worktree_path!)}
-                      class="p-1.5 text-gray-400 hover:text-brand-400 hover:bg-brand-500/10 rounded-lg transition-colors"
+                      variant="icon"
                       title="Open in Code Editor"
                     >
                       <CodeEditorIcon class="w-4 h-4" />
-                    </button>
+                    </Button>
                   </Show>
                   {/* Create Worktree button - show when task doesn't have a worktree */}
                   <Show when={!task().worktree_path && isConnected()}>
-                    <button
+                    <Button
                       onClick={handleCreateWorktree}
                       disabled={isCreatingWorktree()}
-                      class="p-1.5 text-gray-400 hover:text-amber-400 hover:bg-amber-500/10 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      variant="icon"
                       title="Create Worktree"
                     >
                       <Show
@@ -904,7 +905,7 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
                       >
                         <LoadingSpinner class="w-4 h-4" />
                       </Show>
-                    </button>
+                    </Button>
                   </Show>
                   {/* PR Link - show when task has an active PR */}
                   <Show
@@ -932,20 +933,20 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
                       (!task().pr_url || task().pr_status === "closed")
                     }
                   >
-                    <button
+                    <Button
                       onClick={() => setShowCreatePRModal(true)}
-                      class="flex items-center p-1.5 text-xs rounded-full bg-gray-500/20 text-gray-400 border border-gray-500/30 hover:bg-gray-500/30 transition-colors"
+                      variant="icon"
                       title="Create Pull Request"
                     >
                       <PRIcon status="draft" class="w-3.5 h-3.5" />
-                    </button>
+                    </Button>
                   </Show>
                   {/* Refine button - uses LLM to improve task description (only in TODO) */}
                   <Show when={isTodoTask()}>
-                    <button
+                    <Button
                       onClick={handleRefine}
                       disabled={isRefining()}
-                      class="p-1.5 text-gray-400 hover:text-brand-400 hover:bg-brand-500/10 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      variant="icon"
                       title="Refine task with AI"
                     >
                       <Show
@@ -954,26 +955,22 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
                       >
                         <LoadingSpinner class="w-4 h-4" />
                       </Show>
-                    </button>
+                    </Button>
                   </Show>
                   {/* Duplicate button */}
                   <Show when={todoColumn()}>
-                    <button
+                    <Button
                       onClick={handleDuplicate}
-                      class="p-1.5 text-gray-400 hover:text-brand-400 hover:bg-brand-500/10 rounded-lg transition-colors"
+                      variant="icon"
                       title="Duplicate task"
                     >
                       <DuplicateIcon class="w-4 h-4" />
-                    </button>
+                    </Button>
                   </Show>
                   {/* Hide/Show details toggle */}
-                  <button
+                  <Button
                     onClick={toggleHideDetails}
-                    class={`p-1.5 rounded-lg transition-colors ${
-                      hideDetails()
-                        ? "text-brand-400 bg-brand-500/10"
-                        : "text-gray-400 hover:text-brand-400 hover:bg-brand-500/10"
-                    }`}
+                    variant="icon"
                     title={hideDetails() ? "Show details" : "Hide details"}
                   >
                     <svg
@@ -1005,15 +1002,11 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
                         />
                       </Show>
                     </svg>
-                  </button>
+                  </Button>
                   {/* Fullscreen toggle */}
-                  <button
+                  <Button
                     onClick={toggleFullscreen}
-                    class={`p-1.5 rounded-lg transition-colors ${
-                      isFullscreen()
-                        ? "text-brand-400 bg-brand-500/10"
-                        : "text-gray-400 hover:text-brand-400 hover:bg-brand-500/10"
-                    }`}
+                    variant="icon"
                     title={isFullscreen() ? "Exit fullscreen" : "Fullscreen"}
                   >
                     <svg
@@ -1040,14 +1033,14 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
                         />
                       </Show>
                     </svg>
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     onClick={() => setShowDeleteConfirm(true)}
-                    class="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                    variant="icon"
                     title="Delete task"
                   >
                     <TrashIcon class="w-4 h-4" />
-                  </button>
+                  </Button>
                 </div>
               </div>
 
@@ -1066,12 +1059,13 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
                   {isConnected() ? "Connected" : "Disconnected"}
                 </span>
                 <Show when={!isConnected()}>
-                  <button
+                  <Button
                     onClick={() => reconnect()}
-                    class="text-xs text-brand-400 hover:text-brand-300"
+                    variant="ghost"
+                    buttonSize="sm"
                   >
                     Reconnect
-                  </button>
+                  </Button>
                 </Show>
                 <Show when={isTaskWorking()}>
                   <span class="flex items-center gap-1.5 text-xs text-amber-400">
@@ -1098,10 +1092,11 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
               {/* Parent Task Link - for subtasks */}
               <Show when={task().parent_task_id}>
                 <div class="mt-4 pt-4 border-t border-gray-700">
-                  <button
+                  <Button
                     type="button"
                     onClick={() => navigateToSubtask(task().parent_task_id!)}
-                    class="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
+                    variant="ghost"
+                    buttonSize="sm"
                   >
                     <svg
                       class="w-4 h-4"
@@ -1117,7 +1112,7 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
                       />
                     </svg>
                     Parent Task
-                  </button>
+                  </Button>
                 </div>
               </Show>
 
@@ -1157,21 +1152,24 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
                     Delete this task? This cannot be undone.
                   </p>
                   <div class="flex gap-2">
-                    <button
+                    <Button
                       onClick={() => setShowDeleteConfirm(false)}
-                      class="flex-1 py-1.5 px-3 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm transition-colors"
+                      variant="secondary"
+                      buttonSize="sm"
+                      fullWidth
                     >
                       Cancel
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       onClick={handleDelete}
                       disabled={isDeleting()}
-                      class="flex-1 py-1.5 px-3 bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:cursor-not-allowed text-white rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
+                      loading={isDeleting()}
+                      variant="danger"
+                      buttonSize="sm"
+                      fullWidth
                     >
-                      <Show when={isDeleting()} fallback="Delete">
-                        <div class="animate-spin rounded-full h-3 w-3 border-b-2 border-white" />
-                      </Show>
-                    </button>
+                      <Show when={!isDeleting()}>Delete</Show>
+                    </Button>
                   </div>
                 </div>
               </Show>
@@ -1183,12 +1181,13 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
                 <div class="flex items-center justify-between mb-2">
                   <h3 class="text-sm font-medium text-gray-400">Description</h3>
                   <Show when={!isEditingDescription()}>
-                    <button
+                    <Button
                       onClick={() => setIsEditingDescription(true)}
-                      class="text-xs text-brand-400 hover:text-brand-300"
+                      variant="ghost"
+                      buttonSize="sm"
                     >
                       Edit
-                    </button>
+                    </Button>
                   </Show>
                 </div>
                 <Show
@@ -1233,19 +1232,21 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
                       autofocus
                     />
                     <div class="flex gap-2 justify-end">
-                      <button
+                      <Button
                         onClick={handleCancelDescriptionEdit}
-                        class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm"
+                        variant="secondary"
+                        buttonSize="sm"
                       >
                         Cancel
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         onClick={handleSaveDescription}
                         disabled={isSaving()}
-                        class="px-3 py-1.5 bg-brand-600 hover:bg-brand-700 disabled:bg-brand-800 text-white rounded-lg text-sm"
+                        loading={isSaving()}
+                        buttonSize="sm"
                       >
-                        {isSaving() ? "Saving..." : "Save"}
-                      </button>
+                        <Show when={!isSaving()}>Save</Show>
+                      </Button>
                     </div>
                   </div>
                 </Show>
@@ -1419,10 +1420,10 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
                               !
                             </span>
                           </Show>
-                          <button
+                          <Button
                             type="button"
                             onClick={() => removeImage(img.id)}
-                            class="ml-1 text-gray-500 hover:text-red-400 transition-colors"
+                            variant="icon"
                             title="Remove image"
                           >
                             <svg
@@ -1434,7 +1435,7 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
                             >
                               <path d="M18 6L6 18M6 6l12 12" />
                             </svg>
-                          </button>
+                          </Button>
                         </div>
                       );
                     }}
@@ -1476,46 +1477,32 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
                         </span>
                       }
                     >
-                      <div class="relative inline-block">
-                        <select
-                          value={selectedExecutor() ?? ""}
-                          onChange={(e) =>
-                            setSelectedExecutor(e.currentTarget.value)
-                          }
-                          disabled={!isConnected() || isSending()}
-                          class="appearance-none bg-transparent text-xs text-gray-400 hover:text-gray-300 pr-4 cursor-pointer focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                          title="Select AI executor"
-                        >
-                          <For each={availableExecutors()}>
-                            {(exec) => (
-                              <option
-                                value={exec.type}
-                                class="bg-gray-800 text-white"
-                              >
-                                {exec.name}
-                              </option>
-                            )}
-                          </For>
-                        </select>
-                        <svg
-                          class="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-500 pointer-events-none"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M19 9l-7 7-7-7"
-                          />
-                        </svg>
-                      </div>
+                      <Select
+                        value={selectedExecutor() ?? ""}
+                        onChange={(e) =>
+                          setSelectedExecutor(e.currentTarget.value)
+                        }
+                        disabled={!isConnected() || isSending()}
+                        variant="minimal"
+                        selectSize="sm"
+                        title="Select AI executor"
+                      >
+                        <For each={availableExecutors()}>
+                          {(exec) => (
+                            <option
+                              value={exec.type}
+                              class="bg-gray-800 text-white"
+                            >
+                              {exec.name}
+                            </option>
+                          )}
+                        </For>
+                      </Select>
                     </Show>
                   </div>
                 </Show>
                 <div class="flex gap-2">
-                  <textarea
+                  <Textarea
                     ref={inputRef}
                     value={input()}
                     onInput={(e) => setInput(e.currentTarget.value)}
@@ -1532,9 +1519,9 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
                       !isConnected() || isSending() || !hasAvailableExecutor()
                     }
                     rows={1}
-                    class="flex-1 px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed resize-none"
+                    resizable={false}
                   />
-                  <button
+                  <Button
                     type="submit"
                     disabled={
                       !isConnected() ||
@@ -1542,44 +1529,21 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
                       (!input().trim() && attachedImages().length === 0) ||
                       !hasAvailableExecutor()
                     }
-                    class="px-4 py-2 bg-brand-600 hover:bg-brand-700 disabled:bg-brand-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2"
+                    loading={isSending()}
                     title="Send message"
                   >
-                    <Show
-                      when={isSending()}
-                      fallback={
-                        <svg
-                          class="w-4 h-4"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                          />
-                        </svg>
-                      }
-                    >
+                    <Show when={!isSending()}>
                       <svg
-                        class="w-4 h-4 animate-spin"
+                        class="w-4 h-4"
                         fill="none"
                         viewBox="0 0 24 24"
+                        stroke="currentColor"
                       >
-                        <circle
-                          class="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          stroke-width="4"
-                        />
                         <path
-                          class="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
                         />
                       </svg>
                     </Show>
@@ -1588,59 +1552,37 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
                         {task().message_queue?.length ?? 0}
                       </span>
                     </Show>
-                  </button>
+                  </Button>
                   <Show when={isTaskWorking()}>
-                    <button
+                    <Button
                       type="button"
                       onClick={handleStopExecutor}
                       disabled={isStopping()}
-                      class="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2"
+                      loading={isStopping()}
+                      variant="danger"
                       title="Stop Executor"
                     >
-                      <Show
-                        when={isStopping()}
-                        fallback={
-                          <svg
-                            class="w-4 h-4"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <rect
-                              x="6"
-                              y="6"
-                              width="12"
-                              height="12"
-                              rx="1"
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="2"
-                              fill="currentColor"
-                            />
-                          </svg>
-                        }
-                      >
+                      <Show when={!isStopping()}>
                         <svg
-                          class="w-4 h-4 animate-spin"
+                          class="w-4 h-4"
                           fill="none"
                           viewBox="0 0 24 24"
+                          stroke="currentColor"
                         >
-                          <circle
-                            class="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            stroke-width="4"
-                          />
-                          <path
-                            class="opacity-75"
+                          <rect
+                            x="6"
+                            y="6"
+                            width="12"
+                            height="12"
+                            rx="1"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
                             fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                           />
                         </svg>
                       </Show>
-                    </button>
+                    </Button>
                   </Show>
                 </div>
               </form>

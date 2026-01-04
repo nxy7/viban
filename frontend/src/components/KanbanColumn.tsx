@@ -1,6 +1,7 @@
 import { createDroppable } from "@thisbeyond/solid-dnd";
 import { createMemo, For, Show } from "solid-js";
 import { CheckIcon, PlusIcon, SettingsIcon } from "~/components/ui/Icons";
+import { Button } from "~/components/design-system";
 import type { Column, Task } from "~/lib/useKanban";
 import type { DropTarget } from "./KanbanBoard";
 import TaskCard from "./TaskCard";
@@ -89,14 +90,14 @@ export default function KanbanColumn(props: KanbanColumnProps) {
         </div>
 
         {/* Settings button */}
-        <button
+        <Button
           ref={settingsButtonRef}
           onClick={() => props.onOpenSettings?.(settingsButtonRef)}
-          class="p-1.5 text-gray-500 hover:text-gray-300 hover:bg-gray-800 rounded-md transition-colors"
+          variant="icon"
           title="Column settings"
         >
           <SettingsIcon class="w-4 h-4" />
-        </button>
+        </Button>
       </div>
 
       {/* Tasks List - droppable ref on the scrollable container for cross-column drops */}
@@ -151,13 +152,15 @@ export default function KanbanColumn(props: KanbanColumnProps) {
       {/* Add Task Button (bottom) - only shown for TODO column */}
       <Show when={props.showAddButton}>
         <div class="p-2 border-t border-gray-800">
-          <button
+          <Button
             onClick={props.onAddTask}
-            class="w-full py-2 text-sm text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors flex items-center justify-center gap-2"
+            variant="ghost"
+            buttonSize="sm"
+            fullWidth
           >
             <PlusIcon class="w-4 h-4" />
             Add a card
-          </button>
+          </Button>
         </div>
       </Show>
     </div>

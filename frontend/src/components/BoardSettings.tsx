@@ -1,5 +1,6 @@
 import { For, Show } from "solid-js";
 import { type Column, useColumns } from "~/lib/useKanban";
+import { Button } from "~/components/design-system";
 import ColumnHookConfig from "./ColumnHookConfig";
 import HookManager from "./HookManager";
 import RepositoryConfig from "./RepositoryConfig";
@@ -43,16 +44,21 @@ export default function BoardSettings(props: BoardSettingsProps) {
       <div class="flex border-b border-gray-700 mb-4 -mx-6 px-6">
         <For each={tabs}>
           {(tab) => (
-            <button
+            <Button
               onClick={() => props.onTabChange?.(tab.id)}
-              class={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                activeTab() === tab.id
-                  ? "border-brand-500 text-brand-400"
-                  : "border-transparent text-gray-400 hover:text-gray-300"
-              }`}
+              variant="ghost"
+              buttonSize="sm"
             >
-              {tab.label}
-            </button>
+              <span
+                class={`border-b-2 pb-1 transition-colors ${
+                  activeTab() === tab.id
+                    ? "border-brand-500 text-brand-400"
+                    : "border-transparent text-gray-400"
+                }`}
+              >
+                {tab.label}
+              </span>
+            </Button>
           )}
         </For>
       </div>

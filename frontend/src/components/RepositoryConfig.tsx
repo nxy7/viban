@@ -1,6 +1,6 @@
 import { createEffect, createSignal, on, Show } from "solid-js";
 import * as sdk from "~/lib/generated/ash";
-import { Input } from "~/components/design-system";
+import { Button, Input } from "~/components/design-system";
 import ErrorBanner from "~/components/ui/ErrorBanner";
 import { ChevronRightIcon, ExternalLinkIcon } from "~/components/ui/Icons";
 import { type Repository, unwrap, useRepositories } from "~/lib/useKanban";
@@ -136,19 +136,23 @@ function RepositoryForm(props: RepositoryFormProps) {
       </div>
 
       <div class="flex gap-2 pt-2">
-        <button
+        <Button
           onClick={props.onCancel}
-          class="flex-1 py-2 px-4 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg text-sm transition-colors"
+          variant="secondary"
+          buttonSize="sm"
+          fullWidth
         >
           Cancel
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={props.onSave}
           disabled={props.isSaving}
-          class="flex-1 py-2 px-4 bg-brand-600 hover:bg-brand-700 disabled:bg-brand-800 disabled:cursor-not-allowed text-white rounded-lg text-sm transition-colors"
+          loading={props.isSaving}
+          buttonSize="sm"
+          fullWidth
         >
-          {props.isSaving ? "Saving..." : "Save"}
-        </button>
+          <Show when={!props.isSaving}>Save</Show>
+        </Button>
       </div>
     </div>
   );
@@ -174,12 +178,9 @@ function EmptyState(props: EmptyStateProps) {
           worktrees.
         </Show>
       </p>
-      <button
-        onClick={props.onConfigure}
-        class={`px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-sm rounded-lg transition-colors ${props.singleMode ? "" : "block mx-auto"}`}
-      >
+      <Button onClick={props.onConfigure} buttonSize="sm">
         Configure Repository
-      </button>
+      </Button>
     </div>
   );
 }

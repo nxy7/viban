@@ -23,12 +23,12 @@ import {
 import {
   BackArrowIcon,
   CloseIcon,
-  KeyboardIcon,
+  HelpIcon,
   PlusIcon,
   SearchIcon,
   SettingsIcon,
 } from "~/components/ui/Icons";
-import { Input } from "~/components/design-system";
+import { Button, Input } from "~/components/design-system";
 import { fuzzyMatch } from "~/lib/fuzzySearch";
 import * as sdk from "~/lib/generated/ash";
 import { TaskRelationProvider } from "~/lib/TaskRelationContext";
@@ -809,42 +809,43 @@ export default function KanbanBoard(props: KanbanBoardProps) {
                   hasIcon
                 />
                 <Show when={filterText()}>
-                  <button
+                  <Button
                     onClick={() => setFilterText("")}
-                    class="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-gray-500 hover:text-gray-300 transition-colors"
+                    variant="icon"
                     title="Clear filter"
                   >
                     <CloseIcon class="w-4 h-4" />
-                  </button>
+                  </Button>
                 </Show>
               </div>
             </div>
 
             <div class="flex items-center gap-2">
               <Show when={todoColumn()}>
-                <button
+                <Button
                   onClick={() => openCreateModal()}
-                  class="flex items-center gap-2 px-3 py-1.5 text-sm text-white bg-brand-600 hover:bg-brand-700 rounded-lg transition-colors"
+                  buttonSize="sm"
                   title="Add new task"
                 >
                   <PlusIcon class="w-4 h-4" />
                   New Task
-                </button>
+                </Button>
               </Show>
-              <button
+              <Button
                 onClick={() => props.onOpenSettings?.()}
-                class="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-300 hover:text-white bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
+                variant="secondary"
+                buttonSize="sm"
               >
                 <SettingsIcon class="w-4 h-4" />
                 Settings
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => setShowShortcutsHelp(true)}
-                class="flex items-center justify-center w-8 h-8 text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
+                variant="icon"
                 title="Keyboard shortcuts (Shift+?)"
               >
-                <KeyboardIcon class="w-4 h-4" />
-              </button>
+                <HelpIcon class="w-4 h-4" />
+              </Button>
             </div>
           </div>
         </Show>

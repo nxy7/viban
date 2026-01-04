@@ -732,9 +732,9 @@ export function SearchIcon(props: IconProps): JSX.Element {
 }
 
 /**
- * Keyboard icon - for keyboard shortcuts hint
+ * Question mark / help icon - for keyboard shortcuts hint
  */
-export function KeyboardIcon(props: IconProps): JSX.Element {
+export function HelpIcon(props: IconProps): JSX.Element {
   return (
     <svg
       class={props.class ?? "w-4 h-4"}
@@ -742,28 +742,14 @@ export function KeyboardIcon(props: IconProps): JSX.Element {
       viewBox="0 0 24 24"
       stroke="currentColor"
     >
+      <circle cx="12" cy="12" r="10" stroke-width="2" />
       <path
         stroke-linecap="round"
         stroke-linejoin="round"
         stroke-width="2"
-        d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+        d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"
       />
-      <rect
-        x="2"
-        y="6"
-        width="20"
-        height="12"
-        rx="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        stroke-width="2"
-      />
-      <path
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        stroke-width="2"
-        d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"
-      />
+      <circle cx="12" cy="17" r="0.5" fill="currentColor" stroke="none" />
     </svg>
   );
 }

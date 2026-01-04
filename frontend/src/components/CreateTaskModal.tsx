@@ -1,7 +1,7 @@
 import { createEffect, createSignal, on, Show } from "solid-js";
 import * as sdk from "~/lib/generated/ash";
 import { type Column, toDecimal, unwrap } from "~/lib/useKanban";
-import { Input } from "~/components/design-system";
+import { Button, Checkbox, Input } from "~/components/design-system";
 import ImageTextarea, {
   type InlineImage,
   prepareImagesForApi,
@@ -244,26 +244,21 @@ export default function CreateTaskModal(props: CreateTaskModalProps) {
             >
               Description
             </label>
-            <button
+            <Button
               type="button"
               onClick={handleRefine}
               disabled={isRefining() || !title().trim()}
-              class="flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-brand-400 hover:text-brand-300 bg-brand-500/10 hover:bg-brand-500/20 border border-brand-500/30 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              loading={isRefining()}
+              variant="ghost"
+              buttonSize="sm"
               title="Refine description with AI"
             >
-              <Show
-                when={isRefining()}
-                fallback={
-                  <>
-                    <LightningIcon class="w-3.5 h-3.5" />
-                    Refine with AI
-                  </>
-                }
-              >
-                <LoadingSpinner class="h-3 w-3 text-brand-400" />
-                Refining...
+              <Show when={!isRefining()}>
+                <LightningIcon class="w-3.5 h-3.5" />
+                Refine with AI
               </Show>
-            </button>
+              <Show when={isRefining()}>Refining...</Show>
+            </Button>
           </div>
           <ImageTextarea
             id="description"
@@ -305,12 +300,10 @@ export default function CreateTaskModal(props: CreateTaskModalProps) {
         {/* Autostart toggle - only show if we have an In Progress column */}
         <Show when={inProgressColumn()}>
           <div class="flex items-center gap-3 p-3 bg-gray-800/50 border border-gray-700 rounded-lg">
-            <input
-              type="checkbox"
+            <Checkbox
               id="autostart"
               checked={autostart()}
               onChange={(e) => setAutostart(e.currentTarget.checked)}
-              class="w-4 h-4 text-brand-600 bg-gray-700 border-gray-600 rounded focus:ring-brand-500 focus:ring-2 cursor-pointer"
             />
             <div class="flex-1">
               <label
@@ -330,23 +323,23 @@ export default function CreateTaskModal(props: CreateTaskModalProps) {
         <ErrorBanner message={error()} />
 
         <div class="flex gap-3 pt-2">
-          <button
+          <Button
             type="button"
             onClick={handleClose}
-            class="flex-1 py-2 px-4 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors"
+            variant="secondary"
+            fullWidth
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
             disabled={isSubmitting()}
-            class="flex-1 py-2 px-4 bg-brand-600 hover:bg-brand-700 disabled:bg-brand-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+            loading={isSubmitting()}
+            fullWidth
           >
-            <Show when={isSubmitting()} fallback="Create Task">
-              <LoadingSpinner class="h-4 w-4 text-white" />
-              Creating...
-            </Show>
-          </button>
+            <Show when={!isSubmitting()}>Create Task</Show>
+            <Show when={isSubmitting()}>Creating...</Show>
+          </Button>
         </div>
       </form>
     </Modal>

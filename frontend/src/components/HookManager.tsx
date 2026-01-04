@@ -7,7 +7,7 @@ import {
   type HookKind,
   unwrap,
 } from "~/lib/useKanban";
-import { Input, Textarea } from "~/components/design-system";
+import { Button, Checkbox, Input, Select, Textarea } from "~/components/design-system";
 import ErrorBanner from "./ui/ErrorBanner";
 import {
   EditIcon,
@@ -197,12 +197,9 @@ export default function HookManager(props: HookManagerProps) {
       <div class="flex justify-between items-center">
         <h3 class="text-lg font-semibold text-white">Hooks</h3>
         <Show when={!isCreating() && !editingHook()}>
-          <button
-            onClick={startCreate}
-            class="px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-sm rounded-lg transition-colors"
-          >
+          <Button onClick={startCreate} buttonSize="sm">
             Add Hook
-          </button>
+          </Button>
         </Show>
       </div>
 
@@ -218,30 +215,24 @@ export default function HookManager(props: HookManagerProps) {
           {/* Hook Kind Selector */}
           <Show when={isCreating()}>
             <div class="flex gap-2 p-1 bg-gray-900 rounded-lg">
-              <button
+              <Button
                 type="button"
                 onClick={() => setHookKind("script")}
-                class={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-                  hookKind() === "script"
-                    ? "bg-gray-700 text-white"
-                    : "text-gray-400 hover:text-white"
-                }`}
+                variant={hookKind() === "script" ? "secondary" : "ghost"}
+                fullWidth
               >
                 <TerminalIcon class="w-4 h-4 text-gray-400" />
                 Script Hook
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 onClick={() => setHookKind("agent")}
-                class={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-                  hookKind() === "agent"
-                    ? "bg-purple-600 text-white"
-                    : "text-gray-400 hover:text-white"
-                }`}
+                variant={hookKind() === "agent" ? "primary" : "ghost"}
+                fullWidth
               >
                 <SparklesIcon class="w-4 h-4 text-purple-400" />
                 Agent Hook
-              </button>
+              </Button>
             </div>
           </Show>
 
@@ -303,28 +294,27 @@ export default function HookManager(props: HookManagerProps) {
               <label class="block text-sm text-gray-400 mb-1">
                 Agent Executor
               </label>
-              <select
+              <Select
                 value={agentExecutor()}
                 onChange={(e) =>
                   setAgentExecutor(e.currentTarget.value as AgentExecutor)
                 }
-                class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                variant="dark"
+                fullWidth
               >
                 <option value="claude_code">Claude Code</option>
                 <option value="gemini_cli">Gemini CLI</option>
                 <option value="codex">Codex</option>
                 <option value="opencode">OpenCode</option>
                 <option value="cursor_agent">Cursor Agent</option>
-              </select>
+              </Select>
             </div>
 
             <div class="flex items-center gap-2">
-              <input
-                type="checkbox"
+              <Checkbox
                 id="autoApprove"
                 checked={agentAutoApprove()}
                 onChange={(e) => setAgentAutoApprove(e.currentTarget.checked)}
-                class="w-4 h-4 rounded bg-gray-900 border-gray-700"
               />
               <label for="autoApprove" class="text-sm text-gray-300">
                 Auto-approve tool calls (use with caution)
@@ -333,19 +323,23 @@ export default function HookManager(props: HookManagerProps) {
           </Show>
 
           <div class="flex gap-2 pt-2">
-            <button
+            <Button
               onClick={cancelEdit}
-              class="flex-1 py-2 px-4 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg text-sm transition-colors"
+              variant="secondary"
+              buttonSize="sm"
+              fullWidth
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={handleSave}
               disabled={isSaving()}
-              class="flex-1 py-2 px-4 bg-brand-600 hover:bg-brand-700 disabled:bg-brand-800 disabled:cursor-not-allowed text-white rounded-lg text-sm transition-colors"
+              loading={isSaving()}
+              buttonSize="sm"
+              fullWidth
             >
-              {isSaving() ? "Saving..." : "Save Hook"}
-            </button>
+              <Show when={!isSaving()}>Save Hook</Show>
+            </Button>
           </div>
         </div>
       </Show>
@@ -461,20 +455,20 @@ export default function HookManager(props: HookManagerProps) {
                   </Show>
                 </div>
                 <div class="flex gap-1 ml-2">
-                  <button
+                  <Button
                     onClick={() => startEdit(hook)}
-                    class="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors"
+                    variant="icon"
                     title="Edit"
                   >
                     <EditIcon class="w-4 h-4" />
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     onClick={() => handleDelete(hook.id)}
-                    class="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
+                    variant="icon"
                     title="Delete"
                   >
                     <TrashIcon class="w-4 h-4" />
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>

@@ -1,6 +1,7 @@
 import { createResource, createSignal, For, Show } from "solid-js";
 import * as sdk from "~/lib/generated/ash";
 import { type Subtask, type Task, unwrap } from "~/lib/useKanban";
+import { Button } from "~/components/design-system";
 import ErrorBanner from "./ui/ErrorBanner";
 import {
   ChevronRightIcon,
@@ -147,47 +148,50 @@ export default function SubtaskList(props: SubtaskListProps) {
         <div class="space-y-2">
           <For each={subtasks()}>
             {(subtask) => (
-              <button
+              <Button
                 type="button"
                 onClick={() => props.onSubtaskClick?.(subtask.id)}
-                class="w-full flex items-center gap-3 p-2.5 bg-gray-800 hover:bg-gray-750 border border-gray-700 hover:border-gray-600 rounded-lg transition-colors text-left"
+                variant="secondary"
+                fullWidth
               >
-                {/* Status indicator */}
-                <div
-                  class={`w-2 h-2 rounded-full flex-shrink-0 ${getStatusColor(subtask.agent_status)}`}
-                />
+                <div class="w-full flex items-center gap-3 text-left">
+                  {/* Status indicator */}
+                  <div
+                    class={`w-2 h-2 rounded-full flex-shrink-0 ${getStatusColor(subtask.agent_status)}`}
+                  />
 
-                {/* Content */}
-                <div class="flex-1 min-w-0">
-                  <div class="font-medium text-white truncate text-sm">
-                    {subtask.title}
-                  </div>
-                  <Show when={subtask.description}>
-                    <div class="text-xs text-gray-500 truncate mt-0.5">
-                      {subtask.description}
+                  {/* Content */}
+                  <div class="flex-1 min-w-0">
+                    <div class="font-medium text-white truncate text-sm">
+                      {subtask.title}
                     </div>
+                    <Show when={subtask.description}>
+                      <div class="text-xs text-gray-500 truncate mt-0.5">
+                        {subtask.description}
+                      </div>
+                    </Show>
+                  </div>
+
+                  {/* Priority badge */}
+                  <span
+                    class={`text-xs px-1.5 py-0.5 rounded ${getPriorityStyles(subtask.priority)}`}
+                  >
+                    {subtask.priority}
+                  </span>
+
+                  {/* Status indicator for active states */}
+                  <Show
+                    when={
+                      subtask.agent_status === "thinking" ||
+                      subtask.agent_status === "executing"
+                    }
+                  >
+                    <LoadingSpinner class="w-3 h-3 text-blue-400" />
                   </Show>
+                  {/* Chevron */}
+                  <ChevronRightIcon class="w-4 h-4 text-gray-500" />
                 </div>
-
-                {/* Priority badge */}
-                <span
-                  class={`text-xs px-1.5 py-0.5 rounded ${getPriorityStyles(subtask.priority)}`}
-                >
-                  {subtask.priority}
-                </span>
-
-                {/* Status indicator for active states */}
-                <Show
-                  when={
-                    subtask.agent_status === "thinking" ||
-                    subtask.agent_status === "executing"
-                  }
-                >
-                  <LoadingSpinner class="w-3 h-3 text-blue-400" />
-                </Show>
-                {/* Chevron */}
-                <ChevronRightIcon class="w-4 h-4 text-gray-500" />
-              </button>
+              </Button>
             )}
           </For>
         </div>
@@ -199,20 +203,17 @@ export default function SubtaskList(props: SubtaskListProps) {
       >
         <div class="text-center py-6 space-y-3">
           <p class="text-sm text-gray-500">No subtasks yet</p>
-          <button
+          <Button
             type="button"
             onClick={handleGenerate}
             disabled={isGenLoading()}
-            class="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 disabled:cursor-not-allowed text-white rounded-lg text-sm transition-colors"
+            loading={isGenLoading()}
           >
-            <Show
-              when={isGenLoading()}
-              fallback={<SparklesIcon class="w-4 h-4" />}
-            >
-              <LoadingSpinner class="w-4 h-4 text-white" />
+            <Show when={!isGenLoading()}>
+              <SparklesIcon class="w-4 h-4" />
             </Show>
             {isGenLoading() ? "Generating..." : "Generate Subtasks with AI"}
-          </button>
+          </Button>
           <p class="text-xs text-gray-600">
             AI will analyze the task and break it into smaller steps
           </p>
@@ -222,14 +223,16 @@ export default function SubtaskList(props: SubtaskListProps) {
       {/* Add subtask button when list has items */}
       <Show when={subtasks()?.length && !isGenLoading()}>
         <div class="flex gap-2">
-          <button
+          <Button
             type="button"
             onClick={handleGenerate}
-            class="flex-1 flex items-center justify-center gap-2 py-2 bg-gray-800 hover:bg-gray-750 border border-gray-700 hover:border-gray-600 rounded-lg text-sm text-gray-400 hover:text-white transition-colors"
+            variant="secondary"
+            buttonSize="sm"
+            fullWidth
           >
             <SparklesIcon class="w-4 h-4" />
             Generate More
-          </button>
+          </Button>
         </div>
       </Show>
 
@@ -253,13 +256,14 @@ export default function SubtaskList(props: SubtaskListProps) {
               {props.task.agent_status_message}
             </Show>
           </span>
-          <button
+          <Button
             type="button"
             onClick={handleGenerate}
-            class="ml-auto text-xs px-2 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded transition-colors"
+            variant="danger"
+            buttonSize="sm"
           >
             Retry
-          </button>
+          </Button>
         </div>
       </Show>
     </div>

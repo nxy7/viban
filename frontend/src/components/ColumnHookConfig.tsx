@@ -16,6 +16,7 @@ import {
   unwrap,
   useColumnHooks,
 } from "~/lib/useKanban";
+import { Button, Checkbox, Select } from "~/components/design-system";
 import ErrorBanner from "./ui/ErrorBanner";
 import { CloseIcon, DragHandleIcon, SystemIcon } from "./ui/Icons";
 
@@ -104,12 +105,13 @@ export default function ColumnHookConfig(props: ColumnHookConfigProps) {
       <div class="flex justify-between items-center">
         <h4 class="text-sm font-medium text-gray-300">{props.columnName}</h4>
         <Show when={!isAdding() && availableHooks().length > 0}>
-          <button
+          <Button
             onClick={() => setIsAdding(true)}
-            class="text-xs px-2 py-1 text-brand-400 hover:text-brand-300 hover:bg-brand-500/10 rounded transition-colors"
+            variant="ghost"
+            buttonSize="sm"
           >
             + Add Hook
-          </button>
+          </Button>
         </Show>
       </div>
 
@@ -120,7 +122,7 @@ export default function ColumnHookConfig(props: ColumnHookConfigProps) {
         <div class="p-3 bg-gray-800 border border-gray-700 rounded-lg space-y-3">
           <div>
             <label class="block text-xs text-gray-400 mb-1">Hook</label>
-            <select
+            <Select
               value={selectedHookId()}
               onChange={(e) => {
                 const hookId = e.currentTarget.value;
@@ -133,7 +135,9 @@ export default function ColumnHookConfig(props: ColumnHookConfigProps) {
                   setTransparent(selectedHook.default_transparent ?? false);
                 }
               }}
-              class="w-full px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              variant="dark"
+              selectSize="sm"
+              fullWidth
             >
               <option value="">Select a hook...</option>
               <Show when={availableSystemHooks().length > 0}>
@@ -150,17 +154,15 @@ export default function ColumnHookConfig(props: ColumnHookConfigProps) {
                   </For>
                 </optgroup>
               </Show>
-            </select>
+            </Select>
           </div>
 
           {/* Execute once checkbox */}
           <div class="flex items-center gap-2 p-2 bg-gray-900/50 rounded border border-gray-700">
-            <input
-              type="checkbox"
+            <Checkbox
               id="executeOnce"
               checked={executeOnce()}
               onChange={(e) => setExecuteOnce(e.currentTarget.checked)}
-              class="w-4 h-4 text-brand-600 bg-gray-700 border-gray-600 rounded focus:ring-brand-500 focus:ring-2 cursor-pointer"
             />
             <label
               for="executeOnce"
@@ -172,12 +174,10 @@ export default function ColumnHookConfig(props: ColumnHookConfigProps) {
 
           {/* Transparent checkbox */}
           <div class="flex items-center gap-2 p-2 bg-gray-900/50 rounded border border-gray-700">
-            <input
-              type="checkbox"
+            <Checkbox
               id="transparent"
               checked={transparent()}
               onChange={(e) => setTransparent(e.currentTarget.checked)}
-              class="w-4 h-4 text-brand-600 bg-gray-700 border-gray-600 rounded focus:ring-brand-500 focus:ring-2 cursor-pointer"
             />
             <label
               for="transparent"
@@ -188,23 +188,27 @@ export default function ColumnHookConfig(props: ColumnHookConfigProps) {
           </div>
 
           <div class="flex gap-2">
-            <button
+            <Button
               onClick={() => {
                 setIsAdding(false);
                 setSelectedHookId("");
                 setError(null);
               }}
-              class="flex-1 py-1.5 px-3 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded text-sm transition-colors"
+              variant="secondary"
+              buttonSize="sm"
+              fullWidth
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={handleAdd}
               disabled={isSaving() || !selectedHookId()}
-              class="flex-1 py-1.5 px-3 bg-brand-600 hover:bg-brand-700 disabled:bg-brand-800 disabled:cursor-not-allowed text-white rounded text-sm transition-colors"
+              loading={isSaving()}
+              buttonSize="sm"
+              fullWidth
             >
-              {isSaving() ? "Adding..." : "Add"}
-            </button>
+              <Show when={!isSaving()}>Add</Show>
+            </Button>
           </div>
         </div>
       </Show>
@@ -327,52 +331,62 @@ function SortableHookItem(props: SortableHookItemProps) {
           {props.hookDetails?.name || props.columnHook.hook_id}
         </span>
         {/* Execute once indicator */}
-        <button
+        <Button
           onClick={(e) => {
             e.stopPropagation();
             props.onToggleExecuteOnce();
           }}
-          class={`text-xs px-1.5 py-0.5 rounded border transition-colors ${
-            props.columnHook.execute_once
-              ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/30"
-              : "bg-gray-700/50 text-gray-500 border-gray-600/30 hover:bg-gray-700 hover:text-gray-400"
-          }`}
+          variant="ghost"
+          buttonSize="sm"
           title={
             props.columnHook.execute_once
               ? "Runs only once per task (click to disable)"
               : "Runs every time (click to enable execute-once)"
           }
         >
-          {props.columnHook.execute_once ? "1x" : "∞"}
-        </button>
+          <span
+            class={`text-xs px-1.5 py-0.5 rounded border transition-colors ${
+              props.columnHook.execute_once
+                ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
+                : "bg-gray-700/50 text-gray-500 border-gray-600/30"
+            }`}
+          >
+            {props.columnHook.execute_once ? "1x" : "∞"}
+          </span>
+        </Button>
         {/* Transparent indicator */}
-        <button
+        <Button
           onClick={(e) => {
             e.stopPropagation();
             props.onToggleTransparent();
           }}
-          class={`text-xs px-1.5 py-0.5 rounded border transition-colors ${
-            props.columnHook.transparent
-              ? "bg-blue-500/20 text-blue-400 border-blue-500/30 hover:bg-blue-500/30"
-              : "bg-gray-700/50 text-gray-500 border-gray-600/30 hover:bg-gray-700 hover:text-gray-400"
-          }`}
+          variant="ghost"
+          buttonSize="sm"
           title={
             props.columnHook.transparent
               ? "Transparent: runs even on error, doesn't change status (click to disable)"
               : "Normal: skipped on error, changes status on failure (click to make transparent)"
           }
         >
-          {props.columnHook.transparent ? "T" : "N"}
-        </button>
+          <span
+            class={`text-xs px-1.5 py-0.5 rounded border transition-colors ${
+              props.columnHook.transparent
+                ? "bg-blue-500/20 text-blue-400 border-blue-500/30"
+                : "bg-gray-700/50 text-gray-500 border-gray-600/30"
+            }`}
+          >
+            {props.columnHook.transparent ? "T" : "N"}
+          </span>
+        </Button>
       </div>
       <Show when={props.columnHook.removable !== false}>
-        <button
+        <Button
           onClick={() => props.onRemove(props.columnHook.id)}
-          class="p-1 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+          variant="icon"
           title="Remove hook"
         >
           <CloseIcon class="w-3.5 h-3.5" />
-        </button>
+        </Button>
       </Show>
       <Show when={props.columnHook.removable === false}>
         <span

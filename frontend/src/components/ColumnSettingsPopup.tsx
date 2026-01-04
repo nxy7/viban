@@ -27,7 +27,7 @@ import {
   useColumnHooks,
 } from "~/lib/useKanban";
 import { getDefaultSound, type SoundType } from "~/lib/sounds";
-import { Input, Textarea } from "~/components/design-system";
+import { Button, Input, Select, Textarea } from "~/components/design-system";
 import HookSoundSettings from "./HookSoundSettings";
 import ErrorBanner, { InfoBanner } from "./ui/ErrorBanner";
 import {
@@ -167,47 +167,62 @@ export default function ColumnSettingsPopup(props: ColumnSettingsPopupProps) {
         {/* Header */}
         <div class="flex items-center justify-between px-4 py-3 border-b border-gray-700">
           <h3 class="font-semibold text-white">{props.column.name} Settings</h3>
-          <button
-            onClick={props.onClose}
-            class="text-gray-400 hover:text-white p-1 hover:bg-gray-700 rounded transition-colors"
-          >
+          <Button onClick={props.onClose} variant="icon">
             <CloseIcon class="w-4 h-4" />
-          </button>
+          </Button>
         </div>
 
         {/* Tabs */}
         <div class="flex border-b border-gray-700">
-          <button
+          <Button
             onClick={() => setActiveTab("general")}
-            class={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
-              activeTab() === "general"
-                ? "text-white border-b-2 border-brand-500"
-                : "text-gray-400 hover:text-white"
-            }`}
+            variant="ghost"
+            buttonSize="sm"
+            fullWidth
           >
-            General
-          </button>
-          <button
-            onClick={() => setActiveTab("hooks")}
-            class={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
-              activeTab() === "hooks"
-                ? "text-white border-b-2 border-brand-500"
-                : "text-gray-400 hover:text-white"
-            }`}
-          >
-            Hooks
-          </button>
-          <Show when={isInProgressColumn()}>
-            <button
-              onClick={() => setActiveTab("concurrency")}
-              class={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
-                activeTab() === "concurrency"
-                  ? "text-white border-b-2 border-brand-500"
-                  : "text-gray-400 hover:text-white"
-              }`}
+            <span
+              class={
+                activeTab() === "general"
+                  ? "text-white border-b-2 border-brand-500 pb-1"
+                  : "text-gray-400"
+              }
             >
-              Limits
-            </button>
+              General
+            </span>
+          </Button>
+          <Button
+            onClick={() => setActiveTab("hooks")}
+            variant="ghost"
+            buttonSize="sm"
+            fullWidth
+          >
+            <span
+              class={
+                activeTab() === "hooks"
+                  ? "text-white border-b-2 border-brand-500 pb-1"
+                  : "text-gray-400"
+              }
+            >
+              Hooks
+            </span>
+          </Button>
+          <Show when={isInProgressColumn()}>
+            <Button
+              onClick={() => setActiveTab("concurrency")}
+              variant="ghost"
+              buttonSize="sm"
+              fullWidth
+            >
+              <span
+                class={
+                  activeTab() === "concurrency"
+                    ? "text-white border-b-2 border-brand-500 pb-1"
+                    : "text-gray-400"
+                }
+              >
+                Limits
+              </span>
+            </Button>
           </Show>
         </div>
 
@@ -319,14 +334,21 @@ function GeneralSettings(props: GeneralSettingsProps) {
         <div class="flex flex-wrap gap-2">
           <For each={COLUMN_COLORS}>
             {(c) => (
-              <button
+              <Button
                 onClick={() => setColor(c)}
-                class={`w-6 h-6 rounded-full transition-transform ${
-                  color() === c
-                    ? "ring-2 ring-white ring-offset-2 ring-offset-gray-800 scale-110"
-                    : "hover:scale-110"
-                }`}
-                style={{ "background-color": c }}
+                variant="ghost"
+                style={{
+                  "background-color": c,
+                  width: "1.5rem",
+                  height: "1.5rem",
+                  padding: 0,
+                  "border-radius": "9999px",
+                  transform: color() === c ? "scale(1.1)" : undefined,
+                  "box-shadow":
+                    color() === c
+                      ? "0 0 0 2px #1f2937, 0 0 0 4px white"
+                      : undefined,
+                }}
               />
             )}
           </For>
@@ -349,13 +371,15 @@ function GeneralSettings(props: GeneralSettingsProps) {
       </div>
 
       {/* Save button */}
-      <button
+      <Button
         onClick={handleSave}
         disabled={isSaving()}
-        class="w-full py-2 text-sm bg-brand-600 hover:bg-brand-700 disabled:opacity-50 rounded-md font-medium text-white transition-colors"
+        loading={isSaving()}
+        fullWidth
+        buttonSize="sm"
       >
-        {isSaving() ? "Saving..." : "Save Changes"}
-      </button>
+        <Show when={!isSaving()}>Save Changes</Show>
+      </Button>
 
       {/* Danger Zone */}
       <div class="pt-4 mt-4 border-t border-gray-700">
@@ -363,12 +387,14 @@ function GeneralSettings(props: GeneralSettingsProps) {
         <Show
           when={showDeleteConfirm()}
           fallback={
-            <button
+            <Button
               onClick={() => setShowDeleteConfirm(true)}
-              class="w-full py-2 text-sm bg-red-600/20 hover:bg-red-600/30 border border-red-600/50 rounded-md font-medium text-red-400 transition-colors"
+              variant="danger"
+              buttonSize="sm"
+              fullWidth
             >
               Delete All Tasks
-            </button>
+            </Button>
           }
         >
           <div class="p-3 bg-red-900/20 border border-red-500/30 rounded-md space-y-2">
@@ -381,22 +407,27 @@ function GeneralSettings(props: GeneralSettingsProps) {
               </p>
             </Show>
             <div class="flex gap-2">
-              <button
+              <Button
                 onClick={() => {
                   setShowDeleteConfirm(false);
                   setError(null);
                 }}
-                class="flex-1 py-1.5 px-3 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded text-sm transition-colors"
+                variant="secondary"
+                buttonSize="sm"
+                fullWidth
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={handleDeleteAllTasks}
                 disabled={isDeleting()}
-                class="flex-1 py-1.5 px-3 bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:cursor-not-allowed text-white rounded text-sm transition-colors"
+                loading={isDeleting()}
+                variant="danger"
+                buttonSize="sm"
+                fullWidth
               >
-                {isDeleting() ? "Deleting..." : "Delete All"}
-              </button>
+                <Show when={!isDeleting()}>Delete All</Show>
+              </Button>
             </div>
           </div>
         </Show>
@@ -569,7 +600,7 @@ function ConcurrencySettings(props: ConcurrencySettingsProps) {
               Maximum Concurrent Tasks
             </label>
             <div class="flex items-center gap-3">
-              <input
+              <Input
                 type="number"
                 min={1}
                 max={100}
@@ -578,24 +609,27 @@ function ConcurrencySettings(props: ConcurrencySettingsProps) {
                   const val = parseInt(e.currentTarget.value, 10);
                   if (!Number.isNaN(val) && val >= 1) setLimit(val);
                 }}
-                class="w-20 px-3 py-2 bg-gray-900 border border-gray-700 rounded-md text-white text-sm text-center focus:outline-none focus:ring-2 focus:ring-brand-500"
+                variant="dark"
+                inputSize="sm"
+                fullWidth={false}
+                style={{ width: "5rem", "text-align": "center" }}
               />
               <span class="text-sm text-gray-400">tasks at once</span>
             </div>
           </div>
 
           {/* Save button */}
-          <button
+          <Button
             onClick={handleSave}
             disabled={isSaving()}
-            class={`w-full py-2 text-sm rounded-md font-medium transition-colors ${
-              saveSuccess()
-                ? "bg-green-600 text-white"
-                : "bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white"
-            }`}
+            loading={isSaving()}
+            fullWidth
+            buttonSize="sm"
           >
-            {isSaving() ? "Saving..." : saveSuccess() ? "Saved!" : "Save Limit"}
-          </button>
+            <Show when={!isSaving()}>
+              {saveSuccess() ? "Saved!" : "Save Limit"}
+            </Show>
+          </Button>
         </div>
       </Show>
 
@@ -680,12 +714,13 @@ function HookSection(props: HookSectionProps) {
             </Show>
           }
         >
-          <button
+          <Button
             onClick={() => setShowPicker(!showPicker())}
-            class="text-xs text-brand-400 hover:text-brand-300"
+            variant="ghost"
+            buttonSize="sm"
           >
             + Add
-          </button>
+          </Button>
         </Show>
       </div>
 
@@ -694,10 +729,12 @@ function HookSection(props: HookSectionProps) {
         <div class="bg-gray-900 border border-gray-700 rounded-md p-2 space-y-1">
           <For each={unassignedHooks()}>
             {(hook) => (
-              <button
+              <Button
                 onClick={() => handleAddHook(hook.id)}
                 disabled={isAdding()}
-                class="w-full text-left p-2 text-sm text-gray-300 hover:bg-gray-800 rounded transition-colors disabled:opacity-50 flex items-center gap-2"
+                variant="ghost"
+                buttonSize="sm"
+                fullWidth
               >
                 <span class="truncate">{hook.name}</span>
                 <Show when={hook.is_system}>
@@ -705,7 +742,7 @@ function HookSection(props: HookSectionProps) {
                     System
                   </span>
                 </Show>
-              </button>
+              </Button>
             )}
           </For>
         </div>
@@ -871,52 +908,62 @@ function SortableHookItem(props: SortableHookItemProps) {
         </div>
         <div class="flex items-center gap-1">
           {/* Execute once toggle */}
-          <button
+          <Button
             onClick={(e) => {
               e.stopPropagation();
               props.onToggleExecuteOnce();
             }}
-            class={`text-xs px-1.5 py-0.5 rounded border transition-colors ${
-              props.columnHook.execute_once
-                ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/30"
-                : "bg-gray-700/50 text-gray-500 border-gray-600/30 hover:bg-gray-700 hover:text-gray-400"
-            }`}
+            variant="ghost"
+            buttonSize="sm"
             title={
               props.columnHook.execute_once
                 ? "Runs only once per task (click to disable)"
                 : "Runs every time (click to enable execute-once)"
             }
           >
-            {props.columnHook.execute_once ? "1x" : "∞"}
-          </button>
+            <span
+              class={`text-xs px-1.5 py-0.5 rounded border transition-colors ${
+                props.columnHook.execute_once
+                  ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
+                  : "bg-gray-700/50 text-gray-500 border-gray-600/30"
+              }`}
+            >
+              {props.columnHook.execute_once ? "1x" : "∞"}
+            </span>
+          </Button>
           {/* Transparent toggle */}
-          <button
+          <Button
             onClick={(e) => {
               e.stopPropagation();
               props.onToggleTransparent();
             }}
-            class={`text-xs px-1.5 py-0.5 rounded border transition-colors ${
-              props.columnHook.transparent
-                ? "bg-blue-500/20 text-blue-400 border-blue-500/30 hover:bg-blue-500/30"
-                : "bg-gray-700/50 text-gray-500 border-gray-600/30 hover:bg-gray-700 hover:text-gray-400"
-            }`}
+            variant="ghost"
+            buttonSize="sm"
             title={
               props.columnHook.transparent
                 ? "Transparent: runs even on error, doesn't change status (click to disable)"
                 : "Normal: skipped on error, changes status on failure (click to make transparent)"
             }
           >
-            {props.columnHook.transparent ? "T" : "N"}
-          </button>
+            <span
+              class={`text-xs px-1.5 py-0.5 rounded border transition-colors ${
+                props.columnHook.transparent
+                  ? "bg-blue-500/20 text-blue-400 border-blue-500/30"
+                  : "bg-gray-700/50 text-gray-500 border-gray-600/30"
+              }`}
+            >
+              {props.columnHook.transparent ? "T" : "N"}
+            </span>
+          </Button>
           {/* Remove button - only show if removable */}
           <Show when={isRemovable()}>
-            <button
+            <Button
               onClick={() => props.onRemove(props.columnHook.id)}
-              class="p-1 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+              variant="icon"
               title="Remove hook"
             >
               <CloseIcon class="w-3.5 h-3.5" />
-            </button>
+            </Button>
           </Show>
           <Show when={!isRemovable()}>
             <span
@@ -999,15 +1046,16 @@ function MoveTaskSettings(props: MoveTaskSettingsProps) {
             </span>
           }
         >
-          <select
+          <Select
             value={props.targetColumn}
             onChange={(e) => handleTargetChange(e.currentTarget.value)}
-            class="px-2 py-1 bg-gray-800 border border-gray-700 rounded text-gray-300 text-xs focus:outline-none focus:ring-1 focus:ring-brand-500"
+            variant="dark"
+            selectSize="sm"
           >
             <For each={TARGET_COLUMN_OPTIONS}>
               {(option) => <option value={option.value}>{option.label}</option>}
             </For>
-          </select>
+          </Select>
         </Show>
       </div>
     </div>
