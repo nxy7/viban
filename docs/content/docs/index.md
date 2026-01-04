@@ -32,13 +32,16 @@ Use the "Refine" button on any task to transform a simple description into a hig
 - Scope boundaries
 - Implementation guidance
 
+### Keyboard-Centric Navigation
+Viban is designed for power users who prefer keyboard navigation. Press `Shift + ?` to view all available shortcuts, or use common keys like `n` for new task, `/` to search, and arrow keys to navigate between tasks. See [Keyboard Shortcuts](/docs/keyboard-shortcuts) for the complete list.
+
+### Periodical Tasks
+Automate recurring work with scheduled task execution. Set up tasks that run hourly, daily, weekly, or on custom cron schedules for maintenance, dependency updates, code quality checks, and more. See [Periodical Tasks](/docs/periodical-tasks) for details.
+
 ### Multiple AI Agents
 Viban supports multiple AI executors:
 - **Claude Code**: Anthropic's autonomous coding agent (default)
 - **Gemini CLI**: Google's Gemini model for code tasks
-- **Codex**: OpenAI Codex executor
-- **OpenCode**: OpenCode agent
-- **Cursor Agent**: Cursor AI agent
 
 ## Architecture
 

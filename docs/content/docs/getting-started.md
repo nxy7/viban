@@ -79,5 +79,7 @@ This will start:
 ## Next Steps
 
 - Learn about [Boards & Tasks](/docs/boards-and-tasks)
+- Master [Keyboard Shortcuts](/docs/keyboard-shortcuts) for faster navigation
 - Understand [AI Agents](/docs/ai-agents) and how they work
 - Set up [Custom Hooks](/docs/custom-hooks) for automation
+- Automate recurring work with [Periodical Tasks](/docs/periodical-tasks)
