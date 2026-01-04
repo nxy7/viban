@@ -3,7 +3,6 @@
 
 import * as RpcHooks from "../rpcHooks";
 
-
 // RPC Action Hook Context Type
 export type ActionHookContext = Record<string, any>;
 
@@ -19,34 +18,80 @@ export type BoardResourceSchema = {
   name: string;
   description: string | null;
   user_id: UUID;
-  columns: { __type: "Relationship"; __array: true; __resource: ColumnResourceSchema; };
-  hooks: { __type: "Relationship"; __array: true; __resource: HookResourceSchema; };
-  repositories: { __type: "Relationship"; __array: true; __resource: RepositoryResourceSchema; };
+  columns: {
+    __type: "Relationship";
+    __array: true;
+    __resource: ColumnResourceSchema;
+  };
+  hooks: {
+    __type: "Relationship";
+    __array: true;
+    __resource: HookResourceSchema;
+  };
+  repositories: {
+    __type: "Relationship";
+    __array: true;
+    __resource: RepositoryResourceSchema;
+  };
 };
-
-
 
 // Column Schema
 export type ColumnResourceSchema = {
   __type: "Resource";
-  __primitiveFields: "id" | "name" | "position" | "color" | "settings" | "board_id";
+  __primitiveFields:
+    | "id"
+    | "name"
+    | "position"
+    | "color"
+    | "settings"
+    | "board_id";
   id: UUID;
   name: string;
   position: number;
   color: string | null;
   settings: Record<string, any> | null;
   board_id: UUID;
-  board: { __type: "Relationship"; __resource: BoardResourceSchema; };
-  tasks: { __type: "Relationship"; __array: true; __resource: TaskResourceSchema; };
-  column_hooks: { __type: "Relationship"; __array: true; __resource: ColumnHookResourceSchema; };
+  board: { __type: "Relationship"; __resource: BoardResourceSchema };
+  tasks: {
+    __type: "Relationship";
+    __array: true;
+    __resource: TaskResourceSchema;
+  };
+  column_hooks: {
+    __type: "Relationship";
+    __array: true;
+    __resource: ColumnHookResourceSchema;
+  };
 };
-
-
 
 // Task Schema
 export type TaskResourceSchema = {
   __type: "Resource";
-  __primitiveFields: "id" | "title" | "description" | "position" | "priority" | "description_images" | "worktree_path" | "worktree_branch" | "custom_branch_name" | "agent_status" | "agent_status_message" | "in_progress" | "error_message" | "queued_at" | "queue_priority" | "pr_url" | "pr_number" | "pr_status" | "is_parent" | "subtask_position" | "subtask_generation_status" | "executed_hooks" | "column_id" | "parent_task_id";
+  __primitiveFields:
+    | "id"
+    | "title"
+    | "description"
+    | "position"
+    | "priority"
+    | "description_images"
+    | "worktree_path"
+    | "worktree_branch"
+    | "custom_branch_name"
+    | "agent_status"
+    | "agent_status_message"
+    | "in_progress"
+    | "error_message"
+    | "queued_at"
+    | "queue_priority"
+    | "pr_url"
+    | "pr_number"
+    | "pr_status"
+    | "is_parent"
+    | "subtask_position"
+    | "subtask_generation_status"
+    | "executed_hooks"
+    | "column_id"
+    | "parent_task_id";
   id: UUID;
   title: string;
   description: string | null;
@@ -71,41 +116,89 @@ export type TaskResourceSchema = {
   executed_hooks: Array<string> | null;
   column_id: UUID;
   parent_task_id: UUID | null;
-  message_queue: { __type: "Relationship"; __array: true; __resource: VibanKanbanTypesMessageQueueEntryResourceSchema; };
-  column: { __type: "Relationship"; __resource: ColumnResourceSchema; };
-  parent_task: { __type: "Relationship"; __resource: TaskResourceSchema | null; };
-  subtasks: { __type: "Relationship"; __array: true; __resource: TaskResourceSchema; };
-  messages: { __type: "Relationship"; __array: true; __resource: MessageResourceSchema; };
-  executor_sessions: { __type: "Relationship"; __array: true; __resource: ExecutorSessionResourceSchema; };
-  hook_executions: { __type: "Relationship"; __array: true; __resource: HookExecutionResourceSchema; };
+  message_queue: {
+    __type: "Relationship";
+    __array: true;
+    __resource: VibanKanbanTypesMessageQueueEntryResourceSchema;
+  };
+  column: { __type: "Relationship"; __resource: ColumnResourceSchema };
+  parent_task: {
+    __type: "Relationship";
+    __resource: TaskResourceSchema | null;
+  };
+  subtasks: {
+    __type: "Relationship";
+    __array: true;
+    __resource: TaskResourceSchema;
+  };
+  messages: {
+    __type: "Relationship";
+    __array: true;
+    __resource: MessageResourceSchema;
+  };
+  executor_sessions: {
+    __type: "Relationship";
+    __array: true;
+    __resource: ExecutorSessionResourceSchema;
+  };
+  hook_executions: {
+    __type: "Relationship";
+    __array: true;
+    __resource: HookExecutionResourceSchema;
+  };
 };
-
-
 
 // Hook Schema
 export type HookResourceSchema = {
   __type: "Resource";
-  __primitiveFields: "id" | "name" | "hook_kind" | "command" | "agent_prompt" | "agent_executor" | "agent_auto_approve" | "default_execute_once" | "default_transparent" | "board_id";
+  __primitiveFields:
+    | "id"
+    | "name"
+    | "hook_kind"
+    | "command"
+    | "agent_prompt"
+    | "agent_executor"
+    | "agent_auto_approve"
+    | "default_execute_once"
+    | "default_transparent"
+    | "board_id";
   id: UUID;
   name: string;
   hook_kind: "script" | "agent";
   command: string | null;
   agent_prompt: string | null;
-  agent_executor: "claude_code" | "gemini_cli" | "codex" | "opencode" | "cursor_agent" | null;
+  agent_executor:
+    | "claude_code"
+    | "gemini_cli"
+    | "codex"
+    | "opencode"
+    | "cursor_agent"
+    | null;
   agent_auto_approve: boolean | null;
   default_execute_once: boolean | null;
   default_transparent: boolean | null;
   board_id: UUID;
-  board: { __type: "Relationship"; __resource: BoardResourceSchema; };
-  column_hooks: { __type: "Relationship"; __array: true; __resource: ColumnHookResourceSchema; };
+  board: { __type: "Relationship"; __resource: BoardResourceSchema };
+  column_hooks: {
+    __type: "Relationship";
+    __array: true;
+    __resource: ColumnHookResourceSchema;
+  };
 };
-
-
 
 // ColumnHook Schema
 export type ColumnHookResourceSchema = {
   __type: "Resource";
-  __primitiveFields: "id" | "hook_id" | "hook_type" | "position" | "execute_once" | "hook_settings" | "transparent" | "removable" | "column_id";
+  __primitiveFields:
+    | "id"
+    | "hook_id"
+    | "hook_type"
+    | "position"
+    | "execute_once"
+    | "hook_settings"
+    | "transparent"
+    | "removable"
+    | "column_id";
   id: UUID;
   hook_id: string;
   hook_type: "on_entry";
@@ -115,15 +208,25 @@ export type ColumnHookResourceSchema = {
   transparent: boolean | null;
   removable: boolean | null;
   column_id: UUID;
-  column: { __type: "Relationship"; __resource: ColumnResourceSchema; };
+  column: { __type: "Relationship"; __resource: ColumnResourceSchema };
 };
-
-
 
 // Repository Schema
 export type RepositoryResourceSchema = {
   __type: "Resource";
-  __primitiveFields: "id" | "provider" | "provider_repo_id" | "name" | "full_name" | "clone_url" | "html_url" | "default_branch" | "local_path" | "clone_status" | "clone_error" | "board_id";
+  __primitiveFields:
+    | "id"
+    | "provider"
+    | "provider_repo_id"
+    | "name"
+    | "full_name"
+    | "clone_url"
+    | "html_url"
+    | "default_branch"
+    | "local_path"
+    | "clone_status"
+    | "clone_error"
+    | "board_id";
   id: UUID;
   provider: "github" | "gitlab" | "local";
   provider_repo_id: string | null;
@@ -136,15 +239,21 @@ export type RepositoryResourceSchema = {
   clone_status: "pending" | "cloning" | "cloned" | "error" | null;
   clone_error: string | null;
   board_id: UUID;
-  board: { __type: "Relationship"; __resource: BoardResourceSchema; };
+  board: { __type: "Relationship"; __resource: BoardResourceSchema };
 };
-
-
 
 // Message Schema
 export type MessageResourceSchema = {
   __type: "Resource";
-  __primitiveFields: "id" | "type" | "role" | "content" | "status" | "metadata" | "sequence" | "task_id";
+  __primitiveFields:
+    | "id"
+    | "type"
+    | "role"
+    | "content"
+    | "status"
+    | "metadata"
+    | "sequence"
+    | "task_id";
   id: UUID;
   type: "message";
   role: "user" | "assistant" | "system";
@@ -153,21 +262,45 @@ export type MessageResourceSchema = {
   metadata: Record<string, any> | null;
   sequence: number;
   task_id: UUID;
-  task: { __type: "Relationship"; __resource: TaskResourceSchema; };
+  task: { __type: "Relationship"; __resource: TaskResourceSchema };
 };
-
-
 
 // HookExecution Schema
 export type HookExecutionResourceSchema = {
   __type: "Resource";
-  __primitiveFields: "id" | "type" | "hook_name" | "hook_id" | "status" | "skip_reason" | "error_message" | "hook_settings" | "queued_at" | "started_at" | "completed_at" | "triggering_column_id" | "task_id" | "column_hook_id";
+  __primitiveFields:
+    | "id"
+    | "type"
+    | "hook_name"
+    | "hook_id"
+    | "status"
+    | "skip_reason"
+    | "error_message"
+    | "hook_settings"
+    | "queued_at"
+    | "started_at"
+    | "completed_at"
+    | "triggering_column_id"
+    | "task_id"
+    | "column_hook_id";
   id: UUID;
   type: "hook_execution";
   hook_name: string;
   hook_id: string;
-  status: "pending" | "running" | "completed" | "failed" | "cancelled" | "skipped";
-  skip_reason: "error" | "disabled" | "column_change" | "server_restart" | "user_cancelled" | null;
+  status:
+    | "pending"
+    | "running"
+    | "completed"
+    | "failed"
+    | "cancelled"
+    | "skipped";
+  skip_reason:
+    | "error"
+    | "disabled"
+    | "column_change"
+    | "server_restart"
+    | "user_cancelled"
+    | null;
   error_message: string | null;
   hook_settings: Record<string, any> | null;
   queued_at: UtcDateTimeUsec;
@@ -176,31 +309,77 @@ export type HookExecutionResourceSchema = {
   triggering_column_id: UUID | null;
   task_id: UUID;
   column_hook_id: UUID | null;
-  task: { __type: "Relationship"; __resource: TaskResourceSchema; };
-  column_hook: { __type: "Relationship"; __resource: ColumnHookResourceSchema | null; };
+  task: { __type: "Relationship"; __resource: TaskResourceSchema };
+  column_hook: {
+    __type: "Relationship";
+    __resource: ColumnHookResourceSchema | null;
+  };
 };
-
-
 
 // TaskEvent Schema
 export type TaskEventResourceSchema = {
   __type: "Resource";
-  __primitiveFields: "id" | "type" | "status" | "role" | "content" | "hook_name" | "hook_id" | "hook_settings" | "skip_reason" | "error_message" | "queued_at" | "started_at" | "completed_at" | "triggering_column_id" | "executor_type" | "prompt" | "exit_code" | "working_directory" | "session_id" | "sequence" | "metadata" | "task_id" | "column_hook_id";
+  __primitiveFields:
+    | "id"
+    | "type"
+    | "status"
+    | "role"
+    | "content"
+    | "hook_name"
+    | "hook_id"
+    | "hook_settings"
+    | "skip_reason"
+    | "error_message"
+    | "queued_at"
+    | "started_at"
+    | "completed_at"
+    | "triggering_column_id"
+    | "executor_type"
+    | "prompt"
+    | "exit_code"
+    | "working_directory"
+    | "session_id"
+    | "sequence"
+    | "metadata"
+    | "task_id"
+    | "column_hook_id";
   id: UUID;
   type: "message" | "hook_execution" | "session" | "executor_output";
-  status: "pending" | "processing" | "running" | "completed" | "failed" | "cancelled" | "skipped" | "stopped" | null;
+  status:
+    | "pending"
+    | "processing"
+    | "running"
+    | "completed"
+    | "failed"
+    | "cancelled"
+    | "skipped"
+    | "stopped"
+    | null;
   role: "user" | "assistant" | "system" | "tool" | null;
   content: string | null;
   hook_name: string | null;
   hook_id: string | null;
   hook_settings: Record<string, any> | null;
-  skip_reason: "error" | "disabled" | "column_change" | "server_restart" | "user_cancelled" | null;
+  skip_reason:
+    | "error"
+    | "disabled"
+    | "column_change"
+    | "server_restart"
+    | "user_cancelled"
+    | null;
   error_message: string | null;
   queued_at: UtcDateTimeUsec | null;
   started_at: UtcDateTimeUsec | null;
   completed_at: UtcDateTimeUsec | null;
   triggering_column_id: UUID | null;
-  executor_type: "claude_code" | "gemini_cli" | "codex" | "opencode" | "api_anthropic" | "api_openai" | null;
+  executor_type:
+    | "claude_code"
+    | "gemini_cli"
+    | "codex"
+    | "opencode"
+    | "api_anthropic"
+    | "api_openai"
+    | null;
   prompt: string | null;
   exit_code: number | null;
   working_directory: string | null;
@@ -209,19 +388,38 @@ export type TaskEventResourceSchema = {
   metadata: Record<string, any> | null;
   task_id: UUID;
   column_hook_id: UUID | null;
-  task: { __type: "Relationship"; __resource: TaskResourceSchema; };
-  column_hook: { __type: "Relationship"; __resource: ColumnHookResourceSchema | null; };
+  task: { __type: "Relationship"; __resource: TaskResourceSchema };
+  column_hook: {
+    __type: "Relationship";
+    __resource: ColumnHookResourceSchema | null;
+  };
 };
-
-
 
 // ExecutorSession Schema
 export type ExecutorSessionResourceSchema = {
   __type: "Resource";
-  __primitiveFields: "id" | "type" | "executor_type" | "prompt" | "status" | "exit_code" | "error_message" | "working_directory" | "started_at" | "completed_at" | "metadata" | "task_id";
+  __primitiveFields:
+    | "id"
+    | "type"
+    | "executor_type"
+    | "prompt"
+    | "status"
+    | "exit_code"
+    | "error_message"
+    | "working_directory"
+    | "started_at"
+    | "completed_at"
+    | "metadata"
+    | "task_id";
   id: UUID;
   type: "session";
-  executor_type: "claude_code" | "gemini_cli" | "codex" | "opencode" | "api_anthropic" | "api_openai";
+  executor_type:
+    | "claude_code"
+    | "gemini_cli"
+    | "codex"
+    | "opencode"
+    | "api_anthropic"
+    | "api_openai";
   prompt: string;
   status: "pending" | "running" | "completed" | "failed" | "stopped";
   exit_code: number | null;
@@ -231,15 +429,20 @@ export type ExecutorSessionResourceSchema = {
   completed_at: UtcDateTimeUsec | null;
   metadata: Record<string, any> | null;
   task_id: UUID;
-  task: { __type: "Relationship"; __resource: TaskResourceSchema; };
+  task: { __type: "Relationship"; __resource: TaskResourceSchema };
 };
-
-
 
 // SystemTool Schema
 export type SystemToolResourceSchema = {
   __type: "Resource";
-  __primitiveFields: "name" | "display_name" | "description" | "available" | "version" | "category" | "feature";
+  __primitiveFields:
+    | "name"
+    | "display_name"
+    | "description"
+    | "available"
+    | "version"
+    | "category"
+    | "feature";
   name: "docker" | "git" | "gh" | "claude" | "codex" | "aider" | "goose";
   display_name: string;
   description: string | null;
@@ -249,12 +452,17 @@ export type SystemToolResourceSchema = {
   feature: string | null;
 };
 
-
-
 // ActorState Schema
 export type ActorStateResourceSchema = {
   __type: "Resource";
-  __primitiveFields: "id" | "actor_type" | "actor_id" | "state" | "status" | "message" | "version";
+  __primitiveFields:
+    | "id"
+    | "actor_type"
+    | "actor_id"
+    | "state"
+    | "status"
+    | "message"
+    | "version";
   id: UUID;
   actor_type: string;
   actor_id: string;
@@ -263,8 +471,6 @@ export type ActorStateResourceSchema = {
   message: string | null;
   version: number;
 };
-
-
 
 // VibanKanbanTypesMessageQueueEntry Schema
 export type VibanKanbanTypesMessageQueueEntryResourceSchema = {
@@ -277,8 +483,6 @@ export type VibanKanbanTypesMessageQueueEntryResourceSchema = {
   queued_at: string;
 };
 
-
-
 export type VibanKanbanTypesMessageQueueEntryInputSchema = {
   id: string;
   prompt: string;
@@ -286,9 +490,6 @@ export type VibanKanbanTypesMessageQueueEntryInputSchema = {
   images?: Array<Record<string, any>> | null;
   queued_at: string;
 };
-
-
-
 
 export type BoardFilterInput = {
   and?: Array<BoardFilterInput>;
@@ -319,13 +520,11 @@ export type BoardFilterInput = {
     in?: Array<UUID>;
   };
 
-
   columns?: ColumnFilterInput;
 
   hooks?: HookFilterInput;
 
   repositories?: RepositoryFilterInput;
-
 };
 export type ColumnFilterInput = {
   and?: Array<ColumnFilterInput>;
@@ -372,13 +571,11 @@ export type ColumnFilterInput = {
     in?: Array<UUID>;
   };
 
-
   board?: BoardFilterInput;
 
   tasks?: TaskFilterInput;
 
   column_hooks?: ColumnHookFilterInput;
-
 };
 export type TaskFilterInput = {
   and?: Array<TaskFilterInput>;
@@ -553,7 +750,6 @@ export type TaskFilterInput = {
     in?: Array<UUID>;
   };
 
-
   column?: ColumnFilterInput;
 
   parent_task?: TaskFilterInput;
@@ -565,7 +761,6 @@ export type TaskFilterInput = {
   executor_sessions?: ExecutorSessionFilterInput;
 
   hook_executions?: HookExecutionFilterInput;
-
 };
 export type HookFilterInput = {
   and?: Array<HookFilterInput>;
@@ -604,8 +799,15 @@ export type HookFilterInput = {
 
   agent_executor?: {
     eq?: "claude_code" | "gemini_cli" | "codex" | "opencode" | "cursor_agent";
-    not_eq?: "claude_code" | "gemini_cli" | "codex" | "opencode" | "cursor_agent";
-    in?: Array<"claude_code" | "gemini_cli" | "codex" | "opencode" | "cursor_agent">;
+    not_eq?:
+      | "claude_code"
+      | "gemini_cli"
+      | "codex"
+      | "opencode"
+      | "cursor_agent";
+    in?: Array<
+      "claude_code" | "gemini_cli" | "codex" | "opencode" | "cursor_agent"
+    >;
   };
 
   agent_auto_approve?: {
@@ -629,11 +831,9 @@ export type HookFilterInput = {
     in?: Array<UUID>;
   };
 
-
   board?: BoardFilterInput;
 
   column_hooks?: ColumnHookFilterInput;
-
 };
 export type ColumnHookFilterInput = {
   and?: Array<ColumnHookFilterInput>;
@@ -695,9 +895,7 @@ export type ColumnHookFilterInput = {
     in?: Array<UUID>;
   };
 
-
   column?: ColumnFilterInput;
-
 };
 export type RepositoryFilterInput = {
   and?: Array<RepositoryFilterInput>;
@@ -776,9 +974,7 @@ export type RepositoryFilterInput = {
     in?: Array<UUID>;
   };
 
-
   board?: BoardFilterInput;
-
 };
 export type MessageFilterInput = {
   and?: Array<MessageFilterInput>;
@@ -837,9 +1033,7 @@ export type MessageFilterInput = {
     in?: Array<UUID>;
   };
 
-
   task?: TaskFilterInput;
-
 };
 export type HookExecutionFilterInput = {
   and?: Array<HookExecutionFilterInput>;
@@ -871,15 +1065,45 @@ export type HookExecutionFilterInput = {
   };
 
   status?: {
-    eq?: "pending" | "running" | "completed" | "failed" | "cancelled" | "skipped";
-    not_eq?: "pending" | "running" | "completed" | "failed" | "cancelled" | "skipped";
-    in?: Array<"pending" | "running" | "completed" | "failed" | "cancelled" | "skipped">;
+    eq?:
+      | "pending"
+      | "running"
+      | "completed"
+      | "failed"
+      | "cancelled"
+      | "skipped";
+    not_eq?:
+      | "pending"
+      | "running"
+      | "completed"
+      | "failed"
+      | "cancelled"
+      | "skipped";
+    in?: Array<
+      "pending" | "running" | "completed" | "failed" | "cancelled" | "skipped"
+    >;
   };
 
   skip_reason?: {
-    eq?: "error" | "disabled" | "column_change" | "server_restart" | "user_cancelled";
-    not_eq?: "error" | "disabled" | "column_change" | "server_restart" | "user_cancelled";
-    in?: Array<"error" | "disabled" | "column_change" | "server_restart" | "user_cancelled">;
+    eq?:
+      | "error"
+      | "disabled"
+      | "column_change"
+      | "server_restart"
+      | "user_cancelled";
+    not_eq?:
+      | "error"
+      | "disabled"
+      | "column_change"
+      | "server_restart"
+      | "user_cancelled";
+    in?: Array<
+      | "error"
+      | "disabled"
+      | "column_change"
+      | "server_restart"
+      | "user_cancelled"
+    >;
   };
 
   error_message?: {
@@ -942,11 +1166,9 @@ export type HookExecutionFilterInput = {
     in?: Array<UUID>;
   };
 
-
   task?: TaskFilterInput;
 
   column_hook?: ColumnHookFilterInput;
-
 };
 export type TaskEventFilterInput = {
   and?: Array<TaskEventFilterInput>;
@@ -966,9 +1188,34 @@ export type TaskEventFilterInput = {
   };
 
   status?: {
-    eq?: "pending" | "processing" | "running" | "completed" | "failed" | "cancelled" | "skipped" | "stopped";
-    not_eq?: "pending" | "processing" | "running" | "completed" | "failed" | "cancelled" | "skipped" | "stopped";
-    in?: Array<"pending" | "processing" | "running" | "completed" | "failed" | "cancelled" | "skipped" | "stopped">;
+    eq?:
+      | "pending"
+      | "processing"
+      | "running"
+      | "completed"
+      | "failed"
+      | "cancelled"
+      | "skipped"
+      | "stopped";
+    not_eq?:
+      | "pending"
+      | "processing"
+      | "running"
+      | "completed"
+      | "failed"
+      | "cancelled"
+      | "skipped"
+      | "stopped";
+    in?: Array<
+      | "pending"
+      | "processing"
+      | "running"
+      | "completed"
+      | "failed"
+      | "cancelled"
+      | "skipped"
+      | "stopped"
+    >;
   };
 
   role?: {
@@ -1002,9 +1249,25 @@ export type TaskEventFilterInput = {
   };
 
   skip_reason?: {
-    eq?: "error" | "disabled" | "column_change" | "server_restart" | "user_cancelled";
-    not_eq?: "error" | "disabled" | "column_change" | "server_restart" | "user_cancelled";
-    in?: Array<"error" | "disabled" | "column_change" | "server_restart" | "user_cancelled">;
+    eq?:
+      | "error"
+      | "disabled"
+      | "column_change"
+      | "server_restart"
+      | "user_cancelled";
+    not_eq?:
+      | "error"
+      | "disabled"
+      | "column_change"
+      | "server_restart"
+      | "user_cancelled";
+    in?: Array<
+      | "error"
+      | "disabled"
+      | "column_change"
+      | "server_restart"
+      | "user_cancelled"
+    >;
   };
 
   error_message?: {
@@ -1050,9 +1313,28 @@ export type TaskEventFilterInput = {
   };
 
   executor_type?: {
-    eq?: "claude_code" | "gemini_cli" | "codex" | "opencode" | "api_anthropic" | "api_openai";
-    not_eq?: "claude_code" | "gemini_cli" | "codex" | "opencode" | "api_anthropic" | "api_openai";
-    in?: Array<"claude_code" | "gemini_cli" | "codex" | "opencode" | "api_anthropic" | "api_openai">;
+    eq?:
+      | "claude_code"
+      | "gemini_cli"
+      | "codex"
+      | "opencode"
+      | "api_anthropic"
+      | "api_openai";
+    not_eq?:
+      | "claude_code"
+      | "gemini_cli"
+      | "codex"
+      | "opencode"
+      | "api_anthropic"
+      | "api_openai";
+    in?: Array<
+      | "claude_code"
+      | "gemini_cli"
+      | "codex"
+      | "opencode"
+      | "api_anthropic"
+      | "api_openai"
+    >;
   };
 
   prompt?: {
@@ -1111,11 +1393,9 @@ export type TaskEventFilterInput = {
     in?: Array<UUID>;
   };
 
-
   task?: TaskFilterInput;
 
   column_hook?: ColumnHookFilterInput;
-
 };
 export type ExecutorSessionFilterInput = {
   and?: Array<ExecutorSessionFilterInput>;
@@ -1135,9 +1415,28 @@ export type ExecutorSessionFilterInput = {
   };
 
   executor_type?: {
-    eq?: "claude_code" | "gemini_cli" | "codex" | "opencode" | "api_anthropic" | "api_openai";
-    not_eq?: "claude_code" | "gemini_cli" | "codex" | "opencode" | "api_anthropic" | "api_openai";
-    in?: Array<"claude_code" | "gemini_cli" | "codex" | "opencode" | "api_anthropic" | "api_openai">;
+    eq?:
+      | "claude_code"
+      | "gemini_cli"
+      | "codex"
+      | "opencode"
+      | "api_anthropic"
+      | "api_openai";
+    not_eq?:
+      | "claude_code"
+      | "gemini_cli"
+      | "codex"
+      | "opencode"
+      | "api_anthropic"
+      | "api_openai";
+    in?: Array<
+      | "claude_code"
+      | "gemini_cli"
+      | "codex"
+      | "opencode"
+      | "api_anthropic"
+      | "api_openai"
+    >;
   };
 
   prompt?: {
@@ -1206,9 +1505,7 @@ export type ExecutorSessionFilterInput = {
     in?: Array<UUID>;
   };
 
-
   task?: TaskFilterInput;
-
 };
 export type SystemToolFilterInput = {
   and?: Array<SystemToolFilterInput>;
@@ -1218,7 +1515,9 @@ export type SystemToolFilterInput = {
   name?: {
     eq?: "docker" | "git" | "gh" | "claude" | "codex" | "aider" | "goose";
     not_eq?: "docker" | "git" | "gh" | "claude" | "codex" | "aider" | "goose";
-    in?: Array<"docker" | "git" | "gh" | "claude" | "codex" | "aider" | "goose">;
+    in?: Array<
+      "docker" | "git" | "gh" | "claude" | "codex" | "aider" | "goose"
+    >;
   };
 
   display_name?: {
@@ -1255,9 +1554,6 @@ export type SystemToolFilterInput = {
     not_eq?: string;
     in?: Array<string>;
   };
-
-
-
 };
 export type ActorStateFilterInput = {
   and?: Array<ActorStateFilterInput>;
@@ -1309,9 +1605,6 @@ export type ActorStateFilterInput = {
     less_than_or_equal?: number;
     in?: Array<number>;
   };
-
-
-
 };
 export type VibanKanbanTypesMessageQueueEntryFilterInput = {
   and?: Array<VibanKanbanTypesMessageQueueEntryFilterInput>;
@@ -1347,11 +1640,7 @@ export type VibanKanbanTypesMessageQueueEntryFilterInput = {
     not_eq?: string;
     in?: Array<string>;
   };
-
-
-
 };
-
 
 // Utility Types
 
@@ -1376,39 +1665,55 @@ type InferUnionFieldValue<
   {
     [FieldIndex in keyof FieldSelection]: FieldSelection[FieldIndex] extends UnionSchema["__primitiveFields"]
       ? FieldSelection[FieldIndex] extends keyof UnionSchema
-        ? { [P in FieldSelection[FieldIndex]]: UnionSchema[FieldSelection[FieldIndex]] }
+        ? {
+            [P in FieldSelection[FieldIndex]]: UnionSchema[FieldSelection[FieldIndex]];
+          }
         : never
       : FieldSelection[FieldIndex] extends Record<string, any>
         ? {
             [UnionKey in keyof FieldSelection[FieldIndex]]: UnionKey extends keyof UnionSchema
-              ? UnionSchema[UnionKey] extends { __array: true; __type: "TypedMap"; __primitiveFields: infer TypedMapFields }
+              ? UnionSchema[UnionKey] extends {
+                  __array: true;
+                  __type: "TypedMap";
+                  __primitiveFields: infer TypedMapFields;
+                }
                 ? FieldSelection[FieldIndex][UnionKey] extends any[]
                   ? Array<
                       UnionToIntersection<
                         {
                           [FieldIdx in keyof FieldSelection[FieldIndex][UnionKey]]: FieldSelection[FieldIndex][UnionKey][FieldIdx] extends TypedMapFields
                             ? FieldSelection[FieldIndex][UnionKey][FieldIdx] extends keyof UnionSchema[UnionKey]
-                              ? { [P in FieldSelection[FieldIndex][UnionKey][FieldIdx]]: UnionSchema[UnionKey][P] }
+                              ? {
+                                  [P in FieldSelection[FieldIndex][UnionKey][FieldIdx]]: UnionSchema[UnionKey][P];
+                                }
                               : never
                             : never;
                         }[number]
                       >
                     > | null
                   : never
-                : UnionSchema[UnionKey] extends { __type: "TypedMap"; __primitiveFields: infer TypedMapFields }
+                : UnionSchema[UnionKey] extends {
+                      __type: "TypedMap";
+                      __primitiveFields: infer TypedMapFields;
+                    }
                   ? FieldSelection[FieldIndex][UnionKey] extends any[]
                     ? UnionToIntersection<
                         {
                           [FieldIdx in keyof FieldSelection[FieldIndex][UnionKey]]: FieldSelection[FieldIndex][UnionKey][FieldIdx] extends TypedMapFields
                             ? FieldSelection[FieldIndex][UnionKey][FieldIdx] extends keyof UnionSchema[UnionKey]
-                              ? { [P in FieldSelection[FieldIndex][UnionKey][FieldIdx]]: UnionSchema[UnionKey][P] }
+                              ? {
+                                  [P in FieldSelection[FieldIndex][UnionKey][FieldIdx]]: UnionSchema[UnionKey][P];
+                                }
                               : never
                             : never;
                         }[number]
                       > | null
                     : never
                   : UnionSchema[UnionKey] extends TypedSchema
-                    ? InferResult<UnionSchema[UnionKey], FieldSelection[FieldIndex][UnionKey]>
+                    ? InferResult<
+                        UnionSchema[UnionKey],
+                        FieldSelection[FieldIndex][UnionKey]
+                      >
                     : never
               : never;
           }
@@ -1456,25 +1761,46 @@ type ComplexFieldSelection<T extends TypedSchema> = {
         ? NonNullable<T[K]> extends TypedSchema
           ? UnifiedFieldSelection<NonNullable<T[K]>>[]
           : never
-        : T[K] extends { __type: "Union"; __primitiveFields: infer PrimitiveFields }
+        : T[K] extends {
+              __type: "Union";
+              __primitiveFields: infer PrimitiveFields;
+            }
           ? T[K] extends { __array: true }
-            ? (PrimitiveFields | {
-                [UnionKey in keyof Omit<T[K], "__type" | "__primitiveFields" | "__array">]?: T[K][UnionKey] extends { __type: "TypedMap"; __primitiveFields: any }
-                  ? T[K][UnionKey]["__primitiveFields"][]
-                  : T[K][UnionKey] extends TypedSchema
-                    ? UnifiedFieldSelection<T[K][UnionKey]>[]
-                    : never;
-              })[]
-            : (PrimitiveFields | {
-                [UnionKey in keyof Omit<T[K], "__type" | "__primitiveFields">]?: T[K][UnionKey] extends { __type: "TypedMap"; __primitiveFields: any }
-                  ? T[K][UnionKey]["__primitiveFields"][]
-                  : T[K][UnionKey] extends TypedSchema
-                    ? UnifiedFieldSelection<T[K][UnionKey]>[]
-                    : never;
-              })[]
-            : NonNullable<T[K]> extends TypedSchema
-              ? UnifiedFieldSelection<NonNullable<T[K]>>[]
-              : never;
+            ? (
+                | PrimitiveFields
+                | {
+                    [UnionKey in keyof Omit<
+                      T[K],
+                      "__type" | "__primitiveFields" | "__array"
+                    >]?: T[K][UnionKey] extends {
+                      __type: "TypedMap";
+                      __primitiveFields: any;
+                    }
+                      ? T[K][UnionKey]["__primitiveFields"][]
+                      : T[K][UnionKey] extends TypedSchema
+                        ? UnifiedFieldSelection<T[K][UnionKey]>[]
+                        : never;
+                  }
+              )[]
+            : (
+                | PrimitiveFields
+                | {
+                    [UnionKey in keyof Omit<
+                      T[K],
+                      "__type" | "__primitiveFields"
+                    >]?: T[K][UnionKey] extends {
+                      __type: "TypedMap";
+                      __primitiveFields: any;
+                    }
+                      ? T[K][UnionKey]["__primitiveFields"][]
+                      : T[K][UnionKey] extends TypedSchema
+                        ? UnifiedFieldSelection<T[K][UnionKey]>[]
+                        : never;
+                  }
+              )[]
+          : NonNullable<T[K]> extends TypedSchema
+            ? UnifiedFieldSelection<NonNullable<T[K]>>[]
+            : never;
 };
 
 // Main type: Use explicit base case detection to prevent infinite recursion
@@ -1503,22 +1829,112 @@ type InferFieldValue<
                 : null extends Resource
                   ? InferResult<NonNullable<Resource>, Field[K]> | null
                   : InferResult<NonNullable<Resource>, Field[K]>
-            : never
-          : T[K] extends {
-                __type: "ComplexCalculation";
-                __returnType: infer ReturnType;
-              }
-            ? NonNullable<ReturnType> extends TypedSchema
-              ? null extends ReturnType
-                ? InferResult<NonNullable<ReturnType>, Field[K]["fields"]> | null
-                : InferResult<NonNullable<ReturnType>, Field[K]["fields"]>
-              : ReturnType
-            : NonNullable<T[K]> extends { __type: "TypedMap"; __primitiveFields: infer TypedMapFields }
-              ? NonNullable<T[K]> extends { __array: true }
-                ? Field[K] extends any[]
-                  ? null extends T[K]
-                    ? Array<
-                        UnionToIntersection<
+              : never
+            : T[K] extends {
+                  __type: "ComplexCalculation";
+                  __returnType: infer ReturnType;
+                }
+              ? NonNullable<ReturnType> extends TypedSchema
+                ? null extends ReturnType
+                  ? InferResult<
+                      NonNullable<ReturnType>,
+                      Field[K]["fields"]
+                    > | null
+                  : InferResult<NonNullable<ReturnType>, Field[K]["fields"]>
+                : ReturnType
+              : NonNullable<T[K]> extends {
+                    __type: "TypedMap";
+                    __primitiveFields: infer TypedMapFields;
+                  }
+                ? NonNullable<T[K]> extends { __array: true }
+                  ? Field[K] extends any[]
+                    ? null extends T[K]
+                      ? Array<
+                          UnionToIntersection<
+                            {
+                              [FieldIndex in keyof Field[K]]: Field[K][FieldIndex] extends infer E
+                                ? E extends TypedMapFields
+                                  ? E extends keyof NonNullable<T[K]>
+                                    ? { [P in E]: NonNullable<T[K]>[P] }
+                                    : never
+                                  : E extends Record<string, any>
+                                    ? {
+                                        [NestedKey in keyof E]: NestedKey extends keyof NonNullable<
+                                          T[K]
+                                        >
+                                          ? NonNullable<
+                                              NonNullable<T[K]>[NestedKey]
+                                            > extends TypedSchema
+                                            ? null extends NonNullable<
+                                                T[K]
+                                              >[NestedKey]
+                                              ? InferResult<
+                                                  NonNullable<
+                                                    NonNullable<T[K]>[NestedKey]
+                                                  >,
+                                                  E[NestedKey]
+                                                > | null
+                                              : InferResult<
+                                                  NonNullable<
+                                                    NonNullable<T[K]>[NestedKey]
+                                                  >,
+                                                  E[NestedKey]
+                                                >
+                                            : never
+                                          : never;
+                                      }
+                                    : E extends keyof NonNullable<T[K]>
+                                      ? { [P in E]: NonNullable<T[K]>[P] }
+                                      : never
+                                : never;
+                            }[number]
+                          >
+                        > | null
+                      : Array<
+                          UnionToIntersection<
+                            {
+                              [FieldIndex in keyof Field[K]]: Field[K][FieldIndex] extends infer E
+                                ? E extends TypedMapFields
+                                  ? E extends keyof NonNullable<T[K]>
+                                    ? { [P in E]: NonNullable<T[K]>[P] }
+                                    : never
+                                  : E extends Record<string, any>
+                                    ? {
+                                        [NestedKey in keyof E]: NestedKey extends keyof NonNullable<
+                                          T[K]
+                                        >
+                                          ? NonNullable<
+                                              NonNullable<T[K]>[NestedKey]
+                                            > extends TypedSchema
+                                            ? null extends NonNullable<
+                                                T[K]
+                                              >[NestedKey]
+                                              ? InferResult<
+                                                  NonNullable<
+                                                    NonNullable<T[K]>[NestedKey]
+                                                  >,
+                                                  E[NestedKey]
+                                                > | null
+                                              : InferResult<
+                                                  NonNullable<
+                                                    NonNullable<T[K]>[NestedKey]
+                                                  >,
+                                                  E[NestedKey]
+                                                >
+                                            : never
+                                          : never;
+                                      }
+                                    : E extends keyof NonNullable<T[K]>
+                                      ? { [P in E]: NonNullable<T[K]>[P] }
+                                      : never
+                                : never;
+                            }[number]
+                          >
+                        >
+                    : never
+                  : Field[K] extends any[]
+                    ? null extends T[K]
+                      ? UnionToIntersection<
                           {
                             [FieldIndex in keyof Field[K]]: Field[K][FieldIndex] extends infer E
                               ? E extends TypedMapFields
@@ -1527,11 +1943,66 @@ type InferFieldValue<
                                   : never
                                 : E extends Record<string, any>
                                   ? {
-                                      [NestedKey in keyof E]: NestedKey extends keyof NonNullable<T[K]>
-                                        ? NonNullable<NonNullable<T[K]>[NestedKey]> extends TypedSchema
-                                          ? null extends NonNullable<T[K]>[NestedKey]
-                                            ? InferResult<NonNullable<NonNullable<T[K]>[NestedKey]>, E[NestedKey]> | null
-                                            : InferResult<NonNullable<NonNullable<T[K]>[NestedKey]>, E[NestedKey]>
+                                      [NestedKey in keyof E]: NestedKey extends keyof NonNullable<
+                                        T[K]
+                                      >
+                                        ? NonNullable<
+                                            NonNullable<T[K]>[NestedKey]
+                                          > extends TypedSchema
+                                          ? null extends NonNullable<
+                                              T[K]
+                                            >[NestedKey]
+                                            ? InferResult<
+                                                NonNullable<
+                                                  NonNullable<T[K]>[NestedKey]
+                                                >,
+                                                E[NestedKey]
+                                              > | null
+                                            : InferResult<
+                                                NonNullable<
+                                                  NonNullable<T[K]>[NestedKey]
+                                                >,
+                                                E[NestedKey]
+                                              >
+                                          : never
+                                        : never;
+                                    }
+                                  : E extends keyof NonNullable<T[K]>
+                                    ? { [P in E]: NonNullable<T[K]>[P] }
+                                    : never
+                              : never;
+                          }[number]
+                        > | null
+                      : UnionToIntersection<
+                          {
+                            [FieldIndex in keyof Field[K]]: Field[K][FieldIndex] extends infer E
+                              ? E extends TypedMapFields
+                                ? E extends keyof T[K]
+                                  ? { [P in E]: T[K][P] }
+                                  : never
+                                : E extends Record<string, any>
+                                  ? {
+                                      [NestedKey in keyof E]: NestedKey extends keyof NonNullable<
+                                        T[K]
+                                      >
+                                        ? NonNullable<
+                                            NonNullable<T[K]>[NestedKey]
+                                          > extends TypedSchema
+                                          ? null extends NonNullable<
+                                              T[K]
+                                            >[NestedKey]
+                                            ? InferResult<
+                                                NonNullable<
+                                                  NonNullable<T[K]>[NestedKey]
+                                                >,
+                                                E[NestedKey]
+                                              > | null
+                                            : InferResult<
+                                                NonNullable<
+                                                  NonNullable<T[K]>[NestedKey]
+                                                >,
+                                                E[NestedKey]
+                                              >
                                           : never
                                         : never;
                                     }
@@ -1541,98 +2012,37 @@ type InferFieldValue<
                               : never;
                           }[number]
                         >
-                      > | null
-                    : Array<
-                        UnionToIntersection<
-                          {
-                            [FieldIndex in keyof Field[K]]: Field[K][FieldIndex] extends infer E
-                              ? E extends TypedMapFields
-                                ? E extends keyof NonNullable<T[K]>
-                                  ? { [P in E]: NonNullable<T[K]>[P] }
-                                  : never
-                                : E extends Record<string, any>
-                                  ? {
-                                      [NestedKey in keyof E]: NestedKey extends keyof NonNullable<T[K]>
-                                        ? NonNullable<NonNullable<T[K]>[NestedKey]> extends TypedSchema
-                                          ? null extends NonNullable<T[K]>[NestedKey]
-                                            ? InferResult<NonNullable<NonNullable<T[K]>[NestedKey]>, E[NestedKey]> | null
-                                            : InferResult<NonNullable<NonNullable<T[K]>[NestedKey]>, E[NestedKey]>
-                                          : never
-                                        : never;
-                                    }
-                                  : E extends keyof NonNullable<T[K]>
-                                    ? { [P in E]: NonNullable<T[K]>[P] }
-                                    : never
-                              : never;
-                          }[number]
-                        >
-                      >
-                  : never
-                : Field[K] extends any[]
-                  ? null extends T[K]
-                    ? UnionToIntersection<
-                        {
-                          [FieldIndex in keyof Field[K]]: Field[K][FieldIndex] extends infer E
-                            ? E extends TypedMapFields
-                              ? E extends keyof NonNullable<T[K]>
-                                ? { [P in E]: NonNullable<T[K]>[P] }
-                                : never
-                              : E extends Record<string, any>
-                                ? {
-                                    [NestedKey in keyof E]: NestedKey extends keyof NonNullable<T[K]>
-                                      ? NonNullable<NonNullable<T[K]>[NestedKey]> extends TypedSchema
-                                        ? null extends NonNullable<T[K]>[NestedKey]
-                                          ? InferResult<NonNullable<NonNullable<T[K]>[NestedKey]>, E[NestedKey]> | null
-                                          : InferResult<NonNullable<NonNullable<T[K]>[NestedKey]>, E[NestedKey]>
-                                        : never
-                                      : never;
-                                  }
-                                : E extends keyof NonNullable<T[K]>
-                                  ? { [P in E]: NonNullable<T[K]>[P] }
-                                  : never
-                            : never;
-                        }[number]
-                      > | null
-                    : UnionToIntersection<
-                        {
-                          [FieldIndex in keyof Field[K]]: Field[K][FieldIndex] extends infer E
-                            ? E extends TypedMapFields
-                              ? E extends keyof T[K]
-                                ? { [P in E]: T[K][P] }
-                                : never
-                              : E extends Record<string, any>
-                                ? {
-                                    [NestedKey in keyof E]: NestedKey extends keyof NonNullable<T[K]>
-                                      ? NonNullable<NonNullable<T[K]>[NestedKey]> extends TypedSchema
-                                        ? null extends NonNullable<T[K]>[NestedKey]
-                                          ? InferResult<NonNullable<NonNullable<T[K]>[NestedKey]>, E[NestedKey]> | null
-                                          : InferResult<NonNullable<NonNullable<T[K]>[NestedKey]>, E[NestedKey]>
-                                        : never
-                                      : never;
-                                  }
-                                : E extends keyof NonNullable<T[K]>
-                                  ? { [P in E]: NonNullable<T[K]>[P] }
-                                  : never
-                            : never;
-                        }[number]
-                      >
-                  : never
-              : T[K] extends { __type: "Union"; __primitiveFields: any }
-                ? T[K] extends { __array: true }
-                  ? {
-                      [CurrentK in K]: T[CurrentK] extends { __type: "Union"; __primitiveFields: any }
-                        ? Field[CurrentK] extends any[]
-                          ? Array<InferUnionFieldValue<T[CurrentK], Field[CurrentK]>> | null
-                          : never
-                        : never
-                    }
-                  : {
-                      [CurrentK in K]: T[CurrentK] extends { __type: "Union"; __primitiveFields: any }
-                        ? Field[CurrentK] extends any[]
-                          ? InferUnionFieldValue<T[CurrentK], Field[CurrentK]> | null
-                          : never
-                        : never
-                    }
+                    : never
+                : T[K] extends { __type: "Union"; __primitiveFields: any }
+                  ? T[K] extends { __array: true }
+                    ? {
+                        [CurrentK in K]: T[CurrentK] extends {
+                          __type: "Union";
+                          __primitiveFields: any;
+                        }
+                          ? Field[CurrentK] extends any[]
+                            ? Array<
+                                InferUnionFieldValue<
+                                  T[CurrentK],
+                                  Field[CurrentK]
+                                >
+                              > | null
+                            : never
+                          : never;
+                      }
+                    : {
+                        [CurrentK in K]: T[CurrentK] extends {
+                          __type: "Union";
+                          __primitiveFields: any;
+                        }
+                          ? Field[CurrentK] extends any[]
+                            ? InferUnionFieldValue<
+                                T[CurrentK],
+                                Field[CurrentK]
+                              > | null
+                            : never
+                          : never;
+                      }
                   : NonNullable<T[K]> extends TypedSchema
                     ? null extends T[K]
                       ? InferResult<NonNullable<T[K]>, Field[K]> | null
@@ -1648,65 +2058,58 @@ type InferResult<
 > = SelectedFields extends undefined
   ? {}
   : SelectedFields extends []
-  ? {}
-  : SelectedFields extends UnifiedFieldSelection<T>[]
-  ? UnionToIntersection<
-      {
-        [K in keyof SelectedFields]: InferFieldValue<T, SelectedFields[K]>;
-      }[number]
-    >
-  : {};
+    ? {}
+    : SelectedFields extends UnifiedFieldSelection<T>[]
+      ? UnionToIntersection<
+          {
+            [K in keyof SelectedFields]: InferFieldValue<T, SelectedFields[K]>;
+          }[number]
+        >
+      : {};
 
 // Pagination conditional types
 // Checks if a page configuration object has any pagination parameters
-type HasPaginationParams<Page> =
-  Page extends { offset: any } ? true :
-  Page extends { after: any } ? true :
-  Page extends { before: any } ? true :
-  false;
+type HasPaginationParams<Page> = Page extends { offset: any }
+  ? true
+  : Page extends { after: any }
+    ? true
+    : Page extends { before: any }
+      ? true
+      : false;
 
 // Infer which pagination type is being used from the page config
-type InferPaginationType<Page> =
-  Page extends { offset: any } ? "offset" :
-  Page extends { after: any } | { before: any } ? "keyset" :
-  never;
+type InferPaginationType<Page> = Page extends { offset: any }
+  ? "offset"
+  : Page extends { after: any } | { before: any }
+    ? "keyset"
+    : never;
 
 // Returns either non-paginated (array) or paginated result based on page params
 // For single pagination type support (offset-only or keyset-only)
 // @ts-ignore
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-type ConditionalPaginatedResult<
-  Page,
-  RecordType,
-  PaginatedType
-> = Page extends undefined
-  ? RecordType
-  : HasPaginationParams<Page> extends true
-    ? PaginatedType
-    : RecordType;
+type ConditionalPaginatedResult<Page, RecordType, PaginatedType> =
+  Page extends undefined
+    ? RecordType
+    : HasPaginationParams<Page> extends true
+      ? PaginatedType
+      : RecordType;
 
 // For actions supporting both offset and keyset pagination
 // Infers the specific pagination type based on which params were passed
-type ConditionalPaginatedResultMixed<
-  Page,
-  RecordType,
-  OffsetType,
-  KeysetType
-> = Page extends undefined
-  ? RecordType
-  : HasPaginationParams<Page> extends true
-    ? InferPaginationType<Page> extends "offset"
-      ? OffsetType
-      : InferPaginationType<Page> extends "keyset"
-        ? KeysetType
-        : OffsetType | KeysetType  // Fallback to union if can't determine
-    : RecordType;
+type ConditionalPaginatedResultMixed<Page, RecordType, OffsetType, KeysetType> =
+  Page extends undefined
+    ? RecordType
+    : HasPaginationParams<Page> extends true
+      ? InferPaginationType<Page> extends "offset"
+        ? OffsetType
+        : InferPaginationType<Page> extends "keyset"
+          ? KeysetType
+          : OffsetType | KeysetType // Fallback to union if can't determine
+      : RecordType;
 
-export type SuccessDataFunc<T extends (...args: any[]) => Promise<any>> = Extract<
-  Awaited<ReturnType<T>>,
-  { success: true }
->["data"];
-
+export type SuccessDataFunc<T extends (...args: any[]) => Promise<any>> =
+  Extract<Awaited<ReturnType<T>>, { success: true }>["data"];
 
 export type ErrorData<T extends (...args: any[]) => Promise<any>> = Extract<
   Awaited<ReturnType<T>>,
@@ -1744,7 +2147,7 @@ export type AshRpcError = {
   path: string[];
   /** Optional map with extra details (e.g., suggestions, hints) */
   details?: Record<string, any>;
-}
+};
 
 /**
  * Represents the result of a validation RPC call.
@@ -1773,11 +2176,7 @@ export type AshRpcError = {
  */
 export type ValidationResult =
   | { success: true }
-  | { success: false; errors: AshRpcError[]; };
-
-
-
-
+  | { success: false; errors: AshRpcError[] };
 
 // Helper Functions
 
@@ -1823,24 +2222,25 @@ export interface ActionConfig {
   hook_ctx?: Record<string, any>;
 }
 
-
-
-
 /**
  * Gets the CSRF token from the page's meta tag
  * Returns null if no CSRF token is found
  */
 export function getPhoenixCSRFToken(): string | null {
-  return document
-    ?.querySelector("meta[name='csrf-token']")
-    ?.getAttribute("content") || null;
+  return (
+    document
+      ?.querySelector("meta[name='csrf-token']")
+      ?.getAttribute("content") || null
+  );
 }
 
 /**
  * Builds headers object with CSRF token for Phoenix applications
  * Returns headers object with X-CSRF-Token (if available)
  */
-export function buildCSRFHeaders(headers: Record<string, string> = {}): Record<string, string> {
+export function buildCSRFHeaders(
+  headers: Record<string, string> = {},
+): Record<string, string> {
   const csrfToken = getPhoenixCSRFToken();
   if (csrfToken) {
     headers["X-CSRF-Token"] = csrfToken;
@@ -1856,9 +2256,9 @@ export function buildCSRFHeaders(headers: Record<string, string> = {}): Record<s
  */
 async function executeActionRpcRequest<T>(
   payload: Record<string, any>,
-  config: ActionConfig
+  config: ActionConfig,
 ): Promise<T> {
-    const processedConfig = config;
+  const processedConfig = config;
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -1866,7 +2266,8 @@ async function executeActionRpcRequest<T>(
     ...processedConfig.headers,
   };
 
-  const fetchFunction = config.custom_fetch || processedConfig.custom_fetch || fetch;
+  const fetchFunction =
+    config.custom_fetch || processedConfig.custom_fetch || fetch;
   const fetchOptions: RequestInit = {
     ...config.fetch_options,
     ...processedConfig.fetch_options,
@@ -1878,9 +2279,14 @@ async function executeActionRpcRequest<T>(
   const response = await fetchFunction("/api/rpc/run", fetchOptions);
   const result = response.ok ? await response.json() : null;
 
-    if (RpcHooks.afterActionRequest) {
-      await RpcHooks.afterActionRequest(payload.action, response, result, processedConfig);
-    }
+  if (RpcHooks.afterActionRequest) {
+    await RpcHooks.afterActionRequest(
+      payload.action,
+      response,
+      result,
+      processedConfig,
+    );
+  }
 
   if (!response.ok) {
     return {
@@ -1890,27 +2296,20 @@ async function executeActionRpcRequest<T>(
           type: "network_error",
           message: `Network request failed: ${response.statusText}`,
           short_message: "Network error",
-          vars: { statusCode: response.status, statusText: response.statusText },
+          vars: {
+            statusCode: response.status,
+            statusText: response.statusText,
+          },
           fields: [],
           path: [],
-          details: { statusCode: response.status }
-        }
+          details: { statusCode: response.status },
+        },
       ],
     } as T;
   }
 
   return result as T;
 }
-
-
-
-
-
-
-
-
-
-
 
 export type CreateBoardInput = {
   name: string;
@@ -1924,133 +2323,143 @@ export type InferCreateBoardResult<
   Fields extends CreateBoardFields | undefined,
 > = InferResult<BoardResourceSchema, Fields>;
 
-export type CreateBoardResult<Fields extends CreateBoardFields | undefined = undefined> = | { success: true; data: InferCreateBoardResult<Fields>; }
-| { success: false; errors: AshRpcError[]; }
+export type CreateBoardResult<
+  Fields extends CreateBoardFields | undefined = undefined,
+> =
+  | { success: true; data: InferCreateBoardResult<Fields> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function create_board<Fields extends CreateBoardFields | undefined = undefined>(
-  config: {
+export async function create_board<
+  Fields extends CreateBoardFields | undefined = undefined,
+>(config: {
   input: CreateBoardInput;
   hookCtx?: ActionHookContext;
   fields?: Fields;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<CreateBoardResult<Fields extends undefined ? [] : Fields>> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<CreateBoardResult<Fields extends undefined ? [] : Fields>> {
   const payload = {
     action: "create_board",
     input: config.input,
-    ...(config.fields !== undefined && { fields: config.fields })
+    ...(config.fields !== undefined && { fields: config.fields }),
   };
 
-  return executeActionRpcRequest<CreateBoardResult<Fields extends undefined ? [] : Fields>>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<
+    CreateBoardResult<Fields extends undefined ? [] : Fields>
+  >(payload, config);
 }
-
 
 export type ListBoardsFields = UnifiedFieldSelection<BoardResourceSchema>[];
 
-
 export type InferListBoardsResult<
   Fields extends ListBoardsFields | undefined,
-  Page extends ListBoardsConfig["page"] = undefined
-> = ConditionalPaginatedResultMixed<Page, Array<InferResult<BoardResourceSchema, Fields>>, {
-  results: Array<InferResult<BoardResourceSchema, Fields>>;
-  has_more: boolean;
-  limit: number;
-  offset: number;
-  count?: number | null;
-  type: "offset";
-}, {
-  results: Array<InferResult<BoardResourceSchema, Fields>>;
-  has_more: boolean;
-  limit: number;
-  after: string | null;
-  before: string | null;
-  previous_page: string;
-  next_page: string;
-  count?: number | null;
-  type: "keyset";
-}>;
+  Page extends ListBoardsConfig["page"] = undefined,
+> = ConditionalPaginatedResultMixed<
+  Page,
+  Array<InferResult<BoardResourceSchema, Fields>>,
+  {
+    results: Array<InferResult<BoardResourceSchema, Fields>>;
+    has_more: boolean;
+    limit: number;
+    offset: number;
+    count?: number | null;
+    type: "offset";
+  },
+  {
+    results: Array<InferResult<BoardResourceSchema, Fields>>;
+    has_more: boolean;
+    limit: number;
+    after: string | null;
+    before: string | null;
+    previous_page: string;
+    next_page: string;
+    count?: number | null;
+    type: "keyset";
+  }
+>;
 
 export type ListBoardsConfig = {
   hookCtx?: ActionHookContext;
   fields: ListBoardsFields;
   filter?: BoardFilterInput;
   sort?: string;
-  page?: (
-    {
-      limit?: number;
-      offset?: number;
-      count?: boolean;
-    } | {
-      limit?: number;
-      after?: string;
-      before?: string;
-    }
-  );
+  page?:
+    | {
+        limit?: number;
+        offset?: number;
+        count?: boolean;
+      }
+    | {
+        limit?: number;
+        after?: string;
+        before?: string;
+      };
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
 };
 
-export type ListBoardsResult<Fields extends ListBoardsFields, Page extends ListBoardsConfig["page"] = undefined> = | { success: true; data: InferListBoardsResult<Fields, Page>; }
-| { success: false; errors: AshRpcError[]; }
+export type ListBoardsResult<
+  Fields extends ListBoardsFields,
+  Page extends ListBoardsConfig["page"] = undefined,
+> =
+  | { success: true; data: InferListBoardsResult<Fields, Page> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function list_boards<Fields extends ListBoardsFields, Config extends ListBoardsConfig = ListBoardsConfig>(
-  config: Config & { fields: Fields }
+export async function list_boards<
+  Fields extends ListBoardsFields,
+  Config extends ListBoardsConfig = ListBoardsConfig,
+>(
+  config: Config & { fields: Fields },
 ): Promise<ListBoardsResult<Fields, Config["page"]>> {
   const payload = {
     action: "list_boards",
     ...(config.fields !== undefined && { fields: config.fields }),
     ...(config.filter && { filter: config.filter }),
     ...(config.sort && { sort: config.sort }),
-    ...(config.page && { page: config.page })
+    ...(config.page && { page: config.page }),
   };
 
   return executeActionRpcRequest<ListBoardsResult<Fields, Config["page"]>>(
     payload,
-    config
+    config,
   );
 }
 
-
 export type GetBoardFields = UnifiedFieldSelection<BoardResourceSchema>[];
-export type InferGetBoardResult<
-  Fields extends GetBoardFields,
-> = InferResult<BoardResourceSchema, Fields>;
+export type InferGetBoardResult<Fields extends GetBoardFields> = InferResult<
+  BoardResourceSchema,
+  Fields
+>;
 
-export type GetBoardResult<Fields extends GetBoardFields> = | { success: true; data: InferGetBoardResult<Fields>; }
-| { success: false; errors: AshRpcError[]; }
+export type GetBoardResult<Fields extends GetBoardFields> =
+  | { success: true; data: InferGetBoardResult<Fields> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function get_board<Fields extends GetBoardFields>(
-  config: {
+export async function get_board<Fields extends GetBoardFields>(config: {
   hookCtx?: ActionHookContext;
   fields: Fields;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<GetBoardResult<Fields>> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<GetBoardResult<Fields>> {
   const payload = {
     action: "get_board",
-    ...(config.fields !== undefined && { fields: config.fields })
+    ...(config.fields !== undefined && { fields: config.fields }),
   };
 
-  return executeActionRpcRequest<GetBoardResult<Fields>>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<GetBoardResult<Fields>>(payload, config);
 }
-
 
 export type UpdateBoardInput = {
   name?: string;
@@ -2063,62 +2472,59 @@ export type InferUpdateBoardResult<
   Fields extends UpdateBoardFields | undefined,
 > = InferResult<BoardResourceSchema, Fields>;
 
-export type UpdateBoardResult<Fields extends UpdateBoardFields | undefined = undefined> = | { success: true; data: InferUpdateBoardResult<Fields>; }
-| { success: false; errors: AshRpcError[]; }
+export type UpdateBoardResult<
+  Fields extends UpdateBoardFields | undefined = undefined,
+> =
+  | { success: true; data: InferUpdateBoardResult<Fields> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function update_board<Fields extends UpdateBoardFields | undefined = undefined>(
-  config: {
+export async function update_board<
+  Fields extends UpdateBoardFields | undefined = undefined,
+>(config: {
   identity: UUID;
   input: UpdateBoardInput;
   hookCtx?: ActionHookContext;
   fields?: Fields;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<UpdateBoardResult<Fields extends undefined ? [] : Fields>> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<UpdateBoardResult<Fields extends undefined ? [] : Fields>> {
   const payload = {
     action: "update_board",
     identity: config.identity,
     input: config.input,
-    ...(config.fields !== undefined && { fields: config.fields })
+    ...(config.fields !== undefined && { fields: config.fields }),
   };
 
-  return executeActionRpcRequest<UpdateBoardResult<Fields extends undefined ? [] : Fields>>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<
+    UpdateBoardResult<Fields extends undefined ? [] : Fields>
+  >(payload, config);
 }
 
+export type DestroyBoardResult =
+  | { success: true; data: {} }
+  | { success: false; errors: AshRpcError[] };
 
-
-export type DestroyBoardResult = | { success: true; data: {}; }
-| { success: false; errors: AshRpcError[]; }
-
-;
-
-export async function destroy_board(
-  config: {
+export async function destroy_board(config: {
   identity: UUID;
   hookCtx?: ActionHookContext;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<DestroyBoardResult> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<DestroyBoardResult> {
   const payload = {
     action: "destroy_board",
-    identity: config.identity
+    identity: config.identity,
   };
 
-  return executeActionRpcRequest<DestroyBoardResult>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<DestroyBoardResult>(payload, config);
 }
-
 
 export type CreateColumnInput = {
   name: string;
@@ -2134,133 +2540,143 @@ export type InferCreateColumnResult<
   Fields extends CreateColumnFields | undefined,
 > = InferResult<ColumnResourceSchema, Fields>;
 
-export type CreateColumnResult<Fields extends CreateColumnFields | undefined = undefined> = | { success: true; data: InferCreateColumnResult<Fields>; }
-| { success: false; errors: AshRpcError[]; }
+export type CreateColumnResult<
+  Fields extends CreateColumnFields | undefined = undefined,
+> =
+  | { success: true; data: InferCreateColumnResult<Fields> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function create_column<Fields extends CreateColumnFields | undefined = undefined>(
-  config: {
+export async function create_column<
+  Fields extends CreateColumnFields | undefined = undefined,
+>(config: {
   input: CreateColumnInput;
   hookCtx?: ActionHookContext;
   fields?: Fields;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<CreateColumnResult<Fields extends undefined ? [] : Fields>> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<CreateColumnResult<Fields extends undefined ? [] : Fields>> {
   const payload = {
     action: "create_column",
     input: config.input,
-    ...(config.fields !== undefined && { fields: config.fields })
+    ...(config.fields !== undefined && { fields: config.fields }),
   };
 
-  return executeActionRpcRequest<CreateColumnResult<Fields extends undefined ? [] : Fields>>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<
+    CreateColumnResult<Fields extends undefined ? [] : Fields>
+  >(payload, config);
 }
-
 
 export type ListColumnsFields = UnifiedFieldSelection<ColumnResourceSchema>[];
 
-
 export type InferListColumnsResult<
   Fields extends ListColumnsFields | undefined,
-  Page extends ListColumnsConfig["page"] = undefined
-> = ConditionalPaginatedResultMixed<Page, Array<InferResult<ColumnResourceSchema, Fields>>, {
-  results: Array<InferResult<ColumnResourceSchema, Fields>>;
-  has_more: boolean;
-  limit: number;
-  offset: number;
-  count?: number | null;
-  type: "offset";
-}, {
-  results: Array<InferResult<ColumnResourceSchema, Fields>>;
-  has_more: boolean;
-  limit: number;
-  after: string | null;
-  before: string | null;
-  previous_page: string;
-  next_page: string;
-  count?: number | null;
-  type: "keyset";
-}>;
+  Page extends ListColumnsConfig["page"] = undefined,
+> = ConditionalPaginatedResultMixed<
+  Page,
+  Array<InferResult<ColumnResourceSchema, Fields>>,
+  {
+    results: Array<InferResult<ColumnResourceSchema, Fields>>;
+    has_more: boolean;
+    limit: number;
+    offset: number;
+    count?: number | null;
+    type: "offset";
+  },
+  {
+    results: Array<InferResult<ColumnResourceSchema, Fields>>;
+    has_more: boolean;
+    limit: number;
+    after: string | null;
+    before: string | null;
+    previous_page: string;
+    next_page: string;
+    count?: number | null;
+    type: "keyset";
+  }
+>;
 
 export type ListColumnsConfig = {
   hookCtx?: ActionHookContext;
   fields: ListColumnsFields;
   filter?: ColumnFilterInput;
   sort?: string;
-  page?: (
-    {
-      limit?: number;
-      offset?: number;
-      count?: boolean;
-    } | {
-      limit?: number;
-      after?: string;
-      before?: string;
-    }
-  );
+  page?:
+    | {
+        limit?: number;
+        offset?: number;
+        count?: boolean;
+      }
+    | {
+        limit?: number;
+        after?: string;
+        before?: string;
+      };
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
 };
 
-export type ListColumnsResult<Fields extends ListColumnsFields, Page extends ListColumnsConfig["page"] = undefined> = | { success: true; data: InferListColumnsResult<Fields, Page>; }
-| { success: false; errors: AshRpcError[]; }
+export type ListColumnsResult<
+  Fields extends ListColumnsFields,
+  Page extends ListColumnsConfig["page"] = undefined,
+> =
+  | { success: true; data: InferListColumnsResult<Fields, Page> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function list_columns<Fields extends ListColumnsFields, Config extends ListColumnsConfig = ListColumnsConfig>(
-  config: Config & { fields: Fields }
+export async function list_columns<
+  Fields extends ListColumnsFields,
+  Config extends ListColumnsConfig = ListColumnsConfig,
+>(
+  config: Config & { fields: Fields },
 ): Promise<ListColumnsResult<Fields, Config["page"]>> {
   const payload = {
     action: "list_columns",
     ...(config.fields !== undefined && { fields: config.fields }),
     ...(config.filter && { filter: config.filter }),
     ...(config.sort && { sort: config.sort }),
-    ...(config.page && { page: config.page })
+    ...(config.page && { page: config.page }),
   };
 
   return executeActionRpcRequest<ListColumnsResult<Fields, Config["page"]>>(
     payload,
-    config
+    config,
   );
 }
 
-
 export type GetColumnFields = UnifiedFieldSelection<ColumnResourceSchema>[];
-export type InferGetColumnResult<
-  Fields extends GetColumnFields,
-> = InferResult<ColumnResourceSchema, Fields>;
+export type InferGetColumnResult<Fields extends GetColumnFields> = InferResult<
+  ColumnResourceSchema,
+  Fields
+>;
 
-export type GetColumnResult<Fields extends GetColumnFields> = | { success: true; data: InferGetColumnResult<Fields>; }
-| { success: false; errors: AshRpcError[]; }
+export type GetColumnResult<Fields extends GetColumnFields> =
+  | { success: true; data: InferGetColumnResult<Fields> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function get_column<Fields extends GetColumnFields>(
-  config: {
+export async function get_column<Fields extends GetColumnFields>(config: {
   hookCtx?: ActionHookContext;
   fields: Fields;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<GetColumnResult<Fields>> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<GetColumnResult<Fields>> {
   const payload = {
     action: "get_column",
-    ...(config.fields !== undefined && { fields: config.fields })
+    ...(config.fields !== undefined && { fields: config.fields }),
   };
 
-  return executeActionRpcRequest<GetColumnResult<Fields>>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<GetColumnResult<Fields>>(payload, config);
 }
-
 
 export type UpdateColumnInput = {
   name?: string;
@@ -2275,102 +2691,104 @@ export type InferUpdateColumnResult<
   Fields extends UpdateColumnFields | undefined,
 > = InferResult<ColumnResourceSchema, Fields>;
 
-export type UpdateColumnResult<Fields extends UpdateColumnFields | undefined = undefined> = | { success: true; data: InferUpdateColumnResult<Fields>; }
-| { success: false; errors: AshRpcError[]; }
+export type UpdateColumnResult<
+  Fields extends UpdateColumnFields | undefined = undefined,
+> =
+  | { success: true; data: InferUpdateColumnResult<Fields> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function update_column<Fields extends UpdateColumnFields | undefined = undefined>(
-  config: {
+export async function update_column<
+  Fields extends UpdateColumnFields | undefined = undefined,
+>(config: {
   identity: UUID;
   input: UpdateColumnInput;
   hookCtx?: ActionHookContext;
   fields?: Fields;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<UpdateColumnResult<Fields extends undefined ? [] : Fields>> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<UpdateColumnResult<Fields extends undefined ? [] : Fields>> {
   const payload = {
     action: "update_column",
     identity: config.identity,
     input: config.input,
-    ...(config.fields !== undefined && { fields: config.fields })
+    ...(config.fields !== undefined && { fields: config.fields }),
   };
 
-  return executeActionRpcRequest<UpdateColumnResult<Fields extends undefined ? [] : Fields>>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<
+    UpdateColumnResult<Fields extends undefined ? [] : Fields>
+  >(payload, config);
 }
 
+export type DestroyColumnResult =
+  | { success: true; data: {} }
+  | { success: false; errors: AshRpcError[] };
 
-
-export type DestroyColumnResult = | { success: true; data: {}; }
-| { success: false; errors: AshRpcError[]; }
-
-;
-
-export async function destroy_column(
-  config: {
+export async function destroy_column(config: {
   identity: UUID;
   hookCtx?: ActionHookContext;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<DestroyColumnResult> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<DestroyColumnResult> {
   const payload = {
     action: "destroy_column",
-    identity: config.identity
+    identity: config.identity,
   };
 
-  return executeActionRpcRequest<DestroyColumnResult>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<DestroyColumnResult>(payload, config);
 }
-
 
 export type UpdateColumnSettingsInput = {
   settings: Record<string, any>;
 };
 
-export type UpdateColumnSettingsFields = UnifiedFieldSelection<ColumnResourceSchema>[];
+export type UpdateColumnSettingsFields =
+  UnifiedFieldSelection<ColumnResourceSchema>[];
 
 export type InferUpdateColumnSettingsResult<
   Fields extends UpdateColumnSettingsFields | undefined,
 > = InferResult<ColumnResourceSchema, Fields>;
 
-export type UpdateColumnSettingsResult<Fields extends UpdateColumnSettingsFields | undefined = undefined> = | { success: true; data: InferUpdateColumnSettingsResult<Fields>; }
-| { success: false; errors: AshRpcError[]; }
+export type UpdateColumnSettingsResult<
+  Fields extends UpdateColumnSettingsFields | undefined = undefined,
+> =
+  | { success: true; data: InferUpdateColumnSettingsResult<Fields> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function update_column_settings<Fields extends UpdateColumnSettingsFields | undefined = undefined>(
-  config: {
+export async function update_column_settings<
+  Fields extends UpdateColumnSettingsFields | undefined = undefined,
+>(config: {
   identity: UUID;
   input: UpdateColumnSettingsInput;
   hookCtx?: ActionHookContext;
   fields?: Fields;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<UpdateColumnSettingsResult<Fields extends undefined ? [] : Fields>> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<
+  UpdateColumnSettingsResult<Fields extends undefined ? [] : Fields>
+> {
   const payload = {
     action: "update_column_settings",
     identity: config.identity,
     input: config.input,
-    ...(config.fields !== undefined && { fields: config.fields })
+    ...(config.fields !== undefined && { fields: config.fields }),
   };
 
-  return executeActionRpcRequest<UpdateColumnSettingsResult<Fields extends undefined ? [] : Fields>>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<
+    UpdateColumnSettingsResult<Fields extends undefined ? [] : Fields>
+  >(payload, config);
 }
-
 
 export type DeleteAllColumnTasksInput = {
   column_id: UUID;
@@ -2378,31 +2796,27 @@ export type DeleteAllColumnTasksInput = {
 
 export type InferDeleteAllColumnTasksResult = number;
 
-export type DeleteAllColumnTasksResult = | { success: true; data: InferDeleteAllColumnTasksResult; }
-| { success: false; errors: AshRpcError[]; }
+export type DeleteAllColumnTasksResult =
+  | { success: true; data: InferDeleteAllColumnTasksResult }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function delete_all_column_tasks(
-  config: {
+export async function delete_all_column_tasks(config: {
   input: DeleteAllColumnTasksInput;
   hookCtx?: ActionHookContext;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<DeleteAllColumnTasksResult> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<DeleteAllColumnTasksResult> {
   const payload = {
     action: "delete_all_column_tasks",
-    input: config.input
+    input: config.input,
   };
 
-  return executeActionRpcRequest<DeleteAllColumnTasksResult>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<DeleteAllColumnTasksResult>(payload, config);
 }
-
 
 export type CreateTaskInput = {
   title: string;
@@ -2416,137 +2830,146 @@ export type CreateTaskInput = {
 
 export type CreateTaskFields = UnifiedFieldSelection<TaskResourceSchema>[];
 
-export type InferCreateTaskResult<
-  Fields extends CreateTaskFields | undefined,
-> = InferResult<TaskResourceSchema, Fields>;
+export type InferCreateTaskResult<Fields extends CreateTaskFields | undefined> =
+  InferResult<TaskResourceSchema, Fields>;
 
-export type CreateTaskResult<Fields extends CreateTaskFields | undefined = undefined> = | { success: true; data: InferCreateTaskResult<Fields>; }
-| { success: false; errors: AshRpcError[]; }
+export type CreateTaskResult<
+  Fields extends CreateTaskFields | undefined = undefined,
+> =
+  | { success: true; data: InferCreateTaskResult<Fields> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function create_task<Fields extends CreateTaskFields | undefined = undefined>(
-  config: {
+export async function create_task<
+  Fields extends CreateTaskFields | undefined = undefined,
+>(config: {
   input: CreateTaskInput;
   hookCtx?: ActionHookContext;
   fields?: Fields;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<CreateTaskResult<Fields extends undefined ? [] : Fields>> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<CreateTaskResult<Fields extends undefined ? [] : Fields>> {
   const payload = {
     action: "create_task",
     input: config.input,
-    ...(config.fields !== undefined && { fields: config.fields })
+    ...(config.fields !== undefined && { fields: config.fields }),
   };
 
-  return executeActionRpcRequest<CreateTaskResult<Fields extends undefined ? [] : Fields>>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<
+    CreateTaskResult<Fields extends undefined ? [] : Fields>
+  >(payload, config);
 }
-
 
 export type ListTasksFields = UnifiedFieldSelection<TaskResourceSchema>[];
 
-
 export type InferListTasksResult<
   Fields extends ListTasksFields | undefined,
-  Page extends ListTasksConfig["page"] = undefined
-> = ConditionalPaginatedResultMixed<Page, Array<InferResult<TaskResourceSchema, Fields>>, {
-  results: Array<InferResult<TaskResourceSchema, Fields>>;
-  has_more: boolean;
-  limit: number;
-  offset: number;
-  count?: number | null;
-  type: "offset";
-}, {
-  results: Array<InferResult<TaskResourceSchema, Fields>>;
-  has_more: boolean;
-  limit: number;
-  after: string | null;
-  before: string | null;
-  previous_page: string;
-  next_page: string;
-  count?: number | null;
-  type: "keyset";
-}>;
+  Page extends ListTasksConfig["page"] = undefined,
+> = ConditionalPaginatedResultMixed<
+  Page,
+  Array<InferResult<TaskResourceSchema, Fields>>,
+  {
+    results: Array<InferResult<TaskResourceSchema, Fields>>;
+    has_more: boolean;
+    limit: number;
+    offset: number;
+    count?: number | null;
+    type: "offset";
+  },
+  {
+    results: Array<InferResult<TaskResourceSchema, Fields>>;
+    has_more: boolean;
+    limit: number;
+    after: string | null;
+    before: string | null;
+    previous_page: string;
+    next_page: string;
+    count?: number | null;
+    type: "keyset";
+  }
+>;
 
 export type ListTasksConfig = {
   hookCtx?: ActionHookContext;
   fields: ListTasksFields;
   filter?: TaskFilterInput;
   sort?: string;
-  page?: (
-    {
-      limit?: number;
-      offset?: number;
-      count?: boolean;
-    } | {
-      limit?: number;
-      after?: string;
-      before?: string;
-    }
-  );
+  page?:
+    | {
+        limit?: number;
+        offset?: number;
+        count?: boolean;
+      }
+    | {
+        limit?: number;
+        after?: string;
+        before?: string;
+      };
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
 };
 
-export type ListTasksResult<Fields extends ListTasksFields, Page extends ListTasksConfig["page"] = undefined> = | { success: true; data: InferListTasksResult<Fields, Page>; }
-| { success: false; errors: AshRpcError[]; }
+export type ListTasksResult<
+  Fields extends ListTasksFields,
+  Page extends ListTasksConfig["page"] = undefined,
+> =
+  | { success: true; data: InferListTasksResult<Fields, Page> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function list_tasks<Fields extends ListTasksFields, Config extends ListTasksConfig = ListTasksConfig>(
-  config: Config & { fields: Fields }
+export async function list_tasks<
+  Fields extends ListTasksFields,
+  Config extends ListTasksConfig = ListTasksConfig,
+>(
+  config: Config & { fields: Fields },
 ): Promise<ListTasksResult<Fields, Config["page"]>> {
   const payload = {
     action: "list_tasks",
     ...(config.fields !== undefined && { fields: config.fields }),
     ...(config.filter && { filter: config.filter }),
     ...(config.sort && { sort: config.sort }),
-    ...(config.page && { page: config.page })
+    ...(config.page && { page: config.page }),
   };
 
   return executeActionRpcRequest<ListTasksResult<Fields, Config["page"]>>(
     payload,
-    config
+    config,
   );
 }
 
-
 export type GetTaskFields = UnifiedFieldSelection<TaskResourceSchema>[];
-export type InferGetTaskResult<
-  Fields extends GetTaskFields,
-> = InferResult<TaskResourceSchema, Fields>;
+export type InferGetTaskResult<Fields extends GetTaskFields> = InferResult<
+  TaskResourceSchema,
+  Fields
+>;
 
-export type GetTaskResult<Fields extends GetTaskFields> = | { success: true; data: InferGetTaskResult<Fields>; }
-| { success: false; errors: AshRpcError[]; }
+export type GetTaskResult<Fields extends GetTaskFields> =
+  | { success: true; data: InferGetTaskResult<Fields> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function get_task<Fields extends GetTaskFields>(
-  config: {
+export async function get_task<Fields extends GetTaskFields>(config: {
   hookCtx?: ActionHookContext;
   fields: Fields;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<GetTaskResult<Fields>> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<GetTaskResult<Fields>> {
   const payload = {
     action: "get_task",
-    ...(config.fields !== undefined && { fields: config.fields })
+    ...(config.fields !== undefined && { fields: config.fields }),
   };
 
-  return executeActionRpcRequest<GetTaskResult<Fields>>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<GetTaskResult<Fields>>(payload, config);
 }
-
 
 export type UpdateTaskInput = {
   title?: string;
@@ -2559,66 +2982,62 @@ export type UpdateTaskInput = {
 
 export type UpdateTaskFields = UnifiedFieldSelection<TaskResourceSchema>[];
 
-export type InferUpdateTaskResult<
-  Fields extends UpdateTaskFields | undefined,
-> = InferResult<TaskResourceSchema, Fields>;
+export type InferUpdateTaskResult<Fields extends UpdateTaskFields | undefined> =
+  InferResult<TaskResourceSchema, Fields>;
 
-export type UpdateTaskResult<Fields extends UpdateTaskFields | undefined = undefined> = | { success: true; data: InferUpdateTaskResult<Fields>; }
-| { success: false; errors: AshRpcError[]; }
+export type UpdateTaskResult<
+  Fields extends UpdateTaskFields | undefined = undefined,
+> =
+  | { success: true; data: InferUpdateTaskResult<Fields> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function update_task<Fields extends UpdateTaskFields | undefined = undefined>(
-  config: {
+export async function update_task<
+  Fields extends UpdateTaskFields | undefined = undefined,
+>(config: {
   identity: UUID;
   input: UpdateTaskInput;
   hookCtx?: ActionHookContext;
   fields?: Fields;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<UpdateTaskResult<Fields extends undefined ? [] : Fields>> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<UpdateTaskResult<Fields extends undefined ? [] : Fields>> {
   const payload = {
     action: "update_task",
     identity: config.identity,
     input: config.input,
-    ...(config.fields !== undefined && { fields: config.fields })
+    ...(config.fields !== undefined && { fields: config.fields }),
   };
 
-  return executeActionRpcRequest<UpdateTaskResult<Fields extends undefined ? [] : Fields>>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<
+    UpdateTaskResult<Fields extends undefined ? [] : Fields>
+  >(payload, config);
 }
 
+export type DestroyTaskResult =
+  | { success: true; data: {} }
+  | { success: false; errors: AshRpcError[] };
 
-
-export type DestroyTaskResult = | { success: true; data: {}; }
-| { success: false; errors: AshRpcError[]; }
-
-;
-
-export async function destroy_task(
-  config: {
+export async function destroy_task(config: {
   identity: UUID;
   hookCtx?: ActionHookContext;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<DestroyTaskResult> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<DestroyTaskResult> {
   const payload = {
     action: "destroy_task",
-    identity: config.identity
+    identity: config.identity,
   };
 
-  return executeActionRpcRequest<DestroyTaskResult>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<DestroyTaskResult>(payload, config);
 }
-
 
 export type MoveTaskInput = {
   column_id?: UUID;
@@ -2627,39 +3046,40 @@ export type MoveTaskInput = {
 
 export type MoveTaskFields = UnifiedFieldSelection<TaskResourceSchema>[];
 
-export type InferMoveTaskResult<
-  Fields extends MoveTaskFields | undefined,
-> = InferResult<TaskResourceSchema, Fields>;
+export type InferMoveTaskResult<Fields extends MoveTaskFields | undefined> =
+  InferResult<TaskResourceSchema, Fields>;
 
-export type MoveTaskResult<Fields extends MoveTaskFields | undefined = undefined> = | { success: true; data: InferMoveTaskResult<Fields>; }
-| { success: false; errors: AshRpcError[]; }
+export type MoveTaskResult<
+  Fields extends MoveTaskFields | undefined = undefined,
+> =
+  | { success: true; data: InferMoveTaskResult<Fields> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function move_task<Fields extends MoveTaskFields | undefined = undefined>(
-  config: {
+export async function move_task<
+  Fields extends MoveTaskFields | undefined = undefined,
+>(config: {
   identity: UUID;
   input: MoveTaskInput;
   hookCtx?: ActionHookContext;
   fields?: Fields;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<MoveTaskResult<Fields extends undefined ? [] : Fields>> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<MoveTaskResult<Fields extends undefined ? [] : Fields>> {
   const payload = {
     action: "move_task",
     identity: config.identity,
     input: config.input,
-    ...(config.fields !== undefined && { fields: config.fields })
+    ...(config.fields !== undefined && { fields: config.fields }),
   };
 
-  return executeActionRpcRequest<MoveTaskResult<Fields extends undefined ? [] : Fields>>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<
+    MoveTaskResult<Fields extends undefined ? [] : Fields>
+  >(payload, config);
 }
-
 
 export type RefineTaskInput = {
   task_id: UUID;
@@ -2667,31 +3087,27 @@ export type RefineTaskInput = {
 
 export type InferRefineTaskResult = Record<string, any>;
 
-export type RefineTaskResult = | { success: true; data: InferRefineTaskResult; }
-| { success: false; errors: AshRpcError[]; }
+export type RefineTaskResult =
+  | { success: true; data: InferRefineTaskResult }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function refine_task(
-  config: {
+export async function refine_task(config: {
   input: RefineTaskInput;
   hookCtx?: ActionHookContext;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<RefineTaskResult> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<RefineTaskResult> {
   const payload = {
     action: "refine_task",
-    input: config.input
+    input: config.input,
   };
 
-  return executeActionRpcRequest<RefineTaskResult>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<RefineTaskResult>(payload, config);
 }
-
 
 export type RefinePreviewInput = {
   title: string;
@@ -2700,31 +3116,27 @@ export type RefinePreviewInput = {
 
 export type InferRefinePreviewResult = Record<string, any>;
 
-export type RefinePreviewResult = | { success: true; data: InferRefinePreviewResult; }
-| { success: false; errors: AshRpcError[]; }
+export type RefinePreviewResult =
+  | { success: true; data: InferRefinePreviewResult }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function refine_preview(
-  config: {
+export async function refine_preview(config: {
   input: RefinePreviewInput;
   hookCtx?: ActionHookContext;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<RefinePreviewResult> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<RefinePreviewResult> {
   const payload = {
     action: "refine_preview",
-    input: config.input
+    input: config.input,
   };
 
-  return executeActionRpcRequest<RefinePreviewResult>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<RefinePreviewResult>(payload, config);
 }
-
 
 export type GenerateSubtasksInput = {
   task_id: UUID;
@@ -2732,48 +3144,42 @@ export type GenerateSubtasksInput = {
 
 export type InferGenerateSubtasksResult = Record<string, any>;
 
-export type GenerateSubtasksResult = | { success: true; data: InferGenerateSubtasksResult; }
-| { success: false; errors: AshRpcError[]; }
+export type GenerateSubtasksResult =
+  | { success: true; data: InferGenerateSubtasksResult }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function generate_subtasks(
-  config: {
+export async function generate_subtasks(config: {
   input: GenerateSubtasksInput;
   hookCtx?: ActionHookContext;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<GenerateSubtasksResult> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<GenerateSubtasksResult> {
   const payload = {
     action: "generate_subtasks",
-    input: config.input
+    input: config.input,
   };
 
-  return executeActionRpcRequest<GenerateSubtasksResult>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<GenerateSubtasksResult>(payload, config);
 }
-
 
 export type ListSubtasksInput = {
   parent_task_id: UUID;
 };
 
 export type ListSubtasksFields = UnifiedFieldSelection<TaskResourceSchema>[];
-export type InferListSubtasksResult<
-  Fields extends ListSubtasksFields,
-> = Array<InferResult<TaskResourceSchema, Fields>>;
+export type InferListSubtasksResult<Fields extends ListSubtasksFields> = Array<
+  InferResult<TaskResourceSchema, Fields>
+>;
 
-export type ListSubtasksResult<Fields extends ListSubtasksFields> = | { success: true; data: InferListSubtasksResult<Fields>; }
-| { success: false; errors: AshRpcError[]; }
+export type ListSubtasksResult<Fields extends ListSubtasksFields> =
+  | { success: true; data: InferListSubtasksResult<Fields> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function list_subtasks<Fields extends ListSubtasksFields>(
-  config: {
+export async function list_subtasks<Fields extends ListSubtasksFields>(config: {
   input: ListSubtasksInput;
   hookCtx?: ActionHookContext;
   fields: Fields;
@@ -2781,23 +3187,21 @@ export async function list_subtasks<Fields extends ListSubtasksFields>(
   sort?: string;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<ListSubtasksResult<Fields>> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<ListSubtasksResult<Fields>> {
   const payload = {
     action: "list_subtasks",
     input: config.input,
     ...(config.fields !== undefined && { fields: config.fields }),
     ...(config.filter && { filter: config.filter }),
-    ...(config.sort && { sort: config.sort })
+    ...(config.sort && { sort: config.sort }),
   };
 
-  return executeActionRpcRequest<ListSubtasksResult<Fields>>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<ListSubtasksResult<Fields>>(payload, config);
 }
-
 
 export type CreateSubtaskInput = {
   title: string;
@@ -2812,33 +3216,35 @@ export type InferCreateSubtaskResult<
   Fields extends CreateSubtaskFields | undefined,
 > = InferResult<TaskResourceSchema, Fields>;
 
-export type CreateSubtaskResult<Fields extends CreateSubtaskFields | undefined = undefined> = | { success: true; data: InferCreateSubtaskResult<Fields>; }
-| { success: false; errors: AshRpcError[]; }
+export type CreateSubtaskResult<
+  Fields extends CreateSubtaskFields | undefined = undefined,
+> =
+  | { success: true; data: InferCreateSubtaskResult<Fields> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function create_subtask<Fields extends CreateSubtaskFields | undefined = undefined>(
-  config: {
+export async function create_subtask<
+  Fields extends CreateSubtaskFields | undefined = undefined,
+>(config: {
   input: CreateSubtaskInput;
   hookCtx?: ActionHookContext;
   fields?: Fields;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<CreateSubtaskResult<Fields extends undefined ? [] : Fields>> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<CreateSubtaskResult<Fields extends undefined ? [] : Fields>> {
   const payload = {
     action: "create_subtask",
     input: config.input,
-    ...(config.fields !== undefined && { fields: config.fields })
+    ...(config.fields !== undefined && { fields: config.fields }),
   };
 
-  return executeActionRpcRequest<CreateSubtaskResult<Fields extends undefined ? [] : Fields>>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<
+    CreateSubtaskResult<Fields extends undefined ? [] : Fields>
+  >(payload, config);
 }
-
 
 export type CreateTaskPrInput = {
   task_id: UUID;
@@ -2849,31 +3255,27 @@ export type CreateTaskPrInput = {
 
 export type InferCreateTaskPrResult = Record<string, any>;
 
-export type CreateTaskPrResult = | { success: true; data: InferCreateTaskPrResult; }
-| { success: false; errors: AshRpcError[]; }
+export type CreateTaskPrResult =
+  | { success: true; data: InferCreateTaskPrResult }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function create_task_pr(
-  config: {
+export async function create_task_pr(config: {
   input: CreateTaskPrInput;
   hookCtx?: ActionHookContext;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<CreateTaskPrResult> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<CreateTaskPrResult> {
   const payload = {
     action: "create_task_pr",
-    input: config.input
+    input: config.input,
   };
 
-  return executeActionRpcRequest<CreateTaskPrResult>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<CreateTaskPrResult>(payload, config);
 }
-
 
 export type ClearTaskErrorFields = UnifiedFieldSelection<TaskResourceSchema>[];
 
@@ -2881,33 +3283,35 @@ export type InferClearTaskErrorResult<
   Fields extends ClearTaskErrorFields | undefined,
 > = InferResult<TaskResourceSchema, Fields>;
 
-export type ClearTaskErrorResult<Fields extends ClearTaskErrorFields | undefined = undefined> = | { success: true; data: InferClearTaskErrorResult<Fields>; }
-| { success: false; errors: AshRpcError[]; }
+export type ClearTaskErrorResult<
+  Fields extends ClearTaskErrorFields | undefined = undefined,
+> =
+  | { success: true; data: InferClearTaskErrorResult<Fields> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function clear_task_error<Fields extends ClearTaskErrorFields | undefined = undefined>(
-  config: {
+export async function clear_task_error<
+  Fields extends ClearTaskErrorFields | undefined = undefined,
+>(config: {
   identity: UUID;
   hookCtx?: ActionHookContext;
   fields?: Fields;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<ClearTaskErrorResult<Fields extends undefined ? [] : Fields>> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<ClearTaskErrorResult<Fields extends undefined ? [] : Fields>> {
   const payload = {
     action: "clear_task_error",
     identity: config.identity,
-    ...(config.fields !== undefined && { fields: config.fields })
+    ...(config.fields !== undefined && { fields: config.fields }),
   };
 
-  return executeActionRpcRequest<ClearTaskErrorResult<Fields extends undefined ? [] : Fields>>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<
+    ClearTaskErrorResult<Fields extends undefined ? [] : Fields>
+  >(payload, config);
 }
-
 
 export type CreateHookInput = {
   name: string;
@@ -2919,143 +3323,158 @@ export type CreateHookInput = {
 
 export type CreateHookFields = UnifiedFieldSelection<HookResourceSchema>[];
 
-export type InferCreateHookResult<
-  Fields extends CreateHookFields | undefined,
-> = InferResult<HookResourceSchema, Fields>;
+export type InferCreateHookResult<Fields extends CreateHookFields | undefined> =
+  InferResult<HookResourceSchema, Fields>;
 
-export type CreateHookResult<Fields extends CreateHookFields | undefined = undefined> = | { success: true; data: InferCreateHookResult<Fields>; }
-| { success: false; errors: AshRpcError[]; }
+export type CreateHookResult<
+  Fields extends CreateHookFields | undefined = undefined,
+> =
+  | { success: true; data: InferCreateHookResult<Fields> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function create_hook<Fields extends CreateHookFields | undefined = undefined>(
-  config: {
+export async function create_hook<
+  Fields extends CreateHookFields | undefined = undefined,
+>(config: {
   input: CreateHookInput;
   hookCtx?: ActionHookContext;
   fields?: Fields;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<CreateHookResult<Fields extends undefined ? [] : Fields>> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<CreateHookResult<Fields extends undefined ? [] : Fields>> {
   const payload = {
     action: "create_hook",
     input: config.input,
-    ...(config.fields !== undefined && { fields: config.fields })
+    ...(config.fields !== undefined && { fields: config.fields }),
   };
 
-  return executeActionRpcRequest<CreateHookResult<Fields extends undefined ? [] : Fields>>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<
+    CreateHookResult<Fields extends undefined ? [] : Fields>
+  >(payload, config);
 }
-
 
 export type ListHooksFields = UnifiedFieldSelection<HookResourceSchema>[];
 
-
 export type InferListHooksResult<
   Fields extends ListHooksFields | undefined,
-  Page extends ListHooksConfig["page"] = undefined
-> = ConditionalPaginatedResultMixed<Page, Array<InferResult<HookResourceSchema, Fields>>, {
-  results: Array<InferResult<HookResourceSchema, Fields>>;
-  has_more: boolean;
-  limit: number;
-  offset: number;
-  count?: number | null;
-  type: "offset";
-}, {
-  results: Array<InferResult<HookResourceSchema, Fields>>;
-  has_more: boolean;
-  limit: number;
-  after: string | null;
-  before: string | null;
-  previous_page: string;
-  next_page: string;
-  count?: number | null;
-  type: "keyset";
-}>;
+  Page extends ListHooksConfig["page"] = undefined,
+> = ConditionalPaginatedResultMixed<
+  Page,
+  Array<InferResult<HookResourceSchema, Fields>>,
+  {
+    results: Array<InferResult<HookResourceSchema, Fields>>;
+    has_more: boolean;
+    limit: number;
+    offset: number;
+    count?: number | null;
+    type: "offset";
+  },
+  {
+    results: Array<InferResult<HookResourceSchema, Fields>>;
+    has_more: boolean;
+    limit: number;
+    after: string | null;
+    before: string | null;
+    previous_page: string;
+    next_page: string;
+    count?: number | null;
+    type: "keyset";
+  }
+>;
 
 export type ListHooksConfig = {
   hookCtx?: ActionHookContext;
   fields: ListHooksFields;
   filter?: HookFilterInput;
   sort?: string;
-  page?: (
-    {
-      limit?: number;
-      offset?: number;
-      count?: boolean;
-    } | {
-      limit?: number;
-      after?: string;
-      before?: string;
-    }
-  );
+  page?:
+    | {
+        limit?: number;
+        offset?: number;
+        count?: boolean;
+      }
+    | {
+        limit?: number;
+        after?: string;
+        before?: string;
+      };
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
 };
 
-export type ListHooksResult<Fields extends ListHooksFields, Page extends ListHooksConfig["page"] = undefined> = | { success: true; data: InferListHooksResult<Fields, Page>; }
-| { success: false; errors: AshRpcError[]; }
+export type ListHooksResult<
+  Fields extends ListHooksFields,
+  Page extends ListHooksConfig["page"] = undefined,
+> =
+  | { success: true; data: InferListHooksResult<Fields, Page> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function list_hooks<Fields extends ListHooksFields, Config extends ListHooksConfig = ListHooksConfig>(
-  config: Config & { fields: Fields }
+export async function list_hooks<
+  Fields extends ListHooksFields,
+  Config extends ListHooksConfig = ListHooksConfig,
+>(
+  config: Config & { fields: Fields },
 ): Promise<ListHooksResult<Fields, Config["page"]>> {
   const payload = {
     action: "list_hooks",
     ...(config.fields !== undefined && { fields: config.fields }),
     ...(config.filter && { filter: config.filter }),
     ...(config.sort && { sort: config.sort }),
-    ...(config.page && { page: config.page })
+    ...(config.page && { page: config.page }),
   };
 
   return executeActionRpcRequest<ListHooksResult<Fields, Config["page"]>>(
     payload,
-    config
+    config,
   );
 }
 
-
 export type GetHookFields = UnifiedFieldSelection<HookResourceSchema>[];
-export type InferGetHookResult<
-  Fields extends GetHookFields,
-> = InferResult<HookResourceSchema, Fields>;
+export type InferGetHookResult<Fields extends GetHookFields> = InferResult<
+  HookResourceSchema,
+  Fields
+>;
 
-export type GetHookResult<Fields extends GetHookFields> = | { success: true; data: InferGetHookResult<Fields>; }
-| { success: false; errors: AshRpcError[]; }
+export type GetHookResult<Fields extends GetHookFields> =
+  | { success: true; data: InferGetHookResult<Fields> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function get_hook<Fields extends GetHookFields>(
-  config: {
+export async function get_hook<Fields extends GetHookFields>(config: {
   hookCtx?: ActionHookContext;
   fields: Fields;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<GetHookResult<Fields>> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<GetHookResult<Fields>> {
   const payload = {
     action: "get_hook",
-    ...(config.fields !== undefined && { fields: config.fields })
+    ...(config.fields !== undefined && { fields: config.fields }),
   };
 
-  return executeActionRpcRequest<GetHookResult<Fields>>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<GetHookResult<Fields>>(payload, config);
 }
-
 
 export type UpdateHookInput = {
   name?: string;
   command?: string | null;
   agent_prompt?: string | null;
-  agent_executor?: "claude_code" | "gemini_cli" | "codex" | "opencode" | "cursor_agent" | null;
+  agent_executor?:
+    | "claude_code"
+    | "gemini_cli"
+    | "codex"
+    | "opencode"
+    | "cursor_agent"
+    | null;
   agent_auto_approve?: boolean | null;
   default_execute_once?: boolean | null;
   default_transparent?: boolean | null;
@@ -3063,66 +3482,62 @@ export type UpdateHookInput = {
 
 export type UpdateHookFields = UnifiedFieldSelection<HookResourceSchema>[];
 
-export type InferUpdateHookResult<
-  Fields extends UpdateHookFields | undefined,
-> = InferResult<HookResourceSchema, Fields>;
+export type InferUpdateHookResult<Fields extends UpdateHookFields | undefined> =
+  InferResult<HookResourceSchema, Fields>;
 
-export type UpdateHookResult<Fields extends UpdateHookFields | undefined = undefined> = | { success: true; data: InferUpdateHookResult<Fields>; }
-| { success: false; errors: AshRpcError[]; }
+export type UpdateHookResult<
+  Fields extends UpdateHookFields | undefined = undefined,
+> =
+  | { success: true; data: InferUpdateHookResult<Fields> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function update_hook<Fields extends UpdateHookFields | undefined = undefined>(
-  config: {
+export async function update_hook<
+  Fields extends UpdateHookFields | undefined = undefined,
+>(config: {
   identity: UUID;
   input: UpdateHookInput;
   hookCtx?: ActionHookContext;
   fields?: Fields;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<UpdateHookResult<Fields extends undefined ? [] : Fields>> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<UpdateHookResult<Fields extends undefined ? [] : Fields>> {
   const payload = {
     action: "update_hook",
     identity: config.identity,
     input: config.input,
-    ...(config.fields !== undefined && { fields: config.fields })
+    ...(config.fields !== undefined && { fields: config.fields }),
   };
 
-  return executeActionRpcRequest<UpdateHookResult<Fields extends undefined ? [] : Fields>>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<
+    UpdateHookResult<Fields extends undefined ? [] : Fields>
+  >(payload, config);
 }
 
+export type DestroyHookResult =
+  | { success: true; data: {} }
+  | { success: false; errors: AshRpcError[] };
 
-
-export type DestroyHookResult = | { success: true; data: {}; }
-| { success: false; errors: AshRpcError[]; }
-
-;
-
-export async function destroy_hook(
-  config: {
+export async function destroy_hook(config: {
   identity: UUID;
   hookCtx?: ActionHookContext;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<DestroyHookResult> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<DestroyHookResult> {
   const payload = {
     action: "destroy_hook",
-    identity: config.identity
+    identity: config.identity,
   };
 
-  return executeActionRpcRequest<DestroyHookResult>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<DestroyHookResult>(payload, config);
 }
-
 
 export type CreateScriptHookInput = {
   name: string;
@@ -3132,44 +3547,53 @@ export type CreateScriptHookInput = {
   default_transparent?: boolean | null;
 };
 
-export type CreateScriptHookFields = UnifiedFieldSelection<HookResourceSchema>[];
+export type CreateScriptHookFields =
+  UnifiedFieldSelection<HookResourceSchema>[];
 
 export type InferCreateScriptHookResult<
   Fields extends CreateScriptHookFields | undefined,
 > = InferResult<HookResourceSchema, Fields>;
 
-export type CreateScriptHookResult<Fields extends CreateScriptHookFields | undefined = undefined> = | { success: true; data: InferCreateScriptHookResult<Fields>; }
-| { success: false; errors: AshRpcError[]; }
+export type CreateScriptHookResult<
+  Fields extends CreateScriptHookFields | undefined = undefined,
+> =
+  | { success: true; data: InferCreateScriptHookResult<Fields> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function create_script_hook<Fields extends CreateScriptHookFields | undefined = undefined>(
-  config: {
+export async function create_script_hook<
+  Fields extends CreateScriptHookFields | undefined = undefined,
+>(config: {
   input: CreateScriptHookInput;
   hookCtx?: ActionHookContext;
   fields?: Fields;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<CreateScriptHookResult<Fields extends undefined ? [] : Fields>> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<CreateScriptHookResult<Fields extends undefined ? [] : Fields>> {
   const payload = {
     action: "create_script_hook",
     input: config.input,
-    ...(config.fields !== undefined && { fields: config.fields })
+    ...(config.fields !== undefined && { fields: config.fields }),
   };
 
-  return executeActionRpcRequest<CreateScriptHookResult<Fields extends undefined ? [] : Fields>>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<
+    CreateScriptHookResult<Fields extends undefined ? [] : Fields>
+  >(payload, config);
 }
-
 
 export type CreateAgentHookInput = {
   name: string;
   agent_prompt?: string | null;
-  agent_executor?: "claude_code" | "gemini_cli" | "codex" | "opencode" | "cursor_agent" | null;
+  agent_executor?:
+    | "claude_code"
+    | "gemini_cli"
+    | "codex"
+    | "opencode"
+    | "cursor_agent"
+    | null;
   agent_auto_approve?: boolean | null;
   board_id: UUID;
   default_execute_once?: boolean | null;
@@ -3182,33 +3606,35 @@ export type InferCreateAgentHookResult<
   Fields extends CreateAgentHookFields | undefined,
 > = InferResult<HookResourceSchema, Fields>;
 
-export type CreateAgentHookResult<Fields extends CreateAgentHookFields | undefined = undefined> = | { success: true; data: InferCreateAgentHookResult<Fields>; }
-| { success: false; errors: AshRpcError[]; }
+export type CreateAgentHookResult<
+  Fields extends CreateAgentHookFields | undefined = undefined,
+> =
+  | { success: true; data: InferCreateAgentHookResult<Fields> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function create_agent_hook<Fields extends CreateAgentHookFields | undefined = undefined>(
-  config: {
+export async function create_agent_hook<
+  Fields extends CreateAgentHookFields | undefined = undefined,
+>(config: {
   input: CreateAgentHookInput;
   hookCtx?: ActionHookContext;
   fields?: Fields;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<CreateAgentHookResult<Fields extends undefined ? [] : Fields>> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<CreateAgentHookResult<Fields extends undefined ? [] : Fields>> {
   const payload = {
     action: "create_agent_hook",
     input: config.input,
-    ...(config.fields !== undefined && { fields: config.fields })
+    ...(config.fields !== undefined && { fields: config.fields }),
   };
 
-  return executeActionRpcRequest<CreateAgentHookResult<Fields extends undefined ? [] : Fields>>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<
+    CreateAgentHookResult<Fields extends undefined ? [] : Fields>
+  >(payload, config);
 }
-
 
 export type CreateColumnHookInput = {
   position?: number | null;
@@ -3220,139 +3646,152 @@ export type CreateColumnHookInput = {
   removable?: boolean | null;
 };
 
-export type CreateColumnHookFields = UnifiedFieldSelection<ColumnHookResourceSchema>[];
+export type CreateColumnHookFields =
+  UnifiedFieldSelection<ColumnHookResourceSchema>[];
 
 export type InferCreateColumnHookResult<
   Fields extends CreateColumnHookFields | undefined,
 > = InferResult<ColumnHookResourceSchema, Fields>;
 
-export type CreateColumnHookResult<Fields extends CreateColumnHookFields | undefined = undefined> = | { success: true; data: InferCreateColumnHookResult<Fields>; }
-| { success: false; errors: AshRpcError[]; }
+export type CreateColumnHookResult<
+  Fields extends CreateColumnHookFields | undefined = undefined,
+> =
+  | { success: true; data: InferCreateColumnHookResult<Fields> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function create_column_hook<Fields extends CreateColumnHookFields | undefined = undefined>(
-  config: {
+export async function create_column_hook<
+  Fields extends CreateColumnHookFields | undefined = undefined,
+>(config: {
   input: CreateColumnHookInput;
   hookCtx?: ActionHookContext;
   fields?: Fields;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<CreateColumnHookResult<Fields extends undefined ? [] : Fields>> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<CreateColumnHookResult<Fields extends undefined ? [] : Fields>> {
   const payload = {
     action: "create_column_hook",
     input: config.input,
-    ...(config.fields !== undefined && { fields: config.fields })
+    ...(config.fields !== undefined && { fields: config.fields }),
   };
 
-  return executeActionRpcRequest<CreateColumnHookResult<Fields extends undefined ? [] : Fields>>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<
+    CreateColumnHookResult<Fields extends undefined ? [] : Fields>
+  >(payload, config);
 }
 
-
-export type ListColumnHooksFields = UnifiedFieldSelection<ColumnHookResourceSchema>[];
-
+export type ListColumnHooksFields =
+  UnifiedFieldSelection<ColumnHookResourceSchema>[];
 
 export type InferListColumnHooksResult<
   Fields extends ListColumnHooksFields | undefined,
-  Page extends ListColumnHooksConfig["page"] = undefined
-> = ConditionalPaginatedResultMixed<Page, Array<InferResult<ColumnHookResourceSchema, Fields>>, {
-  results: Array<InferResult<ColumnHookResourceSchema, Fields>>;
-  has_more: boolean;
-  limit: number;
-  offset: number;
-  count?: number | null;
-  type: "offset";
-}, {
-  results: Array<InferResult<ColumnHookResourceSchema, Fields>>;
-  has_more: boolean;
-  limit: number;
-  after: string | null;
-  before: string | null;
-  previous_page: string;
-  next_page: string;
-  count?: number | null;
-  type: "keyset";
-}>;
+  Page extends ListColumnHooksConfig["page"] = undefined,
+> = ConditionalPaginatedResultMixed<
+  Page,
+  Array<InferResult<ColumnHookResourceSchema, Fields>>,
+  {
+    results: Array<InferResult<ColumnHookResourceSchema, Fields>>;
+    has_more: boolean;
+    limit: number;
+    offset: number;
+    count?: number | null;
+    type: "offset";
+  },
+  {
+    results: Array<InferResult<ColumnHookResourceSchema, Fields>>;
+    has_more: boolean;
+    limit: number;
+    after: string | null;
+    before: string | null;
+    previous_page: string;
+    next_page: string;
+    count?: number | null;
+    type: "keyset";
+  }
+>;
 
 export type ListColumnHooksConfig = {
   hookCtx?: ActionHookContext;
   fields: ListColumnHooksFields;
   filter?: ColumnHookFilterInput;
   sort?: string;
-  page?: (
-    {
-      limit?: number;
-      offset?: number;
-      count?: boolean;
-    } | {
-      limit?: number;
-      after?: string;
-      before?: string;
-    }
-  );
+  page?:
+    | {
+        limit?: number;
+        offset?: number;
+        count?: boolean;
+      }
+    | {
+        limit?: number;
+        after?: string;
+        before?: string;
+      };
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
 };
 
-export type ListColumnHooksResult<Fields extends ListColumnHooksFields, Page extends ListColumnHooksConfig["page"] = undefined> = | { success: true; data: InferListColumnHooksResult<Fields, Page>; }
-| { success: false; errors: AshRpcError[]; }
+export type ListColumnHooksResult<
+  Fields extends ListColumnHooksFields,
+  Page extends ListColumnHooksConfig["page"] = undefined,
+> =
+  | { success: true; data: InferListColumnHooksResult<Fields, Page> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function list_column_hooks<Fields extends ListColumnHooksFields, Config extends ListColumnHooksConfig = ListColumnHooksConfig>(
-  config: Config & { fields: Fields }
+export async function list_column_hooks<
+  Fields extends ListColumnHooksFields,
+  Config extends ListColumnHooksConfig = ListColumnHooksConfig,
+>(
+  config: Config & { fields: Fields },
 ): Promise<ListColumnHooksResult<Fields, Config["page"]>> {
   const payload = {
     action: "list_column_hooks",
     ...(config.fields !== undefined && { fields: config.fields }),
     ...(config.filter && { filter: config.filter }),
     ...(config.sort && { sort: config.sort }),
-    ...(config.page && { page: config.page })
+    ...(config.page && { page: config.page }),
   };
 
   return executeActionRpcRequest<ListColumnHooksResult<Fields, Config["page"]>>(
     payload,
-    config
+    config,
   );
 }
 
+export type GetColumnHookFields =
+  UnifiedFieldSelection<ColumnHookResourceSchema>[];
+export type InferGetColumnHookResult<Fields extends GetColumnHookFields> =
+  InferResult<ColumnHookResourceSchema, Fields>;
 
-export type GetColumnHookFields = UnifiedFieldSelection<ColumnHookResourceSchema>[];
-export type InferGetColumnHookResult<
+export type GetColumnHookResult<Fields extends GetColumnHookFields> =
+  | { success: true; data: InferGetColumnHookResult<Fields> }
+  | { success: false; errors: AshRpcError[] };
+
+export async function get_column_hook<
   Fields extends GetColumnHookFields,
-> = InferResult<ColumnHookResourceSchema, Fields>;
-
-export type GetColumnHookResult<Fields extends GetColumnHookFields> = | { success: true; data: InferGetColumnHookResult<Fields>; }
-| { success: false; errors: AshRpcError[]; }
-
-;
-
-export async function get_column_hook<Fields extends GetColumnHookFields>(
-  config: {
+>(config: {
   hookCtx?: ActionHookContext;
   fields: Fields;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<GetColumnHookResult<Fields>> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<GetColumnHookResult<Fields>> {
   const payload = {
     action: "get_column_hook",
-    ...(config.fields !== undefined && { fields: config.fields })
+    ...(config.fields !== undefined && { fields: config.fields }),
   };
 
-  return executeActionRpcRequest<GetColumnHookResult<Fields>>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<GetColumnHookResult<Fields>>(payload, config);
 }
-
 
 export type UpdateColumnHookInput = {
   position?: number | null;
@@ -3361,68 +3800,66 @@ export type UpdateColumnHookInput = {
   transparent?: boolean | null;
 };
 
-export type UpdateColumnHookFields = UnifiedFieldSelection<ColumnHookResourceSchema>[];
+export type UpdateColumnHookFields =
+  UnifiedFieldSelection<ColumnHookResourceSchema>[];
 
 export type InferUpdateColumnHookResult<
   Fields extends UpdateColumnHookFields | undefined,
 > = InferResult<ColumnHookResourceSchema, Fields>;
 
-export type UpdateColumnHookResult<Fields extends UpdateColumnHookFields | undefined = undefined> = | { success: true; data: InferUpdateColumnHookResult<Fields>; }
-| { success: false; errors: AshRpcError[]; }
+export type UpdateColumnHookResult<
+  Fields extends UpdateColumnHookFields | undefined = undefined,
+> =
+  | { success: true; data: InferUpdateColumnHookResult<Fields> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function update_column_hook<Fields extends UpdateColumnHookFields | undefined = undefined>(
-  config: {
+export async function update_column_hook<
+  Fields extends UpdateColumnHookFields | undefined = undefined,
+>(config: {
   identity: UUID;
   input?: UpdateColumnHookInput;
   hookCtx?: ActionHookContext;
   fields?: Fields;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<UpdateColumnHookResult<Fields extends undefined ? [] : Fields>> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<UpdateColumnHookResult<Fields extends undefined ? [] : Fields>> {
   const payload = {
     action: "update_column_hook",
     identity: config.identity,
     input: config.input,
-    ...(config.fields !== undefined && { fields: config.fields })
+    ...(config.fields !== undefined && { fields: config.fields }),
   };
 
-  return executeActionRpcRequest<UpdateColumnHookResult<Fields extends undefined ? [] : Fields>>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<
+    UpdateColumnHookResult<Fields extends undefined ? [] : Fields>
+  >(payload, config);
 }
 
+export type DestroyColumnHookResult =
+  | { success: true; data: {} }
+  | { success: false; errors: AshRpcError[] };
 
-
-export type DestroyColumnHookResult = | { success: true; data: {}; }
-| { success: false; errors: AshRpcError[]; }
-
-;
-
-export async function destroy_column_hook(
-  config: {
+export async function destroy_column_hook(config: {
   identity: UUID;
   hookCtx?: ActionHookContext;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<DestroyColumnHookResult> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<DestroyColumnHookResult> {
   const payload = {
     action: "destroy_column_hook",
-    identity: config.identity
+    identity: config.identity,
   };
 
-  return executeActionRpcRequest<DestroyColumnHookResult>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<DestroyColumnHookResult>(payload, config);
 }
-
 
 export type CreateRepositoryInput = {
   provider?: "github" | "gitlab" | "local";
@@ -3436,139 +3873,151 @@ export type CreateRepositoryInput = {
   local_path?: string | null;
 };
 
-export type CreateRepositoryFields = UnifiedFieldSelection<RepositoryResourceSchema>[];
+export type CreateRepositoryFields =
+  UnifiedFieldSelection<RepositoryResourceSchema>[];
 
 export type InferCreateRepositoryResult<
   Fields extends CreateRepositoryFields | undefined,
 > = InferResult<RepositoryResourceSchema, Fields>;
 
-export type CreateRepositoryResult<Fields extends CreateRepositoryFields | undefined = undefined> = | { success: true; data: InferCreateRepositoryResult<Fields>; }
-| { success: false; errors: AshRpcError[]; }
+export type CreateRepositoryResult<
+  Fields extends CreateRepositoryFields | undefined = undefined,
+> =
+  | { success: true; data: InferCreateRepositoryResult<Fields> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function create_repository<Fields extends CreateRepositoryFields | undefined = undefined>(
-  config: {
+export async function create_repository<
+  Fields extends CreateRepositoryFields | undefined = undefined,
+>(config: {
   input: CreateRepositoryInput;
   hookCtx?: ActionHookContext;
   fields?: Fields;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<CreateRepositoryResult<Fields extends undefined ? [] : Fields>> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<CreateRepositoryResult<Fields extends undefined ? [] : Fields>> {
   const payload = {
     action: "create_repository",
     input: config.input,
-    ...(config.fields !== undefined && { fields: config.fields })
+    ...(config.fields !== undefined && { fields: config.fields }),
   };
 
-  return executeActionRpcRequest<CreateRepositoryResult<Fields extends undefined ? [] : Fields>>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<
+    CreateRepositoryResult<Fields extends undefined ? [] : Fields>
+  >(payload, config);
 }
 
-
-export type ListRepositoriesFields = UnifiedFieldSelection<RepositoryResourceSchema>[];
-
+export type ListRepositoriesFields =
+  UnifiedFieldSelection<RepositoryResourceSchema>[];
 
 export type InferListRepositoriesResult<
   Fields extends ListRepositoriesFields | undefined,
-  Page extends ListRepositoriesConfig["page"] = undefined
-> = ConditionalPaginatedResultMixed<Page, Array<InferResult<RepositoryResourceSchema, Fields>>, {
-  results: Array<InferResult<RepositoryResourceSchema, Fields>>;
-  has_more: boolean;
-  limit: number;
-  offset: number;
-  count?: number | null;
-  type: "offset";
-}, {
-  results: Array<InferResult<RepositoryResourceSchema, Fields>>;
-  has_more: boolean;
-  limit: number;
-  after: string | null;
-  before: string | null;
-  previous_page: string;
-  next_page: string;
-  count?: number | null;
-  type: "keyset";
-}>;
+  Page extends ListRepositoriesConfig["page"] = undefined,
+> = ConditionalPaginatedResultMixed<
+  Page,
+  Array<InferResult<RepositoryResourceSchema, Fields>>,
+  {
+    results: Array<InferResult<RepositoryResourceSchema, Fields>>;
+    has_more: boolean;
+    limit: number;
+    offset: number;
+    count?: number | null;
+    type: "offset";
+  },
+  {
+    results: Array<InferResult<RepositoryResourceSchema, Fields>>;
+    has_more: boolean;
+    limit: number;
+    after: string | null;
+    before: string | null;
+    previous_page: string;
+    next_page: string;
+    count?: number | null;
+    type: "keyset";
+  }
+>;
 
 export type ListRepositoriesConfig = {
   hookCtx?: ActionHookContext;
   fields: ListRepositoriesFields;
   filter?: RepositoryFilterInput;
   sort?: string;
-  page?: (
-    {
-      limit?: number;
-      offset?: number;
-      count?: boolean;
-    } | {
-      limit?: number;
-      after?: string;
-      before?: string;
-    }
-  );
+  page?:
+    | {
+        limit?: number;
+        offset?: number;
+        count?: boolean;
+      }
+    | {
+        limit?: number;
+        after?: string;
+        before?: string;
+      };
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
 };
 
-export type ListRepositoriesResult<Fields extends ListRepositoriesFields, Page extends ListRepositoriesConfig["page"] = undefined> = | { success: true; data: InferListRepositoriesResult<Fields, Page>; }
-| { success: false; errors: AshRpcError[]; }
+export type ListRepositoriesResult<
+  Fields extends ListRepositoriesFields,
+  Page extends ListRepositoriesConfig["page"] = undefined,
+> =
+  | { success: true; data: InferListRepositoriesResult<Fields, Page> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function list_repositories<Fields extends ListRepositoriesFields, Config extends ListRepositoriesConfig = ListRepositoriesConfig>(
-  config: Config & { fields: Fields }
+export async function list_repositories<
+  Fields extends ListRepositoriesFields,
+  Config extends ListRepositoriesConfig = ListRepositoriesConfig,
+>(
+  config: Config & { fields: Fields },
 ): Promise<ListRepositoriesResult<Fields, Config["page"]>> {
   const payload = {
     action: "list_repositories",
     ...(config.fields !== undefined && { fields: config.fields }),
     ...(config.filter && { filter: config.filter }),
     ...(config.sort && { sort: config.sort }),
-    ...(config.page && { page: config.page })
+    ...(config.page && { page: config.page }),
   };
 
-  return executeActionRpcRequest<ListRepositoriesResult<Fields, Config["page"]>>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<
+    ListRepositoriesResult<Fields, Config["page"]>
+  >(payload, config);
 }
 
+export type GetRepositoryFields =
+  UnifiedFieldSelection<RepositoryResourceSchema>[];
+export type InferGetRepositoryResult<Fields extends GetRepositoryFields> =
+  InferResult<RepositoryResourceSchema, Fields>;
 
-export type GetRepositoryFields = UnifiedFieldSelection<RepositoryResourceSchema>[];
-export type InferGetRepositoryResult<
+export type GetRepositoryResult<Fields extends GetRepositoryFields> =
+  | { success: true; data: InferGetRepositoryResult<Fields> }
+  | { success: false; errors: AshRpcError[] };
+
+export async function get_repository<
   Fields extends GetRepositoryFields,
-> = InferResult<RepositoryResourceSchema, Fields>;
-
-export type GetRepositoryResult<Fields extends GetRepositoryFields> = | { success: true; data: InferGetRepositoryResult<Fields>; }
-| { success: false; errors: AshRpcError[]; }
-
-;
-
-export async function get_repository<Fields extends GetRepositoryFields>(
-  config: {
+>(config: {
   hookCtx?: ActionHookContext;
   fields: Fields;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<GetRepositoryResult<Fields>> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<GetRepositoryResult<Fields>> {
   const payload = {
     action: "get_repository",
-    ...(config.fields !== undefined && { fields: config.fields })
+    ...(config.fields !== undefined && { fields: config.fields }),
   };
 
-  return executeActionRpcRequest<GetRepositoryResult<Fields>>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<GetRepositoryResult<Fields>>(payload, config);
 }
-
 
 export type UpdateRepositoryInput = {
   name?: string;
@@ -3579,68 +4028,66 @@ export type UpdateRepositoryInput = {
   full_name?: string | null;
 };
 
-export type UpdateRepositoryFields = UnifiedFieldSelection<RepositoryResourceSchema>[];
+export type UpdateRepositoryFields =
+  UnifiedFieldSelection<RepositoryResourceSchema>[];
 
 export type InferUpdateRepositoryResult<
   Fields extends UpdateRepositoryFields | undefined,
 > = InferResult<RepositoryResourceSchema, Fields>;
 
-export type UpdateRepositoryResult<Fields extends UpdateRepositoryFields | undefined = undefined> = | { success: true; data: InferUpdateRepositoryResult<Fields>; }
-| { success: false; errors: AshRpcError[]; }
+export type UpdateRepositoryResult<
+  Fields extends UpdateRepositoryFields | undefined = undefined,
+> =
+  | { success: true; data: InferUpdateRepositoryResult<Fields> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function update_repository<Fields extends UpdateRepositoryFields | undefined = undefined>(
-  config: {
+export async function update_repository<
+  Fields extends UpdateRepositoryFields | undefined = undefined,
+>(config: {
   identity: UUID;
   input: UpdateRepositoryInput;
   hookCtx?: ActionHookContext;
   fields?: Fields;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<UpdateRepositoryResult<Fields extends undefined ? [] : Fields>> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<UpdateRepositoryResult<Fields extends undefined ? [] : Fields>> {
   const payload = {
     action: "update_repository",
     identity: config.identity,
     input: config.input,
-    ...(config.fields !== undefined && { fields: config.fields })
+    ...(config.fields !== undefined && { fields: config.fields }),
   };
 
-  return executeActionRpcRequest<UpdateRepositoryResult<Fields extends undefined ? [] : Fields>>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<
+    UpdateRepositoryResult<Fields extends undefined ? [] : Fields>
+  >(payload, config);
 }
 
+export type DestroyRepositoryResult =
+  | { success: true; data: {} }
+  | { success: false; errors: AshRpcError[] };
 
-
-export type DestroyRepositoryResult = | { success: true; data: {}; }
-| { success: false; errors: AshRpcError[]; }
-
-;
-
-export async function destroy_repository(
-  config: {
+export async function destroy_repository(config: {
   identity: UUID;
   hookCtx?: ActionHookContext;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<DestroyRepositoryResult> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<DestroyRepositoryResult> {
   const payload = {
     action: "destroy_repository",
-    identity: config.identity
+    identity: config.identity,
   };
 
-  return executeActionRpcRequest<DestroyRepositoryResult>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<DestroyRepositoryResult>(payload, config);
 }
-
 
 export type ListBranchesInput = {
   task_id: UUID;
@@ -3648,31 +4095,27 @@ export type ListBranchesInput = {
 
 export type InferListBranchesResult = Record<string, any>;
 
-export type ListBranchesResult = | { success: true; data: InferListBranchesResult; }
-| { success: false; errors: AshRpcError[]; }
+export type ListBranchesResult =
+  | { success: true; data: InferListBranchesResult }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function list_branches(
-  config: {
+export async function list_branches(config: {
   input: ListBranchesInput;
   hookCtx?: ActionHookContext;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<ListBranchesResult> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<ListBranchesResult> {
   const payload = {
     action: "list_branches",
-    input: config.input
+    input: config.input,
   };
 
-  return executeActionRpcRequest<ListBranchesResult>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<ListBranchesResult>(payload, config);
 }
-
 
 export type CreateMessageInput = {
   role: "user" | "assistant" | "system";
@@ -3682,139 +4125,148 @@ export type CreateMessageInput = {
   task_id: UUID;
 };
 
-export type CreateMessageFields = UnifiedFieldSelection<MessageResourceSchema>[];
+export type CreateMessageFields =
+  UnifiedFieldSelection<MessageResourceSchema>[];
 
 export type InferCreateMessageResult<
   Fields extends CreateMessageFields | undefined,
 > = InferResult<MessageResourceSchema, Fields>;
 
-export type CreateMessageResult<Fields extends CreateMessageFields | undefined = undefined> = | { success: true; data: InferCreateMessageResult<Fields>; }
-| { success: false; errors: AshRpcError[]; }
+export type CreateMessageResult<
+  Fields extends CreateMessageFields | undefined = undefined,
+> =
+  | { success: true; data: InferCreateMessageResult<Fields> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function create_message<Fields extends CreateMessageFields | undefined = undefined>(
-  config: {
+export async function create_message<
+  Fields extends CreateMessageFields | undefined = undefined,
+>(config: {
   input: CreateMessageInput;
   hookCtx?: ActionHookContext;
   fields?: Fields;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<CreateMessageResult<Fields extends undefined ? [] : Fields>> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<CreateMessageResult<Fields extends undefined ? [] : Fields>> {
   const payload = {
     action: "create_message",
     input: config.input,
-    ...(config.fields !== undefined && { fields: config.fields })
+    ...(config.fields !== undefined && { fields: config.fields }),
   };
 
-  return executeActionRpcRequest<CreateMessageResult<Fields extends undefined ? [] : Fields>>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<
+    CreateMessageResult<Fields extends undefined ? [] : Fields>
+  >(payload, config);
 }
-
 
 export type ListMessagesFields = UnifiedFieldSelection<MessageResourceSchema>[];
 
-
 export type InferListMessagesResult<
   Fields extends ListMessagesFields | undefined,
-  Page extends ListMessagesConfig["page"] = undefined
-> = ConditionalPaginatedResultMixed<Page, Array<InferResult<MessageResourceSchema, Fields>>, {
-  results: Array<InferResult<MessageResourceSchema, Fields>>;
-  has_more: boolean;
-  limit: number;
-  offset: number;
-  count?: number | null;
-  type: "offset";
-}, {
-  results: Array<InferResult<MessageResourceSchema, Fields>>;
-  has_more: boolean;
-  limit: number;
-  after: string | null;
-  before: string | null;
-  previous_page: string;
-  next_page: string;
-  count?: number | null;
-  type: "keyset";
-}>;
+  Page extends ListMessagesConfig["page"] = undefined,
+> = ConditionalPaginatedResultMixed<
+  Page,
+  Array<InferResult<MessageResourceSchema, Fields>>,
+  {
+    results: Array<InferResult<MessageResourceSchema, Fields>>;
+    has_more: boolean;
+    limit: number;
+    offset: number;
+    count?: number | null;
+    type: "offset";
+  },
+  {
+    results: Array<InferResult<MessageResourceSchema, Fields>>;
+    has_more: boolean;
+    limit: number;
+    after: string | null;
+    before: string | null;
+    previous_page: string;
+    next_page: string;
+    count?: number | null;
+    type: "keyset";
+  }
+>;
 
 export type ListMessagesConfig = {
   hookCtx?: ActionHookContext;
   fields: ListMessagesFields;
   filter?: MessageFilterInput;
   sort?: string;
-  page?: (
-    {
-      limit?: number;
-      offset?: number;
-      count?: boolean;
-    } | {
-      limit?: number;
-      after?: string;
-      before?: string;
-    }
-  );
+  page?:
+    | {
+        limit?: number;
+        offset?: number;
+        count?: boolean;
+      }
+    | {
+        limit?: number;
+        after?: string;
+        before?: string;
+      };
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
 };
 
-export type ListMessagesResult<Fields extends ListMessagesFields, Page extends ListMessagesConfig["page"] = undefined> = | { success: true; data: InferListMessagesResult<Fields, Page>; }
-| { success: false; errors: AshRpcError[]; }
+export type ListMessagesResult<
+  Fields extends ListMessagesFields,
+  Page extends ListMessagesConfig["page"] = undefined,
+> =
+  | { success: true; data: InferListMessagesResult<Fields, Page> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function list_messages<Fields extends ListMessagesFields, Config extends ListMessagesConfig = ListMessagesConfig>(
-  config: Config & { fields: Fields }
+export async function list_messages<
+  Fields extends ListMessagesFields,
+  Config extends ListMessagesConfig = ListMessagesConfig,
+>(
+  config: Config & { fields: Fields },
 ): Promise<ListMessagesResult<Fields, Config["page"]>> {
   const payload = {
     action: "list_messages",
     ...(config.fields !== undefined && { fields: config.fields }),
     ...(config.filter && { filter: config.filter }),
     ...(config.sort && { sort: config.sort }),
-    ...(config.page && { page: config.page })
+    ...(config.page && { page: config.page }),
   };
 
   return executeActionRpcRequest<ListMessagesResult<Fields, Config["page"]>>(
     payload,
-    config
+    config,
   );
 }
 
-
 export type GetMessageFields = UnifiedFieldSelection<MessageResourceSchema>[];
-export type InferGetMessageResult<
-  Fields extends GetMessageFields,
-> = InferResult<MessageResourceSchema, Fields>;
+export type InferGetMessageResult<Fields extends GetMessageFields> =
+  InferResult<MessageResourceSchema, Fields>;
 
-export type GetMessageResult<Fields extends GetMessageFields> = | { success: true; data: InferGetMessageResult<Fields>; }
-| { success: false; errors: AshRpcError[]; }
+export type GetMessageResult<Fields extends GetMessageFields> =
+  | { success: true; data: InferGetMessageResult<Fields> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function get_message<Fields extends GetMessageFields>(
-  config: {
+export async function get_message<Fields extends GetMessageFields>(config: {
   hookCtx?: ActionHookContext;
   fields: Fields;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<GetMessageResult<Fields>> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<GetMessageResult<Fields>> {
   const payload = {
     action: "get_message",
-    ...(config.fields !== undefined && { fields: config.fields })
+    ...(config.fields !== undefined && { fields: config.fields }),
   };
 
-  return executeActionRpcRequest<GetMessageResult<Fields>>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<GetMessageResult<Fields>>(payload, config);
 }
-
 
 export type UpdateMessageInput = {
   content?: string;
@@ -3822,85 +4274,83 @@ export type UpdateMessageInput = {
   metadata?: Record<string, any> | null;
 };
 
-export type UpdateMessageFields = UnifiedFieldSelection<MessageResourceSchema>[];
+export type UpdateMessageFields =
+  UnifiedFieldSelection<MessageResourceSchema>[];
 
 export type InferUpdateMessageResult<
   Fields extends UpdateMessageFields | undefined,
 > = InferResult<MessageResourceSchema, Fields>;
 
-export type UpdateMessageResult<Fields extends UpdateMessageFields | undefined = undefined> = | { success: true; data: InferUpdateMessageResult<Fields>; }
-| { success: false; errors: AshRpcError[]; }
+export type UpdateMessageResult<
+  Fields extends UpdateMessageFields | undefined = undefined,
+> =
+  | { success: true; data: InferUpdateMessageResult<Fields> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function update_message<Fields extends UpdateMessageFields | undefined = undefined>(
-  config: {
+export async function update_message<
+  Fields extends UpdateMessageFields | undefined = undefined,
+>(config: {
   identity: UUID;
   input: UpdateMessageInput;
   hookCtx?: ActionHookContext;
   fields?: Fields;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<UpdateMessageResult<Fields extends undefined ? [] : Fields>> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<UpdateMessageResult<Fields extends undefined ? [] : Fields>> {
   const payload = {
     action: "update_message",
     identity: config.identity,
     input: config.input,
-    ...(config.fields !== undefined && { fields: config.fields })
+    ...(config.fields !== undefined && { fields: config.fields }),
   };
 
-  return executeActionRpcRequest<UpdateMessageResult<Fields extends undefined ? [] : Fields>>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<
+    UpdateMessageResult<Fields extends undefined ? [] : Fields>
+  >(payload, config);
 }
 
+export type DestroyMessageResult =
+  | { success: true; data: {} }
+  | { success: false; errors: AshRpcError[] };
 
-
-export type DestroyMessageResult = | { success: true; data: {}; }
-| { success: false; errors: AshRpcError[]; }
-
-;
-
-export async function destroy_message(
-  config: {
+export async function destroy_message(config: {
   identity: UUID;
   hookCtx?: ActionHookContext;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<DestroyMessageResult> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<DestroyMessageResult> {
   const payload = {
     action: "destroy_message",
-    identity: config.identity
+    identity: config.identity,
   };
 
-  return executeActionRpcRequest<DestroyMessageResult>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<DestroyMessageResult>(payload, config);
 }
-
 
 export type MessagesForTaskInput = {
   task_id: UUID;
 };
 
-export type MessagesForTaskFields = UnifiedFieldSelection<MessageResourceSchema>[];
-export type InferMessagesForTaskResult<
+export type MessagesForTaskFields =
+  UnifiedFieldSelection<MessageResourceSchema>[];
+export type InferMessagesForTaskResult<Fields extends MessagesForTaskFields> =
+  Array<InferResult<MessageResourceSchema, Fields>>;
+
+export type MessagesForTaskResult<Fields extends MessagesForTaskFields> =
+  | { success: true; data: InferMessagesForTaskResult<Fields> }
+  | { success: false; errors: AshRpcError[] };
+
+export async function messages_for_task<
   Fields extends MessagesForTaskFields,
-> = Array<InferResult<MessageResourceSchema, Fields>>;
-
-export type MessagesForTaskResult<Fields extends MessagesForTaskFields> = | { success: true; data: InferMessagesForTaskResult<Fields>; }
-| { success: false; errors: AshRpcError[]; }
-
-;
-
-export async function messages_for_task<Fields extends MessagesForTaskFields>(
-  config: {
+>(config: {
   input: MessagesForTaskInput;
   hookCtx?: ActionHookContext;
   fields: Fields;
@@ -3908,140 +4358,156 @@ export async function messages_for_task<Fields extends MessagesForTaskFields>(
   sort?: string;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<MessagesForTaskResult<Fields>> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<MessagesForTaskResult<Fields>> {
   const payload = {
     action: "messages_for_task",
     input: config.input,
     ...(config.fields !== undefined && { fields: config.fields }),
     ...(config.filter && { filter: config.filter }),
-    ...(config.sort && { sort: config.sort })
+    ...(config.sort && { sort: config.sort }),
   };
 
   return executeActionRpcRequest<MessagesForTaskResult<Fields>>(
     payload,
-    config
+    config,
   );
 }
 
-
-export type ListHookExecutionsFields = UnifiedFieldSelection<HookExecutionResourceSchema>[];
-
+export type ListHookExecutionsFields =
+  UnifiedFieldSelection<HookExecutionResourceSchema>[];
 
 export type InferListHookExecutionsResult<
   Fields extends ListHookExecutionsFields | undefined,
-  Page extends ListHookExecutionsConfig["page"] = undefined
-> = ConditionalPaginatedResultMixed<Page, Array<InferResult<HookExecutionResourceSchema, Fields>>, {
-  results: Array<InferResult<HookExecutionResourceSchema, Fields>>;
-  has_more: boolean;
-  limit: number;
-  offset: number;
-  count?: number | null;
-  type: "offset";
-}, {
-  results: Array<InferResult<HookExecutionResourceSchema, Fields>>;
-  has_more: boolean;
-  limit: number;
-  after: string | null;
-  before: string | null;
-  previous_page: string;
-  next_page: string;
-  count?: number | null;
-  type: "keyset";
-}>;
+  Page extends ListHookExecutionsConfig["page"] = undefined,
+> = ConditionalPaginatedResultMixed<
+  Page,
+  Array<InferResult<HookExecutionResourceSchema, Fields>>,
+  {
+    results: Array<InferResult<HookExecutionResourceSchema, Fields>>;
+    has_more: boolean;
+    limit: number;
+    offset: number;
+    count?: number | null;
+    type: "offset";
+  },
+  {
+    results: Array<InferResult<HookExecutionResourceSchema, Fields>>;
+    has_more: boolean;
+    limit: number;
+    after: string | null;
+    before: string | null;
+    previous_page: string;
+    next_page: string;
+    count?: number | null;
+    type: "keyset";
+  }
+>;
 
 export type ListHookExecutionsConfig = {
   hookCtx?: ActionHookContext;
   fields: ListHookExecutionsFields;
   filter?: HookExecutionFilterInput;
   sort?: string;
-  page?: (
-    {
-      limit?: number;
-      offset?: number;
-      count?: boolean;
-    } | {
-      limit?: number;
-      after?: string;
-      before?: string;
-    }
-  );
+  page?:
+    | {
+        limit?: number;
+        offset?: number;
+        count?: boolean;
+      }
+    | {
+        limit?: number;
+        after?: string;
+        before?: string;
+      };
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
 };
 
-export type ListHookExecutionsResult<Fields extends ListHookExecutionsFields, Page extends ListHookExecutionsConfig["page"] = undefined> = | { success: true; data: InferListHookExecutionsResult<Fields, Page>; }
-| { success: false; errors: AshRpcError[]; }
+export type ListHookExecutionsResult<
+  Fields extends ListHookExecutionsFields,
+  Page extends ListHookExecutionsConfig["page"] = undefined,
+> =
+  | { success: true; data: InferListHookExecutionsResult<Fields, Page> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function list_hook_executions<Fields extends ListHookExecutionsFields, Config extends ListHookExecutionsConfig = ListHookExecutionsConfig>(
-  config: Config & { fields: Fields }
+export async function list_hook_executions<
+  Fields extends ListHookExecutionsFields,
+  Config extends ListHookExecutionsConfig = ListHookExecutionsConfig,
+>(
+  config: Config & { fields: Fields },
 ): Promise<ListHookExecutionsResult<Fields, Config["page"]>> {
   const payload = {
     action: "list_hook_executions",
     ...(config.fields !== undefined && { fields: config.fields }),
     ...(config.filter && { filter: config.filter }),
     ...(config.sort && { sort: config.sort }),
-    ...(config.page && { page: config.page })
+    ...(config.page && { page: config.page }),
   };
 
-  return executeActionRpcRequest<ListHookExecutionsResult<Fields, Config["page"]>>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<
+    ListHookExecutionsResult<Fields, Config["page"]>
+  >(payload, config);
 }
 
+export type GetHookExecutionFields =
+  UnifiedFieldSelection<HookExecutionResourceSchema>[];
+export type InferGetHookExecutionResult<Fields extends GetHookExecutionFields> =
+  InferResult<HookExecutionResourceSchema, Fields>;
 
-export type GetHookExecutionFields = UnifiedFieldSelection<HookExecutionResourceSchema>[];
-export type InferGetHookExecutionResult<
+export type GetHookExecutionResult<Fields extends GetHookExecutionFields> =
+  | { success: true; data: InferGetHookExecutionResult<Fields> }
+  | { success: false; errors: AshRpcError[] };
+
+export async function get_hook_execution<
   Fields extends GetHookExecutionFields,
-> = InferResult<HookExecutionResourceSchema, Fields>;
-
-export type GetHookExecutionResult<Fields extends GetHookExecutionFields> = | { success: true; data: InferGetHookExecutionResult<Fields>; }
-| { success: false; errors: AshRpcError[]; }
-
-;
-
-export async function get_hook_execution<Fields extends GetHookExecutionFields>(
-  config: {
+>(config: {
   hookCtx?: ActionHookContext;
   fields: Fields;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<GetHookExecutionResult<Fields>> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<GetHookExecutionResult<Fields>> {
   const payload = {
     action: "get_hook_execution",
-    ...(config.fields !== undefined && { fields: config.fields })
+    ...(config.fields !== undefined && { fields: config.fields }),
   };
 
   return executeActionRpcRequest<GetHookExecutionResult<Fields>>(
     payload,
-    config
+    config,
   );
 }
-
 
 export type HookExecutionsForTaskInput = {
   task_id: UUID;
 };
 
-export type HookExecutionsForTaskFields = UnifiedFieldSelection<HookExecutionResourceSchema>[];
+export type HookExecutionsForTaskFields =
+  UnifiedFieldSelection<HookExecutionResourceSchema>[];
 export type InferHookExecutionsForTaskResult<
   Fields extends HookExecutionsForTaskFields,
 > = Array<InferResult<HookExecutionResourceSchema, Fields>>;
 
-export type HookExecutionsForTaskResult<Fields extends HookExecutionsForTaskFields> = | { success: true; data: InferHookExecutionsForTaskResult<Fields>; }
-| { success: false; errors: AshRpcError[]; }
+export type HookExecutionsForTaskResult<
+  Fields extends HookExecutionsForTaskFields,
+> =
+  | { success: true; data: InferHookExecutionsForTaskResult<Fields> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function hook_executions_for_task<Fields extends HookExecutionsForTaskFields>(
-  config: {
+export async function hook_executions_for_task<
+  Fields extends HookExecutionsForTaskFields,
+>(config: {
   input: HookExecutionsForTaskInput;
   hookCtx?: ActionHookContext;
   fields: Fields;
@@ -4049,140 +4515,152 @@ export async function hook_executions_for_task<Fields extends HookExecutionsForT
   sort?: string;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<HookExecutionsForTaskResult<Fields>> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<HookExecutionsForTaskResult<Fields>> {
   const payload = {
     action: "hook_executions_for_task",
     input: config.input,
     ...(config.fields !== undefined && { fields: config.fields }),
     ...(config.filter && { filter: config.filter }),
-    ...(config.sort && { sort: config.sort })
+    ...(config.sort && { sort: config.sort }),
   };
 
   return executeActionRpcRequest<HookExecutionsForTaskResult<Fields>>(
     payload,
-    config
+    config,
   );
 }
 
-
-export type ListTaskEventsFields = UnifiedFieldSelection<TaskEventResourceSchema>[];
-
+export type ListTaskEventsFields =
+  UnifiedFieldSelection<TaskEventResourceSchema>[];
 
 export type InferListTaskEventsResult<
   Fields extends ListTaskEventsFields | undefined,
-  Page extends ListTaskEventsConfig["page"] = undefined
-> = ConditionalPaginatedResultMixed<Page, Array<InferResult<TaskEventResourceSchema, Fields>>, {
-  results: Array<InferResult<TaskEventResourceSchema, Fields>>;
-  has_more: boolean;
-  limit: number;
-  offset: number;
-  count?: number | null;
-  type: "offset";
-}, {
-  results: Array<InferResult<TaskEventResourceSchema, Fields>>;
-  has_more: boolean;
-  limit: number;
-  after: string | null;
-  before: string | null;
-  previous_page: string;
-  next_page: string;
-  count?: number | null;
-  type: "keyset";
-}>;
+  Page extends ListTaskEventsConfig["page"] = undefined,
+> = ConditionalPaginatedResultMixed<
+  Page,
+  Array<InferResult<TaskEventResourceSchema, Fields>>,
+  {
+    results: Array<InferResult<TaskEventResourceSchema, Fields>>;
+    has_more: boolean;
+    limit: number;
+    offset: number;
+    count?: number | null;
+    type: "offset";
+  },
+  {
+    results: Array<InferResult<TaskEventResourceSchema, Fields>>;
+    has_more: boolean;
+    limit: number;
+    after: string | null;
+    before: string | null;
+    previous_page: string;
+    next_page: string;
+    count?: number | null;
+    type: "keyset";
+  }
+>;
 
 export type ListTaskEventsConfig = {
   hookCtx?: ActionHookContext;
   fields: ListTaskEventsFields;
   filter?: TaskEventFilterInput;
   sort?: string;
-  page?: (
-    {
-      limit?: number;
-      offset?: number;
-      count?: boolean;
-    } | {
-      limit?: number;
-      after?: string;
-      before?: string;
-    }
-  );
+  page?:
+    | {
+        limit?: number;
+        offset?: number;
+        count?: boolean;
+      }
+    | {
+        limit?: number;
+        after?: string;
+        before?: string;
+      };
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
 };
 
-export type ListTaskEventsResult<Fields extends ListTaskEventsFields, Page extends ListTaskEventsConfig["page"] = undefined> = | { success: true; data: InferListTaskEventsResult<Fields, Page>; }
-| { success: false; errors: AshRpcError[]; }
+export type ListTaskEventsResult<
+  Fields extends ListTaskEventsFields,
+  Page extends ListTaskEventsConfig["page"] = undefined,
+> =
+  | { success: true; data: InferListTaskEventsResult<Fields, Page> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function list_task_events<Fields extends ListTaskEventsFields, Config extends ListTaskEventsConfig = ListTaskEventsConfig>(
-  config: Config & { fields: Fields }
+export async function list_task_events<
+  Fields extends ListTaskEventsFields,
+  Config extends ListTaskEventsConfig = ListTaskEventsConfig,
+>(
+  config: Config & { fields: Fields },
 ): Promise<ListTaskEventsResult<Fields, Config["page"]>> {
   const payload = {
     action: "list_task_events",
     ...(config.fields !== undefined && { fields: config.fields }),
     ...(config.filter && { filter: config.filter }),
     ...(config.sort && { sort: config.sort }),
-    ...(config.page && { page: config.page })
+    ...(config.page && { page: config.page }),
   };
 
   return executeActionRpcRequest<ListTaskEventsResult<Fields, Config["page"]>>(
     payload,
-    config
+    config,
   );
 }
 
+export type GetTaskEventFields =
+  UnifiedFieldSelection<TaskEventResourceSchema>[];
+export type InferGetTaskEventResult<Fields extends GetTaskEventFields> =
+  InferResult<TaskEventResourceSchema, Fields>;
 
-export type GetTaskEventFields = UnifiedFieldSelection<TaskEventResourceSchema>[];
-export type InferGetTaskEventResult<
+export type GetTaskEventResult<Fields extends GetTaskEventFields> =
+  | { success: true; data: InferGetTaskEventResult<Fields> }
+  | { success: false; errors: AshRpcError[] };
+
+export async function get_task_event<
   Fields extends GetTaskEventFields,
-> = InferResult<TaskEventResourceSchema, Fields>;
-
-export type GetTaskEventResult<Fields extends GetTaskEventFields> = | { success: true; data: InferGetTaskEventResult<Fields>; }
-| { success: false; errors: AshRpcError[]; }
-
-;
-
-export async function get_task_event<Fields extends GetTaskEventFields>(
-  config: {
+>(config: {
   hookCtx?: ActionHookContext;
   fields: Fields;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<GetTaskEventResult<Fields>> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<GetTaskEventResult<Fields>> {
   const payload = {
     action: "get_task_event",
-    ...(config.fields !== undefined && { fields: config.fields })
+    ...(config.fields !== undefined && { fields: config.fields }),
   };
 
-  return executeActionRpcRequest<GetTaskEventResult<Fields>>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<GetTaskEventResult<Fields>>(payload, config);
 }
-
 
 export type TaskEventsForTaskInput = {
   task_id: UUID;
 };
 
-export type TaskEventsForTaskFields = UnifiedFieldSelection<TaskEventResourceSchema>[];
+export type TaskEventsForTaskFields =
+  UnifiedFieldSelection<TaskEventResourceSchema>[];
 export type InferTaskEventsForTaskResult<
   Fields extends TaskEventsForTaskFields,
 > = Array<InferResult<TaskEventResourceSchema, Fields>>;
 
-export type TaskEventsForTaskResult<Fields extends TaskEventsForTaskFields> = | { success: true; data: InferTaskEventsForTaskResult<Fields>; }
-| { success: false; errors: AshRpcError[]; }
+export type TaskEventsForTaskResult<Fields extends TaskEventsForTaskFields> =
+  | { success: true; data: InferTaskEventsForTaskResult<Fields> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function task_events_for_task<Fields extends TaskEventsForTaskFields>(
-  config: {
+export async function task_events_for_task<
+  Fields extends TaskEventsForTaskFields,
+>(config: {
   input: TaskEventsForTaskInput;
   hookCtx?: ActionHookContext;
   fields: Fields;
@@ -4190,140 +4668,157 @@ export async function task_events_for_task<Fields extends TaskEventsForTaskField
   sort?: string;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<TaskEventsForTaskResult<Fields>> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<TaskEventsForTaskResult<Fields>> {
   const payload = {
     action: "task_events_for_task",
     input: config.input,
     ...(config.fields !== undefined && { fields: config.fields }),
     ...(config.filter && { filter: config.filter }),
-    ...(config.sort && { sort: config.sort })
+    ...(config.sort && { sort: config.sort }),
   };
 
   return executeActionRpcRequest<TaskEventsForTaskResult<Fields>>(
     payload,
-    config
+    config,
   );
 }
 
-
-export type ListExecutorSessionsFields = UnifiedFieldSelection<ExecutorSessionResourceSchema>[];
-
+export type ListExecutorSessionsFields =
+  UnifiedFieldSelection<ExecutorSessionResourceSchema>[];
 
 export type InferListExecutorSessionsResult<
   Fields extends ListExecutorSessionsFields | undefined,
-  Page extends ListExecutorSessionsConfig["page"] = undefined
-> = ConditionalPaginatedResultMixed<Page, Array<InferResult<ExecutorSessionResourceSchema, Fields>>, {
-  results: Array<InferResult<ExecutorSessionResourceSchema, Fields>>;
-  has_more: boolean;
-  limit: number;
-  offset: number;
-  count?: number | null;
-  type: "offset";
-}, {
-  results: Array<InferResult<ExecutorSessionResourceSchema, Fields>>;
-  has_more: boolean;
-  limit: number;
-  after: string | null;
-  before: string | null;
-  previous_page: string;
-  next_page: string;
-  count?: number | null;
-  type: "keyset";
-}>;
+  Page extends ListExecutorSessionsConfig["page"] = undefined,
+> = ConditionalPaginatedResultMixed<
+  Page,
+  Array<InferResult<ExecutorSessionResourceSchema, Fields>>,
+  {
+    results: Array<InferResult<ExecutorSessionResourceSchema, Fields>>;
+    has_more: boolean;
+    limit: number;
+    offset: number;
+    count?: number | null;
+    type: "offset";
+  },
+  {
+    results: Array<InferResult<ExecutorSessionResourceSchema, Fields>>;
+    has_more: boolean;
+    limit: number;
+    after: string | null;
+    before: string | null;
+    previous_page: string;
+    next_page: string;
+    count?: number | null;
+    type: "keyset";
+  }
+>;
 
 export type ListExecutorSessionsConfig = {
   hookCtx?: ActionHookContext;
   fields: ListExecutorSessionsFields;
   filter?: ExecutorSessionFilterInput;
   sort?: string;
-  page?: (
-    {
-      limit?: number;
-      offset?: number;
-      count?: boolean;
-    } | {
-      limit?: number;
-      after?: string;
-      before?: string;
-    }
-  );
+  page?:
+    | {
+        limit?: number;
+        offset?: number;
+        count?: boolean;
+      }
+    | {
+        limit?: number;
+        after?: string;
+        before?: string;
+      };
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
 };
 
-export type ListExecutorSessionsResult<Fields extends ListExecutorSessionsFields, Page extends ListExecutorSessionsConfig["page"] = undefined> = | { success: true; data: InferListExecutorSessionsResult<Fields, Page>; }
-| { success: false; errors: AshRpcError[]; }
+export type ListExecutorSessionsResult<
+  Fields extends ListExecutorSessionsFields,
+  Page extends ListExecutorSessionsConfig["page"] = undefined,
+> =
+  | { success: true; data: InferListExecutorSessionsResult<Fields, Page> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function list_executor_sessions<Fields extends ListExecutorSessionsFields, Config extends ListExecutorSessionsConfig = ListExecutorSessionsConfig>(
-  config: Config & { fields: Fields }
+export async function list_executor_sessions<
+  Fields extends ListExecutorSessionsFields,
+  Config extends ListExecutorSessionsConfig = ListExecutorSessionsConfig,
+>(
+  config: Config & { fields: Fields },
 ): Promise<ListExecutorSessionsResult<Fields, Config["page"]>> {
   const payload = {
     action: "list_executor_sessions",
     ...(config.fields !== undefined && { fields: config.fields }),
     ...(config.filter && { filter: config.filter }),
     ...(config.sort && { sort: config.sort }),
-    ...(config.page && { page: config.page })
+    ...(config.page && { page: config.page }),
   };
 
-  return executeActionRpcRequest<ListExecutorSessionsResult<Fields, Config["page"]>>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<
+    ListExecutorSessionsResult<Fields, Config["page"]>
+  >(payload, config);
 }
 
-
-export type GetExecutorSessionFields = UnifiedFieldSelection<ExecutorSessionResourceSchema>[];
+export type GetExecutorSessionFields =
+  UnifiedFieldSelection<ExecutorSessionResourceSchema>[];
 export type InferGetExecutorSessionResult<
   Fields extends GetExecutorSessionFields,
 > = InferResult<ExecutorSessionResourceSchema, Fields>;
 
-export type GetExecutorSessionResult<Fields extends GetExecutorSessionFields> = | { success: true; data: InferGetExecutorSessionResult<Fields>; }
-| { success: false; errors: AshRpcError[]; }
+export type GetExecutorSessionResult<Fields extends GetExecutorSessionFields> =
+  | { success: true; data: InferGetExecutorSessionResult<Fields> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function get_executor_session<Fields extends GetExecutorSessionFields>(
-  config: {
+export async function get_executor_session<
+  Fields extends GetExecutorSessionFields,
+>(config: {
   hookCtx?: ActionHookContext;
   fields: Fields;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<GetExecutorSessionResult<Fields>> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<GetExecutorSessionResult<Fields>> {
   const payload = {
     action: "get_executor_session",
-    ...(config.fields !== undefined && { fields: config.fields })
+    ...(config.fields !== undefined && { fields: config.fields }),
   };
 
   return executeActionRpcRequest<GetExecutorSessionResult<Fields>>(
     payload,
-    config
+    config,
   );
 }
-
 
 export type ExecutorSessionsForTaskInput = {
   task_id: UUID;
 };
 
-export type ExecutorSessionsForTaskFields = UnifiedFieldSelection<ExecutorSessionResourceSchema>[];
+export type ExecutorSessionsForTaskFields =
+  UnifiedFieldSelection<ExecutorSessionResourceSchema>[];
 export type InferExecutorSessionsForTaskResult<
   Fields extends ExecutorSessionsForTaskFields,
 > = Array<InferResult<ExecutorSessionResourceSchema, Fields>>;
 
-export type ExecutorSessionsForTaskResult<Fields extends ExecutorSessionsForTaskFields> = | { success: true; data: InferExecutorSessionsForTaskResult<Fields>; }
-| { success: false; errors: AshRpcError[]; }
+export type ExecutorSessionsForTaskResult<
+  Fields extends ExecutorSessionsForTaskFields,
+> =
+  | { success: true; data: InferExecutorSessionsForTaskResult<Fields> }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function executor_sessions_for_task<Fields extends ExecutorSessionsForTaskFields>(
-  config: {
+export async function executor_sessions_for_task<
+  Fields extends ExecutorSessionsForTaskFields,
+>(config: {
   input: ExecutorSessionsForTaskInput;
   hookCtx?: ActionHookContext;
   fields: Fields;
@@ -4331,49 +4826,46 @@ export async function executor_sessions_for_task<Fields extends ExecutorSessions
   sort?: string;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<ExecutorSessionsForTaskResult<Fields>> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<ExecutorSessionsForTaskResult<Fields>> {
   const payload = {
     action: "executor_sessions_for_task",
     input: config.input,
     ...(config.fields !== undefined && { fields: config.fields }),
     ...(config.filter && { filter: config.filter }),
-    ...(config.sort && { sort: config.sort })
+    ...(config.sort && { sort: config.sort }),
   };
 
   return executeActionRpcRequest<ExecutorSessionsForTaskResult<Fields>>(
     payload,
-    config
+    config,
   );
 }
-
 
 export type InferListToolsResult = Record<string, any>;
 
-export type ListToolsResult = | { success: true; data: InferListToolsResult; }
-| { success: false; errors: AshRpcError[]; }
+export type ListToolsResult =
+  | { success: true; data: InferListToolsResult }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function list_tools(
-  config: {
+export async function list_tools(config: {
   hookCtx?: ActionHookContext;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<ListToolsResult> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<ListToolsResult> {
   const payload = {
-    action: "list_tools"
+    action: "list_tools",
   };
 
-  return executeActionRpcRequest<ListToolsResult>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<ListToolsResult>(payload, config);
 }
-
 
 export type ToolAvailableInput = {
   tool_name: "docker" | "git" | "gh" | "claude" | "codex" | "aider" | "goose";
@@ -4381,83 +4873,71 @@ export type ToolAvailableInput = {
 
 export type InferToolAvailableResult = boolean;
 
-export type ToolAvailableResult = | { success: true; data: InferToolAvailableResult; }
-| { success: false; errors: AshRpcError[]; }
+export type ToolAvailableResult =
+  | { success: true; data: InferToolAvailableResult }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function tool_available(
-  config: {
+export async function tool_available(config: {
   input: ToolAvailableInput;
   hookCtx?: ActionHookContext;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<ToolAvailableResult> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<ToolAvailableResult> {
   const payload = {
     action: "tool_available",
-    input: config.input
+    input: config.input,
   };
 
-  return executeActionRpcRequest<ToolAvailableResult>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<ToolAvailableResult>(payload, config);
 }
-
 
 export type InferAvailableToolsResult = Array<string>;
 
-export type AvailableToolsResult = | { success: true; data: InferAvailableToolsResult; }
-| { success: false; errors: AshRpcError[]; }
+export type AvailableToolsResult =
+  | { success: true; data: InferAvailableToolsResult }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function available_tools(
-  config: {
+export async function available_tools(config: {
   hookCtx?: ActionHookContext;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<AvailableToolsResult> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<AvailableToolsResult> {
   const payload = {
-    action: "available_tools"
+    action: "available_tools",
   };
 
-  return executeActionRpcRequest<AvailableToolsResult>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<AvailableToolsResult>(payload, config);
 }
-
 
 export type InferListExecutorsResult = Record<string, any>;
 
-export type ListExecutorsResult = | { success: true; data: InferListExecutorsResult; }
-| { success: false; errors: AshRpcError[]; }
+export type ListExecutorsResult =
+  | { success: true; data: InferListExecutorsResult }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function list_executors(
-  config: {
+export async function list_executors(config: {
   hookCtx?: ActionHookContext;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<ListExecutorsResult> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<ListExecutorsResult> {
   const payload = {
-    action: "list_executors"
+    action: "list_executors",
   };
 
-  return executeActionRpcRequest<ListExecutorsResult>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<ListExecutorsResult>(payload, config);
 }
-
 
 export type OpenInEditorInput = {
   path: string;
@@ -4465,31 +4945,27 @@ export type OpenInEditorInput = {
 
 export type InferOpenInEditorResult = Record<string, any>;
 
-export type OpenInEditorResult = | { success: true; data: InferOpenInEditorResult; }
-| { success: false; errors: AshRpcError[]; }
+export type OpenInEditorResult =
+  | { success: true; data: InferOpenInEditorResult }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function open_in_editor(
-  config: {
+export async function open_in_editor(config: {
   input: OpenInEditorInput;
   hookCtx?: ActionHookContext;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<OpenInEditorResult> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<OpenInEditorResult> {
   const payload = {
     action: "open_in_editor",
-    input: config.input
+    input: config.input,
   };
 
-  return executeActionRpcRequest<OpenInEditorResult>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<OpenInEditorResult>(payload, config);
 }
-
 
 export type OpenFolderInput = {
   path: string;
@@ -4497,31 +4973,27 @@ export type OpenFolderInput = {
 
 export type InferOpenFolderResult = Record<string, any>;
 
-export type OpenFolderResult = | { success: true; data: InferOpenFolderResult; }
-| { success: false; errors: AshRpcError[]; }
+export type OpenFolderResult =
+  | { success: true; data: InferOpenFolderResult }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function open_folder(
-  config: {
+export async function open_folder(config: {
   input: OpenFolderInput;
   hookCtx?: ActionHookContext;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<OpenFolderResult> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<OpenFolderResult> {
   const payload = {
     action: "open_folder",
-    input: config.input
+    input: config.input,
   };
 
-  return executeActionRpcRequest<OpenFolderResult>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<OpenFolderResult>(payload, config);
 }
-
 
 export type SetDemoTextInput = {
   text: string;
@@ -4529,29 +5001,24 @@ export type SetDemoTextInput = {
 
 export type InferSetDemoTextResult = Record<string, any>;
 
-export type SetDemoTextResult = | { success: true; data: InferSetDemoTextResult; }
-| { success: false; errors: AshRpcError[]; }
+export type SetDemoTextResult =
+  | { success: true; data: InferSetDemoTextResult }
+  | { success: false; errors: AshRpcError[] };
 
-;
-
-export async function set_demo_text(
-  config: {
+export async function set_demo_text(config: {
   input: SetDemoTextInput;
   hookCtx?: ActionHookContext;
   headers?: Record<string, string>;
   fetchOptions?: RequestInit;
-  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}
-): Promise<SetDemoTextResult> {
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<SetDemoTextResult> {
   const payload = {
     action: "set_demo_text",
-    input: config.input
+    input: config.input,
   };
 
-  return executeActionRpcRequest<SetDemoTextResult>(
-    payload,
-    config
-  );
+  return executeActionRpcRequest<SetDemoTextResult>(payload, config);
 }
-
-

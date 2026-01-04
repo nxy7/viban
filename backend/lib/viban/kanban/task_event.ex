@@ -49,16 +49,18 @@ defmodule Viban.Kanban.TaskEvent do
 
     attribute :status, :atom do
       public? true
+
       constraints one_of: [
-        :pending,
-        :processing,
-        :running,
-        :completed,
-        :failed,
-        :cancelled,
-        :skipped,
-        :stopped
-      ]
+                    :pending,
+                    :processing,
+                    :running,
+                    :completed,
+                    :failed,
+                    :cancelled,
+                    :skipped,
+                    :stopped
+                  ]
+
       description "Event status"
     end
 
@@ -122,14 +124,16 @@ defmodule Viban.Kanban.TaskEvent do
 
     attribute :executor_type, :atom do
       public? true
+
       constraints one_of: [
-        :claude_code,
-        :gemini_cli,
-        :codex,
-        :opencode,
-        :api_anthropic,
-        :api_openai
-      ]
+                    :claude_code,
+                    :gemini_cli,
+                    :codex,
+                    :opencode,
+                    :api_anthropic,
+                    :api_openai
+                  ]
+
       description "Executor type (for session type)"
     end
 

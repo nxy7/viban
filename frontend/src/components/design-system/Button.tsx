@@ -1,9 +1,16 @@
 import { createMemo, type JSX, Show, splitProps } from "solid-js";
 
-type ButtonVariant = "primary" | "secondary" | "danger" | "ghost" | "icon" | "badge";
+type ButtonVariant =
+  | "primary"
+  | "secondary"
+  | "danger"
+  | "ghost"
+  | "icon"
+  | "badge";
 type ButtonSize = "sm" | "md" | "lg";
 
-interface ButtonProps extends Omit<JSX.ButtonHTMLAttributes<HTMLButtonElement>, "class"> {
+interface ButtonProps
+  extends Omit<JSX.ButtonHTMLAttributes<HTMLButtonElement>, "class"> {
   variant?: ButtonVariant;
   buttonSize?: ButtonSize;
   fullWidth?: boolean;
@@ -53,7 +60,9 @@ export default function Button(props: ButtonProps) {
       !isCompact() ? sizeClasses[size()] : "",
       local.fullWidth ? "w-full" : "",
       local.class,
-    ].filter(Boolean).join(" ");
+    ]
+      .filter(Boolean)
+      .join(" ");
   });
 
   return (
@@ -63,11 +72,7 @@ export default function Button(props: ButtonProps) {
       class={classes()}
     >
       <Show when={local.loading}>
-        <svg
-          class="w-4 h-4 animate-spin"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
+        <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
           <circle
             class="opacity-25"
             cx="12"

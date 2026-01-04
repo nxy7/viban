@@ -12,8 +12,8 @@ export default function SecretPage() {
       .where(({ actors }) =>
         and(
           eq(actors.actor_type, "Elixir.Viban.StateServer.DemoAgent"),
-          eq(actors.actor_id, "demo-agent")
-        )
+          eq(actors.actor_id, "demo-agent"),
+        ),
       )
       .select(({ actors }) => ({
         id: actors.id,
@@ -24,7 +24,7 @@ export default function SecretPage() {
         message: actors.message,
         version: actors.version,
         updated_at: actors.updated_at,
-      }))
+      })),
   );
 
   const demoAgent = createMemo(() => {
@@ -135,10 +135,14 @@ export default function SecretPage() {
 
           {/* Raw State */}
           <div class="border-t border-gray-800 pt-6">
-            <h2 class="text-lg font-semibold text-white mb-2">Raw State JSON</h2>
+            <h2 class="text-lg font-semibold text-white mb-2">
+              Raw State JSON
+            </h2>
             <pre class="bg-gray-800 p-4 rounded-lg text-sm text-gray-300 overflow-auto">
-              {JSON.stringify(demoAgent(), (_, v) =>
-                typeof v === "bigint" ? v.toString() : v, 2
+              {JSON.stringify(
+                demoAgent(),
+                (_, v) => (typeof v === "bigint" ? v.toString() : v),
+                2,
               )}
             </pre>
           </div>

@@ -3,7 +3,8 @@ import { type JSX, splitProps } from "solid-js";
 type InputVariant = "default" | "search" | "mono" | "dark" | "dark-mono";
 type InputSize = "sm" | "md" | "lg";
 
-interface InputProps extends Omit<JSX.InputHTMLAttributes<HTMLInputElement>, "class"> {
+interface InputProps
+  extends Omit<JSX.InputHTMLAttributes<HTMLInputElement>, "class"> {
   variant?: InputVariant;
   inputSize?: InputSize;
   fullWidth?: boolean;
@@ -33,7 +34,9 @@ export default function Input(props: InputProps) {
     "onKeyDown",
   ]);
 
-  const handleKeyDown: JSX.EventHandler<HTMLInputElement, KeyboardEvent> = (e) => {
+  const handleKeyDown: JSX.EventHandler<HTMLInputElement, KeyboardEvent> = (
+    e,
+  ) => {
     if (e.key === "Escape") {
       e.currentTarget.blur();
     }
@@ -42,7 +45,8 @@ export default function Input(props: InputProps) {
     }
   };
 
-  const baseClasses = "border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
+  const baseClasses =
+    "border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
   const variant = local.variant ?? "default";
   const size = local.inputSize ?? "md";
 
@@ -52,13 +56,9 @@ export default function Input(props: InputProps) {
     sizeClasses[size],
     local.fullWidth !== false ? "w-full" : "",
     local.hasIcon ? "pl-9" : "",
-  ].filter(Boolean).join(" ");
+  ]
+    .filter(Boolean)
+    .join(" ");
 
-  return (
-    <input
-      {...rest}
-      class={classes}
-      onKeyDown={handleKeyDown}
-    />
-  );
+  return <input {...rest} class={classes} onKeyDown={handleKeyDown} />;
 }

@@ -1664,7 +1664,10 @@ interface HookExecutionActivityComponentProps {
   formatDate: (dateStr: string) => string;
 }
 
-function formatDuration(startedAt: string | null | undefined, completedAt: string | null | undefined): string | null {
+function formatDuration(
+  startedAt: string | null | undefined,
+  completedAt: string | null | undefined,
+): string | null {
   if (!startedAt || !completedAt) return null;
   const start = new Date(startedAt).getTime();
   const end = new Date(completedAt).getTime();

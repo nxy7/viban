@@ -3,7 +3,8 @@ import { type JSX, splitProps } from "solid-js";
 type TextareaVariant = "default" | "mono" | "dark" | "dark-mono";
 type TextareaSize = "sm" | "md" | "lg";
 
-interface TextareaProps extends Omit<JSX.TextareaHTMLAttributes<HTMLTextAreaElement>, "class"> {
+interface TextareaProps
+  extends Omit<JSX.TextareaHTMLAttributes<HTMLTextAreaElement>, "class"> {
   variant?: TextareaVariant;
   textareaSize?: TextareaSize;
   fullWidth?: boolean;
@@ -32,7 +33,9 @@ export default function Textarea(props: TextareaProps) {
     "onKeyDown",
   ]);
 
-  const handleKeyDown: JSX.EventHandler<HTMLTextAreaElement, KeyboardEvent> = (e) => {
+  const handleKeyDown: JSX.EventHandler<HTMLTextAreaElement, KeyboardEvent> = (
+    e,
+  ) => {
     if (e.key === "Escape") {
       e.currentTarget.blur();
     }
@@ -41,7 +44,8 @@ export default function Textarea(props: TextareaProps) {
     }
   };
 
-  const baseClasses = "border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
+  const baseClasses =
+    "border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
   const variant = local.variant ?? "default";
   const size = local.textareaSize ?? "md";
 
@@ -51,13 +55,9 @@ export default function Textarea(props: TextareaProps) {
     sizeClasses[size],
     local.fullWidth !== false ? "w-full" : "",
     local.resizable === false ? "resize-none" : "",
-  ].filter(Boolean).join(" ");
+  ]
+    .filter(Boolean)
+    .join(" ");
 
-  return (
-    <textarea
-      {...rest}
-      class={classes}
-      onKeyDown={handleKeyDown}
-    />
-  );
+  return <textarea {...rest} class={classes} onKeyDown={handleKeyDown} />;
 }

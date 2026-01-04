@@ -165,7 +165,8 @@ export const Disabled: Story = {
 
 export const WithValue: Story = {
   args: {
-    value: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+    value:
+      "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
     rows: 4,
   },
   decorators: [
@@ -187,9 +188,7 @@ function InteractiveTextarea() {
         placeholder="Type something..."
         rows={4}
       />
-      <span class="text-sm text-gray-400">
-        Characters: {value().length}
-      </span>
+      <span class="text-sm text-gray-400">Characters: {value().length}</span>
     </div>
   );
 }

@@ -1,11 +1,21 @@
-import { type Accessor, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
+import {
+  type Accessor,
+  createEffect,
+  createMemo,
+  createSignal,
+  onCleanup,
+} from "solid-js";
 import { getErrorMessage } from "~/lib/errorUtils";
 import {
   type ExecutorInfo,
   type LLMTodoItem,
   socketManager,
 } from "~/lib/socket";
-import { useTaskEvents, useExecutorSessions, type TaskEvent } from "~/hooks/useKanban";
+import {
+  useTaskEvents,
+  useExecutorSessions,
+  type TaskEvent,
+} from "~/hooks/useKanban";
 
 export type AgentStatusType = "idle" | "thinking" | "executing" | "error";
 
@@ -85,9 +95,10 @@ function taskEventToOutputLine(event: TaskEvent): OutputLine | null {
     let metadata: Record<string, unknown> | undefined;
     if (event.metadata) {
       try {
-        metadata = typeof event.metadata === "string"
-          ? JSON.parse(event.metadata)
-          : event.metadata as Record<string, unknown>;
+        metadata =
+          typeof event.metadata === "string"
+            ? JSON.parse(event.metadata)
+            : (event.metadata as Record<string, unknown>);
       } catch {
         // Ignore parsing errors
       }
@@ -122,7 +133,8 @@ export function useTaskChat(
   );
 
   // Electric SQL sync for task events (messages, output)
-  const { events: electricEvents, isLoading: electricLoading } = useTaskEvents(taskId);
+  const { events: electricEvents, isLoading: electricLoading } =
+    useTaskEvents(taskId);
 
   // Electric SQL sync for executor sessions (to determine running state)
   const { sessions } = useExecutorSessions(taskId);
@@ -145,7 +157,9 @@ export function useTaskChat(
   // Derive running state from sessions
   const isRunning = createMemo(() => {
     const sessionList = sessions();
-    return sessionList.some(s => s.status === "running" || s.status === "pending");
+    return sessionList.some(
+      (s) => s.status === "running" || s.status === "pending",
+    );
   });
 
   // Derive agent status from task or session state
@@ -170,7 +184,10 @@ export function useTaskChat(
       return `${lastSession.executor_type} is running...`;
     }
     if (lastSession.status === "failed") {
-      return lastSession.error_message || `Failed with exit code ${lastSession.exit_code}`;
+      return (
+        lastSession.error_message ||
+        `Failed with exit code ${lastSession.exit_code}`
+      );
     }
     if (lastSession.status === "completed") {
       return "Completed successfully";
@@ -189,9 +206,10 @@ export function useTaskChat(
       const event = events[i];
       if (event.content === "todos" && event.metadata) {
         try {
-          const meta = typeof event.metadata === "string"
-            ? JSON.parse(event.metadata)
-            : event.metadata;
+          const meta =
+            typeof event.metadata === "string"
+              ? JSON.parse(event.metadata)
+              : event.metadata;
           if (meta?.todos && Array.isArray(meta.todos)) {
             return meta.todos as LLMTodoItem[];
           }
@@ -208,13 +226,16 @@ export function useTaskChat(
     if (!isRunning()) return false;
     const lines = output();
     const sessionList = sessions();
-    const runningSession = sessionList.find(s => s.status === "running");
+    const runningSession = sessionList.find((s) => s.status === "running");
     if (!runningSession) return false;
 
     // Check if we have any output from this session
-    const hasSessionOutput = lines.some(line => {
+    const hasSessionOutput = lines.some((line) => {
       // Session output would be after session start
-      return new Date(line.timestamp) >= new Date(runningSession.started_at || runningSession.inserted_at);
+      return (
+        new Date(line.timestamp) >=
+        new Date(runningSession.started_at || runningSession.inserted_at)
+      );
     });
     return !hasSessionOutput;
   });
@@ -236,7 +257,6 @@ export function useTaskChat(
       } catch (err) {
         console.error("[useTaskChat] Failed to list executors:", err);
       }
-
     } catch (err) {
       console.error("[useTaskChat] Connection error:", err);
       setError(getErrorMessage(err, "Failed to connect"));

@@ -316,7 +316,10 @@ defmodule Viban.Executors.Runner do
     )
 
     status = if exit_code == 0, do: :completed, else: :failed
-    status_msg = if exit_code == 0, do: "Completed successfully", else: "Failed with exit code #{exit_code}"
+
+    status_msg =
+      if exit_code == 0, do: "Completed successfully", else: "Failed with exit code #{exit_code}"
+
     save_message(task_id, session_id, :system, status_msg)
     update_session_status(session_id, status, exit_code)
     update_task_status(task_id, status, exit_code)

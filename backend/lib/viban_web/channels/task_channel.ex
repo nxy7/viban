@@ -91,6 +91,7 @@ defmodule VibanWeb.TaskChannel do
           display_content =
             if image_count > 0 do
               suffix = if image_count > 1, do: "s", else: ""
+
               "#{user_prompt}#{if user_prompt != "", do: "\n\n", else: ""}[#{image_count} image#{suffix} attached]"
             else
               user_prompt
@@ -232,7 +233,6 @@ defmodule VibanWeb.TaskChannel do
     end
   end
 
-
   defp serialize_session(session) do
     %{
       id: session.id,
@@ -247,7 +247,6 @@ defmodule VibanWeb.TaskChannel do
       inserted_at: session.inserted_at
     }
   end
-
 
   defp maybe_move_to_in_progress(task) do
     alias Viban.Kanban.Column

@@ -34,6 +34,7 @@ defmodule Viban.StateServer.ActorState do
     attribute :actor_type, :string do
       allow_nil? false
       public? true
+
       description "Module name of the StateServer (e.g., 'Elixir.Viban.Kanban.Servers.HookExecutionServer')"
     end
 

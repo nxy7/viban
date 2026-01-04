@@ -51,7 +51,9 @@ test.describe("Task Movement E2E Tests (No Hooks Board)", () => {
     await expect(authenticatedPage.getByText("Done")).toBeVisible();
   });
 
-  test("board shows seed tasks in TODO column", async ({ authenticatedPage }) => {
+  test("board shows seed tasks in TODO column", async ({
+    authenticatedPage,
+  }) => {
     const hasBoard = await navigateToBoard(authenticatedPage, NO_HOOKS_BOARD);
     if (!hasBoard) return;
 
@@ -67,7 +69,9 @@ test.describe("Task Movement E2E Tests (No Hooks Board)", () => {
     expect(taskCount).toBeGreaterThanOrEqual(1);
   });
 
-  test("can drag task from TODO to In Progress", async ({ authenticatedPage }) => {
+  test("can drag task from TODO to In Progress", async ({
+    authenticatedPage,
+  }) => {
     const hasBoard = await navigateToBoard(authenticatedPage, NO_HOOKS_BOARD);
     if (!hasBoard) return;
 
@@ -84,23 +88,34 @@ test.describe("Task Movement E2E Tests (No Hooks Board)", () => {
       return;
     }
 
-    const taskTitle = await firstTask.locator("h3, h4, p").first().textContent();
+    const taskTitle = await firstTask
+      .locator("h3, h4, p")
+      .first()
+      .textContent();
     if (!taskTitle) {
       test.skip(true, "Could not get task title");
       return;
     }
 
-    const inProgressColumn = await getColumnLocator(authenticatedPage, "In Progress");
+    const inProgressColumn = await getColumnLocator(
+      authenticatedPage,
+      "In Progress",
+    );
     await firstTask.dragTo(inProgressColumn, { force: true });
 
     await authenticatedPage.waitForTimeout(1000);
 
-    const inProgressTasks = await getTasksInColumn(authenticatedPage, "In Progress");
+    const inProgressTasks = await getTasksInColumn(
+      authenticatedPage,
+      "In Progress",
+    );
     const movedTask = inProgressTasks.filter({ hasText: taskTitle.trim() });
     await expect(movedTask).toBeVisible({ timeout: 5000 });
   });
 
-  test("can drag task back to TODO from In Progress", async ({ authenticatedPage }) => {
+  test("can drag task back to TODO from In Progress", async ({
+    authenticatedPage,
+  }) => {
     const hasBoard = await navigateToBoard(authenticatedPage, NO_HOOKS_BOARD);
     if (!hasBoard) return;
 
@@ -108,7 +123,10 @@ test.describe("Task Movement E2E Tests (No Hooks Board)", () => {
       timeout: 15000,
     });
 
-    const inProgressColumn = await getColumnLocator(authenticatedPage, "In Progress");
+    const inProgressColumn = await getColumnLocator(
+      authenticatedPage,
+      "In Progress",
+    );
     const firstTask = inProgressColumn.locator("[data-task-id]").first();
     const hasTask = await firstTask.isVisible().catch(() => false);
 
@@ -117,7 +135,10 @@ test.describe("Task Movement E2E Tests (No Hooks Board)", () => {
       return;
     }
 
-    const taskTitle = await firstTask.locator("h3, h4, p").first().textContent();
+    const taskTitle = await firstTask
+      .locator("h3, h4, p")
+      .first()
+      .textContent();
     if (!taskTitle) {
       test.skip(true, "Could not get task title");
       return;
@@ -133,7 +154,9 @@ test.describe("Task Movement E2E Tests (No Hooks Board)", () => {
     await expect(movedTask).toBeVisible({ timeout: 5000 });
   });
 
-  test("can reorder tasks within TODO column", async ({ authenticatedPage }) => {
+  test("can reorder tasks within TODO column", async ({
+    authenticatedPage,
+  }) => {
     const hasBoard = await navigateToBoard(authenticatedPage, NO_HOOKS_BOARD);
     if (!hasBoard) return;
 
@@ -183,7 +206,9 @@ test.describe("Task Movement E2E Tests (No Hooks Board)", () => {
 });
 
 test.describe("Hook Cancellation E2E Tests (Slow Hook Board)", () => {
-  test("board loads with expected columns and hook", async ({ authenticatedPage }) => {
+  test("board loads with expected columns and hook", async ({
+    authenticatedPage,
+  }) => {
     const hasBoard = await navigateToBoard(authenticatedPage, SLOW_HOOK_BOARD);
     if (!hasBoard) return;
 
@@ -193,7 +218,9 @@ test.describe("Hook Cancellation E2E Tests (Slow Hook Board)", () => {
     await expect(authenticatedPage.getByText("In Progress")).toBeVisible();
   });
 
-  test("moving task to In Progress triggers slow hook", async ({ authenticatedPage }) => {
+  test("moving task to In Progress triggers slow hook", async ({
+    authenticatedPage,
+  }) => {
     const hasBoard = await navigateToBoard(authenticatedPage, SLOW_HOOK_BOARD);
     if (!hasBoard) return;
 
@@ -210,12 +237,18 @@ test.describe("Hook Cancellation E2E Tests (Slow Hook Board)", () => {
       return;
     }
 
-    const inProgressColumn = await getColumnLocator(authenticatedPage, "In Progress");
+    const inProgressColumn = await getColumnLocator(
+      authenticatedPage,
+      "In Progress",
+    );
     await firstTask.dragTo(inProgressColumn, { force: true });
 
     await authenticatedPage.waitForTimeout(2000);
 
-    const inProgressTasks = await getTasksInColumn(authenticatedPage, "In Progress");
+    const inProgressTasks = await getTasksInColumn(
+      authenticatedPage,
+      "In Progress",
+    );
     const taskCount = await inProgressTasks.count();
     expect(taskCount).toBeGreaterThanOrEqual(1);
   });
@@ -230,7 +263,10 @@ test.describe("Hook Cancellation E2E Tests (Slow Hook Board)", () => {
       timeout: 15000,
     });
 
-    const inProgressColumn = await getColumnLocator(authenticatedPage, "In Progress");
+    const inProgressColumn = await getColumnLocator(
+      authenticatedPage,
+      "In Progress",
+    );
     const firstTask = inProgressColumn.locator("[data-task-id]").first();
     const hasTask = await firstTask.isVisible().catch(() => false);
 
@@ -269,12 +305,18 @@ test.describe("Hook Cancellation E2E Tests (Slow Hook Board)", () => {
       return;
     }
 
-    const inProgressColumn = await getColumnLocator(authenticatedPage, "In Progress");
+    const inProgressColumn = await getColumnLocator(
+      authenticatedPage,
+      "In Progress",
+    );
     await taskWithTitle.dragTo(inProgressColumn, { force: true });
 
     await authenticatedPage.waitForTimeout(500);
 
-    const inProgressTasks = await getTasksInColumn(authenticatedPage, "In Progress");
+    const inProgressTasks = await getTasksInColumn(
+      authenticatedPage,
+      "In Progress",
+    );
     const movedTask = inProgressTasks.first();
 
     if (await movedTask.isVisible().catch(() => false)) {
@@ -282,7 +324,9 @@ test.describe("Hook Cancellation E2E Tests (Slow Hook Board)", () => {
 
       await authenticatedPage.waitForTimeout(1000);
 
-      const stopButton = authenticatedPage.locator("button[title='Stop executor']");
+      const stopButton = authenticatedPage.locator(
+        "button[title='Stop executor']",
+      );
       const hasStopButton = await stopButton
         .isVisible({ timeout: 5000 })
         .catch(() => false);

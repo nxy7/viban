@@ -2,7 +2,8 @@ import { type JSX, splitProps } from "solid-js";
 
 type CheckboxSize = "sm" | "md" | "lg";
 
-interface CheckboxProps extends Omit<JSX.InputHTMLAttributes<HTMLInputElement>, "class" | "type"> {
+interface CheckboxProps
+  extends Omit<JSX.InputHTMLAttributes<HTMLInputElement>, "class" | "type"> {
   checkboxSize?: CheckboxSize;
 }
 
@@ -17,15 +18,10 @@ export default function Checkbox(props: CheckboxProps) {
 
   const size = local.checkboxSize ?? "md";
 
-  const baseClasses = "text-brand-600 bg-gray-700 border-gray-600 rounded focus:ring-brand-500 focus:ring-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
+  const baseClasses =
+    "text-brand-600 bg-gray-700 border-gray-600 rounded focus:ring-brand-500 focus:ring-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
 
   const classes = [baseClasses, sizeClasses[size]].join(" ");
 
-  return (
-    <input
-      {...rest}
-      type="checkbox"
-      class={classes}
-    />
-  );
+  return <input {...rest} type="checkbox" class={classes} />;
 }

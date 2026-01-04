@@ -63,7 +63,10 @@ export const DisabledChecked: Story = {
   },
 };
 
-function InteractiveCheckbox(props: { label: string; checkboxSize?: "sm" | "md" | "lg" }) {
+function InteractiveCheckbox(props: {
+  label: string;
+  checkboxSize?: "sm" | "md" | "lg";
+}) {
   const [checked, setChecked] = createSignal(false);
   return (
     <label class="flex items-center gap-2 text-white cursor-pointer">

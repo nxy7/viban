@@ -20,9 +20,7 @@ export default function Chip(props: ChipProps) {
   const variant = props.variant ?? "gray";
 
   return (
-    <span
-      class={`text-xs px-1.5 py-0.5 rounded ${variantClasses[variant]}`}
-    >
+    <span class={`text-xs px-1.5 py-0.5 rounded ${variantClasses[variant]}`}>
       {props.children}
     </span>
   );

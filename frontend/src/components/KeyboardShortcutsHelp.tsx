@@ -20,9 +20,7 @@ export default function KeyboardShortcutsHelp(
     >
       <Show
         when={shortcuts().length > 0}
-        fallback={
-          <p class="text-gray-500 text-sm">No shortcuts available</p>
-        }
+        fallback={<p class="text-gray-500 text-sm">No shortcuts available</p>}
       >
         <div class="space-y-2">
           <For each={shortcuts()}>

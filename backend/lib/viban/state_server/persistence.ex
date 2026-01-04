@@ -83,7 +83,8 @@ defmodule Viban.StateServer.Persistence do
           {:ok, record} ->
             ActorState.update_status(record, %{status: status, message: message})
 
-          {:error, error} when is_struct(error, Ash.Error.Invalid) or is_struct(error, Ash.Error.Query.NotFound) ->
+          {:error, error}
+          when is_struct(error, Ash.Error.Invalid) or is_struct(error, Ash.Error.Query.NotFound) ->
             ActorState.upsert(%{
               actor_type: actor_type,
               actor_id: actor_id,

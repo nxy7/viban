@@ -3,7 +3,8 @@ import { type JSX, splitProps } from "solid-js";
 type SelectVariant = "default" | "dark" | "minimal";
 type SelectSize = "sm" | "md" | "lg";
 
-interface SelectProps extends Omit<JSX.SelectHTMLAttributes<HTMLSelectElement>, "class"> {
+interface SelectProps
+  extends Omit<JSX.SelectHTMLAttributes<HTMLSelectElement>, "class"> {
   variant?: SelectVariant;
   selectSize?: SelectSize;
   fullWidth?: boolean;
@@ -32,14 +33,17 @@ export default function Select(props: SelectProps) {
   const variant = local.variant ?? "default";
   const size = local.selectSize ?? "md";
 
-  const baseClasses = "border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
+  const baseClasses =
+    "border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
 
   const classes = [
     baseClasses,
     variantClasses[variant],
     sizeClasses[size],
     local.fullWidth ? "w-full" : "",
-  ].filter(Boolean).join(" ");
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <select {...rest} class={classes}>

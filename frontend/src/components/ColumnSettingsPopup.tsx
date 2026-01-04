@@ -27,7 +27,13 @@ import {
   useColumnHooks,
 } from "~/hooks/useKanban";
 import { getDefaultSound, type SoundType } from "~/lib/sounds";
-import { Button, Chip, Input, Select, Textarea } from "~/components/design-system";
+import {
+  Button,
+  Chip,
+  Input,
+  Select,
+  Textarea,
+} from "~/components/design-system";
 import HookSoundSettings from "./HookSoundSettings";
 import ErrorBanner, { InfoBanner } from "./ui/ErrorBanner";
 import {

@@ -246,8 +246,11 @@ defmodule Viban.Kanban.Servers.TaskServer do
     case TaskSupervisor.get_hook_executor(task_id) do
       {:ok, pid} ->
         case HookExecutionServer.cancel_current(pid) do
-          :ok -> :ok
-          {:error, reason} -> Logger.warning("Failed to cancel HookExecutionServer: #{inspect(reason)}")
+          :ok ->
+            :ok
+
+          {:error, reason} ->
+            Logger.warning("Failed to cancel HookExecutionServer: #{inspect(reason)}")
         end
 
       {:error, :not_found} ->
@@ -259,8 +262,11 @@ defmodule Viban.Kanban.Servers.TaskServer do
     case TaskSupervisor.get_hook_executor(task_id) do
       {:ok, pid} ->
         case HookExecutionServer.stop(pid) do
-          :ok -> :ok
-          {:error, reason} -> Logger.warning("Failed to stop HookExecutionServer: #{inspect(reason)}")
+          :ok ->
+            :ok
+
+          {:error, reason} ->
+            Logger.warning("Failed to stop HookExecutionServer: #{inspect(reason)}")
         end
 
       {:error, :not_found} ->
@@ -558,7 +564,9 @@ defmodule Viban.Kanban.Servers.TaskServer do
           WorktreeManager.remove_worktree(
             state.task_id,
             state.worktree_path,
-            state.worktree_branch, add_activity: false)
+            state.worktree_branch,
+            add_activity: false
+          )
         end
     end
   end

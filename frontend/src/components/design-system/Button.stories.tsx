@@ -58,8 +58,18 @@ export const Icon: Story = {
   args: {
     variant: "icon",
     children: (
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+      <svg
+        class="w-5 h-5"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M12 4v16m8-8H4"
+        />
       </svg>
     ),
   },
@@ -123,8 +133,18 @@ export const AllVariants: Story = {
         <Button variant="danger">Danger</Button>
         <Button variant="ghost">Ghost</Button>
         <Button variant="icon">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          <svg
+            class="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 4v16m8-8H4"
+            />
           </svg>
         </Button>
       </div>
@@ -152,13 +172,21 @@ export const AllStates: Story = {
       </div>
       <div class="flex gap-4 items-center">
         <Button variant="secondary">Normal</Button>
-        <Button variant="secondary" disabled>Disabled</Button>
-        <Button variant="secondary" loading>Loading</Button>
+        <Button variant="secondary" disabled>
+          Disabled
+        </Button>
+        <Button variant="secondary" loading>
+          Loading
+        </Button>
       </div>
       <div class="flex gap-4 items-center">
         <Button variant="danger">Normal</Button>
-        <Button variant="danger" disabled>Disabled</Button>
-        <Button variant="danger" loading>Loading</Button>
+        <Button variant="danger" disabled>
+          Disabled
+        </Button>
+        <Button variant="danger" loading>
+          Loading
+        </Button>
       </div>
     </div>
   ),

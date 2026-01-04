@@ -157,7 +157,6 @@ export interface TaskStatus {
   sessions: ExecutorSession[];
 }
 
-
 export type TaskChannelHandlers = Record<string, never>;
 
 // ============================================================================
@@ -196,7 +195,6 @@ export interface ListExecutorsResponse {
 export interface GetHistoryResponse {
   sessions: ExecutorSession[];
 }
-
 
 export interface StopExecutorResponse {
   status: string;
@@ -483,7 +481,6 @@ class SocketManager {
       { showErrorNotification: false },
     );
   }
-
 
   /** Creates a git worktree for a task. */
   async createWorktree(taskId: string): Promise<CreateWorktreeResponse> {
