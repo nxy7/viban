@@ -1,9 +1,9 @@
 import { createEffect, createSignal, on, Show } from "solid-js";
-import * as sdk from "~/lib/generated/ash";
 import { Button, Input } from "~/components/design-system";
 import ErrorBanner from "~/components/ui/ErrorBanner";
 import { ChevronRightIcon, ExternalLinkIcon } from "~/components/ui/Icons";
 import { type Repository, unwrap, useRepositories } from "~/hooks/useKanban";
+import * as sdk from "~/lib/generated/ash";
 
 interface RepositoryConfigProps {
   boardId: string;
@@ -248,7 +248,7 @@ export default function RepositoryConfig(props: RepositoryConfigProps) {
     setError(null);
 
     const repo = repository();
-    let result;
+    let result: unknown;
     if (repo) {
       result = await sdk
         .update_repository({

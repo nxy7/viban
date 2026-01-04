@@ -10,7 +10,7 @@ defmodule Viban.Kanban.Actors.KanbanHookBehaviorTest do
   use Viban.DataCase, async: false
 
   alias Viban.Kanban.{Board, Column, Task, Hook, ColumnHook}
-  alias Viban.Kanban.Actors.BoardActor
+  alias Viban.Kanban.Actors.BoardSupervisor
   alias Viban.Kanban.Actors.CommandQueue
 
   # Integration tests require the full actor system to be running.
@@ -19,6 +19,85 @@ defmodule Viban.Kanban.Actors.KanbanHookBehaviorTest do
 
   # Timeout for async operations (hooks, moves, etc.)
   @async_timeout 2000
+
+  # ============================================================================
+  # Shared Test Helpers
+  # ============================================================================
+
+  defp create_board_with_columns do
+    {:ok, user} = create_test_user()
+    {:ok, board} = Board.create(%{name: "Test Board", user_id: user.id})
+
+    {:ok, columns} = Column.read()
+    board_columns = Enum.filter(columns, &(&1.board_id == board.id))
+
+    todo_column = Enum.find(board_columns, &(&1.name == "TODO"))
+    in_progress_column = Enum.find(board_columns, &(&1.name == "In Progress"))
+    to_review_column = Enum.find(board_columns, &(&1.name == "To Review"))
+
+    clear_default_column_hooks(board_columns)
+
+    %{
+      board: board,
+      user: user,
+      todo_column: todo_column,
+      in_progress_column: in_progress_column,
+      to_review_column: to_review_column
+    }
+  end
+
+  defp clear_default_column_hooks(columns) do
+    import Ecto.Query
+
+    column_ids = Enum.map(columns, & &1.id)
+
+    from(ch in ColumnHook, where: ch.column_id in ^column_ids)
+    |> Viban.Repo.delete_all()
+  end
+
+  defp wait_for_task_server(task_id, timeout \\ 5000) do
+    registry = Viban.Kanban.ActorRegistry
+
+    wait_until(timeout, fn ->
+      case Registry.lookup(registry, {:task_server, task_id}) do
+        [{_pid, _}] -> true
+        [] -> false
+      end
+    end)
+  end
+
+  defp wait_until(timeout, fun) when timeout > 0 do
+    if fun.() do
+      :ok
+    else
+      Process.sleep(50)
+      wait_until(timeout - 50, fun)
+    end
+  end
+
+  defp wait_until(_timeout, _fun), do: :timeout
+
+  defp create_temp_worktree do
+    path =
+      Path.join(System.tmp_dir!(), "viban_test_worktree_#{System.unique_integer([:positive])}")
+
+    File.mkdir_p!(path)
+    path
+  end
+
+  defp create_task_with_worktree(attrs) do
+    worktree = create_temp_worktree()
+    {:ok, task} = Task.create(attrs)
+
+    {:ok, task} =
+      Task.assign_worktree(task, %{worktree_path: worktree, worktree_branch: "test-branch"})
+
+    {task, worktree}
+  end
+
+  # ============================================================================
+  # Tests
+  # ============================================================================
 
   describe "CommandQueue module" do
     test "new queue is empty and not executing" do
@@ -110,22 +189,7 @@ defmodule Viban.Kanban.Actors.KanbanHookBehaviorTest do
     @describetag :integration
 
     setup do
-      {:ok, user} = create_test_user()
-      {:ok, board} = Board.create(%{name: "Test Board", user_id: user.id})
-
-      {:ok, columns} = Column.read()
-      board_columns = Enum.filter(columns, &(&1.board_id == board.id))
-      todo_column = Enum.find(board_columns, &(&1.name == "TODO"))
-      in_progress_column = Enum.find(board_columns, &(&1.name == "In Progress"))
-      to_review_column = Enum.find(board_columns, &(&1.name == "To Review"))
-
-      %{
-        board: board,
-        todo_column: todo_column,
-        in_progress_column: in_progress_column,
-        to_review_column: to_review_column,
-        user: user
-      }
+      create_board_with_columns()
     end
 
     test "hook runs when task enters column", %{
@@ -144,36 +208,54 @@ defmodule Viban.Kanban.Actors.KanbanHookBehaviorTest do
         })
 
       # Attach hook to In Progress column
-      {:ok, _column_hook} =
+      {:ok, column_hook} =
         ColumnHook.create(%{
           column_id: in_progress_column.id,
           hook_id: hook.id,
           position: 0
         })
 
-      # Create task in TODO
-      {:ok, task} =
-        Task.create(%{
+      # Verify hook is attached
+      {:ok, all_hooks} = ColumnHook.read()
+      ip_hooks = Enum.filter(all_hooks, &(&1.column_id == in_progress_column.id))
+      assert length(ip_hooks) == 1, "Expected 1 hook on In Progress, got #{length(ip_hooks)}"
+      assert hd(ip_hooks).id == column_hook.id
+
+      # Create task in TODO with a worktree (required for script execution)
+      {task, worktree} =
+        create_task_with_worktree(%{
           title: "Test Task",
           column_id: todo_column.id
         })
 
-      # Start board actor to manage task actors
-      start_supervised!({BoardActor, board.id})
-      Process.sleep(200)
+      # Start board supervisor to manage task actors
+      start_supervised!({BoardSupervisor, board.id})
+
+      # Wait for TaskServer to be registered
+      result = wait_for_task_server(task.id)
+      assert result == :ok, "TaskServer not registered within timeout"
 
       # Move task to In Progress
-      {:ok, moved_task} = Task.move(task, %{column_id: in_progress_column.id})
-      BoardActor.notify_task_updated(board.id, moved_task)
+      {:ok, _moved_task} = Task.move(task, %{column_id: in_progress_column.id})
+
+      # Wait a bit for the move notification to be processed
+      Process.sleep(500)
+
+      # Check if hook executions were created
+      alias Viban.Kanban.HookExecution
+      {:ok, all_executions} = HookExecution.history_for_task(task.id)
+      assert length(all_executions) > 0, "No hook executions created for task"
 
       # Wait for hook to execute
       Process.sleep(@async_timeout)
 
       # Verify marker file was created
-      assert File.exists?(marker_file)
+      assert File.exists?(marker_file),
+             "Hook did not execute - marker file not found at #{marker_file}"
 
       # Cleanup
       File.rm(marker_file)
+      File.rm_rf(worktree)
     end
 
     test "hooks execute in position order", %{
@@ -228,20 +310,19 @@ defmodule Viban.Kanban.Actors.KanbanHookBehaviorTest do
           position: 2
         })
 
-      # Create task in TODO
-      {:ok, task} =
-        Task.create(%{
+      # Create task in TODO with a worktree
+      {task, worktree} =
+        create_task_with_worktree(%{
           title: "Test Task",
           column_id: todo_column.id
         })
 
-      # Start board actor
-      start_supervised!({BoardActor, board.id})
-      Process.sleep(200)
+      # Start board supervisor
+      start_supervised!({BoardSupervisor, board.id})
+      wait_for_task_server(task.id)
 
       # Move task to In Progress
-      {:ok, moved_task} = Task.move(task, %{column_id: in_progress_column.id})
-      BoardActor.notify_task_updated(board.id, moved_task)
+      {:ok, _moved_task} = Task.move(task, %{column_id: in_progress_column.id})
 
       # Wait for all hooks to execute
       Process.sleep(@async_timeout * 2)
@@ -255,6 +336,7 @@ defmodule Viban.Kanban.Actors.KanbanHookBehaviorTest do
 
       # Cleanup
       File.rm(marker_file)
+      File.rm_rf(worktree)
     end
   end
 
@@ -262,20 +344,7 @@ defmodule Viban.Kanban.Actors.KanbanHookBehaviorTest do
     @describetag :integration
 
     setup do
-      {:ok, user} = create_test_user()
-      {:ok, board} = Board.create(%{name: "Test Board", user_id: user.id})
-
-      {:ok, columns} = Column.read()
-      board_columns = Enum.filter(columns, &(&1.board_id == board.id))
-      todo_column = Enum.find(board_columns, &(&1.name == "TODO"))
-      in_progress_column = Enum.find(board_columns, &(&1.name == "In Progress"))
-
-      %{
-        board: board,
-        todo_column: todo_column,
-        in_progress_column: in_progress_column,
-        user: user
-      }
+      create_board_with_columns()
     end
 
     test "execute_once=true hook only runs once per task", %{
@@ -304,20 +373,19 @@ defmodule Viban.Kanban.Actors.KanbanHookBehaviorTest do
           execute_once: true
         })
 
-      # Create task in TODO
-      {:ok, task} =
-        Task.create(%{
+      # Create task in TODO with a worktree
+      {task, worktree} =
+        create_task_with_worktree(%{
           title: "Test Task",
           column_id: todo_column.id
         })
 
-      # Start board actor
-      start_supervised!({BoardActor, board.id})
-      Process.sleep(200)
+      # Start board supervisor
+      start_supervised!({BoardSupervisor, board.id})
+      wait_for_task_server(task.id)
 
       # First move to In Progress - hook should run
       {:ok, moved1} = Task.move(task, %{column_id: in_progress_column.id})
-      BoardActor.notify_task_updated(board.id, moved1)
       Process.sleep(@async_timeout)
 
       # Check counter
@@ -325,12 +393,10 @@ defmodule Viban.Kanban.Actors.KanbanHookBehaviorTest do
 
       # Move back to TODO
       {:ok, moved2} = Task.move(moved1, %{column_id: todo_column.id})
-      BoardActor.notify_task_updated(board.id, moved2)
       Process.sleep(500)
 
       # Move to In Progress again - hook should NOT run
-      {:ok, moved3} = Task.move(moved2, %{column_id: in_progress_column.id})
-      BoardActor.notify_task_updated(board.id, moved3)
+      {:ok, _moved3} = Task.move(moved2, %{column_id: in_progress_column.id})
       Process.sleep(@async_timeout)
 
       # Counter should still be 1
@@ -338,6 +404,7 @@ defmodule Viban.Kanban.Actors.KanbanHookBehaviorTest do
 
       # Cleanup
       File.rm(counter_file)
+      File.rm_rf(worktree)
     end
 
     test "execute_once=false hook runs every time task enters column", %{
@@ -365,32 +432,29 @@ defmodule Viban.Kanban.Actors.KanbanHookBehaviorTest do
           execute_once: false
         })
 
-      # Create task in TODO
-      {:ok, task} =
-        Task.create(%{
+      # Create task in TODO with a worktree
+      {task, worktree} =
+        create_task_with_worktree(%{
           title: "Test Task",
           column_id: todo_column.id
         })
 
-      # Start board actor
-      start_supervised!({BoardActor, board.id})
-      Process.sleep(200)
+      # Start board supervisor
+      start_supervised!({BoardSupervisor, board.id})
+      wait_for_task_server(task.id)
 
       # First move to In Progress
       {:ok, moved1} = Task.move(task, %{column_id: in_progress_column.id})
-      BoardActor.notify_task_updated(board.id, moved1)
       Process.sleep(@async_timeout)
 
       assert String.trim(File.read!(counter_file)) == "1"
 
       # Move back to TODO
       {:ok, moved2} = Task.move(moved1, %{column_id: todo_column.id})
-      BoardActor.notify_task_updated(board.id, moved2)
       Process.sleep(500)
 
       # Move to In Progress again - hook SHOULD run again
-      {:ok, moved3} = Task.move(moved2, %{column_id: in_progress_column.id})
-      BoardActor.notify_task_updated(board.id, moved3)
+      {:ok, _moved3} = Task.move(moved2, %{column_id: in_progress_column.id})
       Process.sleep(@async_timeout)
 
       # Counter should now be 2
@@ -398,6 +462,7 @@ defmodule Viban.Kanban.Actors.KanbanHookBehaviorTest do
 
       # Cleanup
       File.rm(counter_file)
+      File.rm_rf(worktree)
     end
   end
 
@@ -405,22 +470,7 @@ defmodule Viban.Kanban.Actors.KanbanHookBehaviorTest do
     @describetag :integration
 
     setup do
-      {:ok, user} = create_test_user()
-      {:ok, board} = Board.create(%{name: "Test Board", user_id: user.id})
-
-      {:ok, columns} = Column.read()
-      board_columns = Enum.filter(columns, &(&1.board_id == board.id))
-      todo_column = Enum.find(board_columns, &(&1.name == "TODO"))
-      in_progress_column = Enum.find(board_columns, &(&1.name == "In Progress"))
-      to_review_column = Enum.find(board_columns, &(&1.name == "To Review"))
-
-      %{
-        board: board,
-        todo_column: todo_column,
-        in_progress_column: in_progress_column,
-        to_review_column: to_review_column,
-        user: user
-      }
+      create_board_with_columns()
     end
 
     test "moving task clears remaining hook queue", %{
@@ -462,27 +512,25 @@ defmodule Viban.Kanban.Actors.KanbanHookBehaviorTest do
           position: 1
         })
 
-      # Create task in TODO
-      {:ok, task} =
-        Task.create(%{
+      # Create task in TODO with a worktree
+      {task, worktree} =
+        create_task_with_worktree(%{
           title: "Test Task",
           column_id: todo_column.id
         })
 
-      # Start board actor
-      start_supervised!({BoardActor, board.id})
-      Process.sleep(200)
+      # Start board supervisor
+      start_supervised!({BoardSupervisor, board.id})
+      wait_for_task_server(task.id)
 
       # Move task to In Progress (starts slow hook)
       {:ok, moved1} = Task.move(task, %{column_id: in_progress_column.id})
-      BoardActor.notify_task_updated(board.id, moved1)
 
       # Wait just a bit for the slow hook to start
       Process.sleep(500)
 
       # Move task to To Review BEFORE slow hook completes (short-circuit)
-      {:ok, moved2} = Task.move(moved1, %{column_id: to_review_column.id})
-      BoardActor.notify_task_updated(board.id, moved2)
+      {:ok, _moved2} = Task.move(moved1, %{column_id: to_review_column.id})
 
       # Wait for what would have been the slow hook completion
       Process.sleep(4000)
@@ -495,6 +543,9 @@ defmodule Viban.Kanban.Actors.KanbanHookBehaviorTest do
         refute String.contains?(content, "fast")
         File.rm(marker_file)
       end
+
+      # Cleanup
+      File.rm_rf(worktree)
     end
   end
 
@@ -502,20 +553,7 @@ defmodule Viban.Kanban.Actors.KanbanHookBehaviorTest do
     @describetag :integration
 
     setup do
-      {:ok, user} = create_test_user()
-      {:ok, board} = Board.create(%{name: "Test Board", user_id: user.id})
-
-      {:ok, columns} = Column.read()
-      board_columns = Enum.filter(columns, &(&1.board_id == board.id))
-      todo_column = Enum.find(board_columns, &(&1.name == "TODO"))
-      in_progress_column = Enum.find(board_columns, &(&1.name == "In Progress"))
-
-      %{
-        board: board,
-        todo_column: todo_column,
-        in_progress_column: in_progress_column,
-        user: user
-      }
+      create_board_with_columns()
     end
 
     test "task is set to error state when hook fails", %{
@@ -539,20 +577,19 @@ defmodule Viban.Kanban.Actors.KanbanHookBehaviorTest do
           position: 0
         })
 
-      # Create task in TODO
-      {:ok, task} =
-        Task.create(%{
+      # Create task in TODO with a worktree
+      {task, worktree} =
+        create_task_with_worktree(%{
           title: "Test Task",
           column_id: todo_column.id
         })
 
-      # Start board actor
-      start_supervised!({BoardActor, board.id})
-      Process.sleep(200)
+      # Start board supervisor
+      start_supervised!({BoardSupervisor, board.id})
+      wait_for_task_server(task.id)
 
       # Move task to In Progress (will trigger failing hook)
-      {:ok, moved_task} = Task.move(task, %{column_id: in_progress_column.id})
-      BoardActor.notify_task_updated(board.id, moved_task)
+      {:ok, _moved_task} = Task.move(task, %{column_id: in_progress_column.id})
 
       # Wait for hook to execute and fail
       Process.sleep(@async_timeout)
@@ -563,6 +600,9 @@ defmodule Viban.Kanban.Actors.KanbanHookBehaviorTest do
       assert updated_task.agent_status == :error
       assert updated_task.error_message != nil
       assert String.contains?(updated_task.error_message, "Failing Hook")
+
+      # Cleanup
+      File.rm_rf(worktree)
     end
 
     test "subsequent hooks do not run after a hook fails", %{
@@ -602,26 +642,28 @@ defmodule Viban.Kanban.Actors.KanbanHookBehaviorTest do
           position: 1
         })
 
-      # Create task in TODO
-      {:ok, task} =
-        Task.create(%{
+      # Create task in TODO with a worktree
+      {task, worktree} =
+        create_task_with_worktree(%{
           title: "Test Task",
           column_id: todo_column.id
         })
 
-      # Start board actor
-      start_supervised!({BoardActor, board.id})
-      Process.sleep(200)
+      # Start board supervisor
+      start_supervised!({BoardSupervisor, board.id})
+      wait_for_task_server(task.id)
 
       # Move task to In Progress
-      {:ok, moved_task} = Task.move(task, %{column_id: in_progress_column.id})
-      BoardActor.notify_task_updated(board.id, moved_task)
+      {:ok, _moved_task} = Task.move(task, %{column_id: in_progress_column.id})
 
       # Wait for hooks to process
       Process.sleep(@async_timeout)
 
       # Success hook should NOT have run because first hook failed
       refute File.exists?(marker_file)
+
+      # Cleanup
+      File.rm_rf(worktree)
     end
   end
 

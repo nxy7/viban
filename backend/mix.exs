@@ -103,8 +103,8 @@ defmodule Viban.MixProject do
       {:phoenix_sync, "== 0.6.0"},
 
       # Ash Sync (Electric integration for Ash read queries)
-      # {:ash_sync, github: "nxy7/ash_sync"},
-      {:ash_sync, path: "/Users/dawiddanieluk/ash_sync"},
+      {:ash_sync, github: "nxy7/ash_sync"},
+      # {:ash_sync, path: "/Users/dawiddanieluk/ash_sync"},
 
       # Utilities
       {:cors_plug, "~> 3.0"},

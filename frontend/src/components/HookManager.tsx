@@ -1,12 +1,4 @@
 import { createMemo, createResource, createSignal, For, Show } from "solid-js";
-import * as sdk from "~/lib/generated/ash";
-import {
-  type AgentExecutor,
-  type CombinedHook,
-  fetchAllHooks,
-  type HookKind,
-  unwrap,
-} from "~/hooks/useKanban";
 import {
   Button,
   Checkbox,
@@ -14,6 +6,14 @@ import {
   Select,
   Textarea,
 } from "~/components/design-system";
+import {
+  type AgentExecutor,
+  type CombinedHook,
+  fetchAllHooks,
+  type HookKind,
+  unwrap,
+} from "~/hooks/useKanban";
+import * as sdk from "~/lib/generated/ash";
 import ErrorBanner from "./ui/ErrorBanner";
 import {
   EditIcon,
@@ -126,7 +126,7 @@ export default function HookManager(props: HookManagerProps) {
     setIsSaving(true);
     setError(null);
 
-    let result;
+    let result: unknown;
     if (isCreating()) {
       if (hookKind() === "script") {
         result = await sdk
