@@ -1,3 +1,4 @@
+import { useLocation } from "@solidjs/router";
 import { useLiveQuery } from "@tanstack/solid-db";
 import {
   type CollisionDetector,
@@ -26,6 +27,7 @@ import {
   SearchIcon,
   SettingsIcon,
 } from "~/components/ui/Icons";
+import { Input } from "~/components/design-system";
 import { fuzzyMatch } from "~/lib/fuzzySearch";
 import * as sdk from "~/lib/generated/ash";
 import { TaskRelationProvider } from "~/lib/TaskRelationContext";
@@ -38,10 +40,12 @@ import {
   useBoard,
   useColumns,
 } from "~/lib/useKanban";
+import { useShortcut } from "~/lib/useKeyboardShortcuts";
 import BoardSettings from "./BoardSettings";
 import ColumnSettingsPopup from "./ColumnSettingsPopup";
 import CreateTaskModal from "./CreateTaskModal";
 import KanbanColumn from "./KanbanColumn";
+import KeyboardShortcutsHelp from "./KeyboardShortcutsHelp";
 import { TaskCardOverlay } from "./TaskCard";
 
 /** Valid settings tabs */
@@ -229,6 +233,10 @@ interface KanbanBoardProps {
   onCloseSettings?: () => void;
   /** Called when settings tab is changed */
   onChangeSettingsTab?: (tab: SettingsTab) => void;
+  /** Currently selected task ID (for arrow key navigation) */
+  selectedTaskId?: string | null;
+  /** Called to navigate to a different task */
+  onNavigateToTask?: (task: Task) => void;
 }
 
 /** Skeleton placeholder for loading state - shows 3 column placeholders */
@@ -384,6 +392,29 @@ export default function KanbanBoard(props: KanbanBoardProps) {
   });
 
   const [filterText, setFilterText] = createSignal("");
+  const [showShortcutsHelp, setShowShortcutsHelp] = createSignal(false);
+  let searchInputRef: HTMLInputElement | undefined;
+
+  const location = useLocation();
+  const isTaskPanelOpen = () => !!props.selectedTaskId;
+  const isSettingsOpen = () => props.settingsTab != null;
+  const isBoardView = () => /^\/board\/[^/]+$/.test(location.pathname);
+
+  useShortcut(["Shift", "?"], () => setShowShortcutsHelp(true), {
+    description: "Show keyboard shortcuts",
+  });
+  useShortcut(["n"], () => openCreateModal(), {
+    description: "Create new task",
+    enabled: isBoardView,
+  });
+  useShortcut(["/"], () => searchInputRef?.focus(), {
+    description: "Focus search",
+    enabled: isBoardView,
+  });
+  useShortcut([","], () => props.onOpenSettings?.(), {
+    description: "Open settings",
+    enabled: isBoardView,
+  });
 
   const filteredTasks = createMemo(() => {
     const query = filterText().trim();
@@ -397,7 +428,40 @@ export default function KanbanBoard(props: KanbanBoardProps) {
     });
   });
 
-  const isSettingsOpen = () => props.settingsTab != null;
+  const orderedFilteredTasks = createMemo(() => {
+    const cols = columns();
+    const tasks = filteredTasks();
+    const result: Task[] = [];
+    for (const col of cols) {
+      const colTasks = tasks
+        .filter((t) => t.column_id === col.id)
+        .sort((a, b) => Number(a.position) - Number(b.position));
+      result.push(...colTasks);
+    }
+    return result;
+  });
+
+  const navigateTask = (direction: "prev" | "next") => {
+    if (!props.selectedTaskId || !props.onNavigateToTask) return;
+    const tasks = orderedFilteredTasks();
+    const currentIndex = tasks.findIndex((t) => t.id === props.selectedTaskId);
+    if (currentIndex === -1) return;
+
+    const newIndex =
+      direction === "next"
+        ? (currentIndex + 1) % tasks.length
+        : (currentIndex - 1 + tasks.length) % tasks.length;
+    props.onNavigateToTask(tasks[newIndex]);
+  };
+
+  useShortcut(["ArrowRight"], () => navigateTask("next"), {
+    description: "Next task",
+    enabled: isTaskPanelOpen,
+  });
+  useShortcut(["ArrowLeft"], () => navigateTask("prev"), {
+    description: "Previous task",
+    enabled: isTaskPanelOpen,
+  });
 
   const todoColumn = () =>
     columns().find((c) => c.name.toUpperCase() === "TODO");
@@ -733,12 +797,15 @@ export default function KanbanBoard(props: KanbanBoardProps) {
             <div class="flex-1 max-w-md">
               <div class="relative">
                 <SearchIcon class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                <input
+                <Input
+                  ref={searchInputRef}
                   type="text"
                   placeholder="Filter tasks..."
                   value={filterText()}
                   onInput={(e) => setFilterText(e.currentTarget.value)}
-                  class="w-full pl-9 pr-8 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors"
+                  variant="search"
+                  inputSize="sm"
+                  hasIcon
                 />
                 <Show when={filterText()}>
                   <button
@@ -861,6 +928,12 @@ export default function KanbanBoard(props: KanbanBoardProps) {
           />
         )}
       </Show>
+
+      {/* Keyboard Shortcuts Help Modal */}
+      <KeyboardShortcutsHelp
+        isOpen={showShortcutsHelp()}
+        onClose={() => setShowShortcutsHelp(false)}
+      />
     </div>
   );
 }

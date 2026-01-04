@@ -4,6 +4,7 @@ import { FileRoutes } from "@solidjs/start/router";
 import { Suspense } from "solid-js";
 import NotificationContainer from "./components/ui/NotificationContainer";
 import { AuthProvider } from "./lib/useAuth";
+import { EscapeStackProvider } from "./lib/useEscapeStack";
 import "./app.css";
 
 export default function App() {
@@ -12,10 +13,12 @@ export default function App() {
       root={(props) => (
         <MetaProvider>
           <Title>Viban</Title>
-          <AuthProvider>
-            <Suspense>{props.children}</Suspense>
-            <NotificationContainer />
-          </AuthProvider>
+          <EscapeStackProvider>
+            <AuthProvider>
+              <Suspense>{props.children}</Suspense>
+              <NotificationContainer />
+            </AuthProvider>
+          </EscapeStackProvider>
         </MetaProvider>
       )}
     >

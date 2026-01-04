@@ -1,6 +1,7 @@
 import { createEffect, createSignal, on, Show } from "solid-js";
 import * as sdk from "~/lib/generated/ash";
 import { type Column, toDecimal, unwrap } from "~/lib/useKanban";
+import { Input } from "~/components/design-system";
 import ImageTextarea, {
   type InlineImage,
   prepareImagesForApi,
@@ -9,7 +10,8 @@ import ErrorBanner from "./ui/ErrorBanner";
 import { LightningIcon, LoadingSpinner, PlayIcon } from "./ui/Icons";
 import Modal from "./ui/Modal";
 
-const MAX_BRANCH_NAME_LENGTH = 20;
+const MAX_BRANCH_NAME_LENGTH = 200;
+const AUTO_BRANCH_NAME_LENGTH = 25;
 const BRANCH_NAME_PREFIX = "viban-";
 const STORAGE_KEY_TITLE = "create-task-draft-title";
 const STORAGE_KEY_DESCRIPTION = "create-task-draft-description";
@@ -28,14 +30,6 @@ interface CreateTaskModalProps {
   };
 }
 
-/**
- * Generates a git-safe branch name from a task title.
- * - Converts to lowercase
- * - Removes special characters except hyphens
- * - Replaces spaces with hyphens
- * - Prefixes with "viban-"
- * - Truncates to MAX_BRANCH_NAME_LENGTH characters
- */
 function generateDefaultBranchName(taskTitle: string): string {
   const sanitized = taskTitle
     .toLowerCase()
@@ -43,7 +37,7 @@ function generateDefaultBranchName(taskTitle: string): string {
     .trim()
     .replace(/\s+/g, "-");
 
-  return (BRANCH_NAME_PREFIX + sanitized).slice(0, MAX_BRANCH_NAME_LENGTH);
+  return (BRANCH_NAME_PREFIX + sanitized).slice(0, AUTO_BRANCH_NAME_LENGTH);
 }
 
 export default function CreateTaskModal(props: CreateTaskModalProps) {
@@ -232,14 +226,13 @@ export default function CreateTaskModal(props: CreateTaskModalProps) {
           >
             Title *
           </label>
-          <input
+          <Input
             ref={titleInputRef}
             id="title"
             type="text"
             value={title()}
             onInput={(e) => setTitle(e.currentTarget.value)}
             placeholder="Enter task title..."
-            class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
           />
         </div>
 
@@ -290,16 +283,18 @@ export default function CreateTaskModal(props: CreateTaskModalProps) {
           >
             Worktree Name
           </label>
-          <input
+          <Input
             id="branchName"
             type="text"
             value={customBranchName()}
             onInput={(e) => {
-              setCustomBranchName(e.currentTarget.value);
-              setBranchNameManuallyEdited(true);
+              const value = e.currentTarget.value;
+              setCustomBranchName(value);
+              setBranchNameManuallyEdited(value.length > 0);
             }}
+            maxLength={MAX_BRANCH_NAME_LENGTH}
             placeholder="Auto-generated from title..."
-            class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white font-mono placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+            variant="mono"
           />
           <p class="text-xs text-gray-500 mt-1">
             Git branch and worktree folder name. Auto-generated from title if

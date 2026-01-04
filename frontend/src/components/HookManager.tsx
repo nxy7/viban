@@ -7,6 +7,7 @@ import {
   type HookKind,
   unwrap,
 } from "~/lib/useKanban";
+import { Input, Textarea } from "~/components/design-system";
 import ErrorBanner from "./ui/ErrorBanner";
 import {
   EditIcon,
@@ -247,7 +248,7 @@ export default function HookManager(props: HookManagerProps) {
           {/* Name */}
           <div>
             <label class="block text-sm text-gray-400 mb-1">Name</label>
-            <input
+            <Input
               type="text"
               value={name()}
               onInput={(e) => setName(e.currentTarget.value)}
@@ -256,7 +257,7 @@ export default function HookManager(props: HookManagerProps) {
                   ? "e.g., Run Tests"
                   : "e.g., Create PR on Review"
               }
-              class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              variant="dark"
             />
           </div>
 
@@ -264,12 +265,13 @@ export default function HookManager(props: HookManagerProps) {
           <Show when={hookKind() === "script"}>
             <div>
               <label class="block text-sm text-gray-400 mb-1">Command</label>
-              <textarea
+              <Textarea
                 value={command()}
                 onInput={(e) => setCommand(e.currentTarget.value)}
                 placeholder={`#!/bin/bash\n# Your script here\nnpm run test`}
                 rows={4}
-                class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"
+                variant="dark-mono"
+                resizable={false}
               />
               <p class="text-xs text-gray-500 mt-1">
                 Supports shebangs (#!/bin/bash, #!/usr/bin/env python, etc.)
@@ -283,12 +285,13 @@ export default function HookManager(props: HookManagerProps) {
               <label class="block text-sm text-gray-400 mb-1">
                 Agent Prompt
               </label>
-              <textarea
+              <Textarea
                 value={agentPrompt()}
                 onInput={(e) => setAgentPrompt(e.currentTarget.value)}
                 placeholder="If this task makes any code changes, create a PR and fill in the title and description using the repository PR template."
                 rows={5}
-                class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"
+                variant="dark"
+                resizable={false}
               />
               <p class="text-xs text-gray-500 mt-1">
                 The agent will receive full task context (title, description,

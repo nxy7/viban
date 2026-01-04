@@ -4,6 +4,7 @@ import { createEffect, createMemo, on, onCleanup, onMount } from "solid-js";
 import KanbanBoard from "~/components/KanbanBoard";
 import TaskDetailsPanel from "~/components/TaskDetailsPanel";
 import { SystemProvider } from "~/lib/SystemContext";
+import { ShortcutProvider } from "~/lib/useKeyboardShortcuts";
 import { type Task, tasksCollection, useColumns } from "~/lib/useKanban";
 import {
   initAudio,
@@ -273,21 +274,25 @@ export default function BoardPage() {
 
   return (
     <SystemProvider>
-      <KanbanBoard
-        boardId={boardId()}
-        onTaskClick={openCardDetails}
-        settingsTab={settingsTab()}
-        onOpenSettings={openSettings}
-        onCloseSettings={closeSettings}
-        onChangeSettingsTab={changeSettingsTab}
-      />
+      <ShortcutProvider>
+        <KanbanBoard
+          boardId={boardId()}
+          onTaskClick={openCardDetails}
+          settingsTab={settingsTab()}
+          onOpenSettings={openSettings}
+          onCloseSettings={closeSettings}
+          onChangeSettingsTab={changeSettingsTab}
+          selectedTaskId={cardId()}
+          onNavigateToTask={openCardDetails}
+        />
 
-      <TaskDetailsPanel
-        isOpen={isPanelOpen()}
-        onClose={closeCardDetails}
-        task={selectedTask()}
-        columnName={selectedTaskColumnName()}
-      />
+        <TaskDetailsPanel
+          isOpen={isPanelOpen()}
+          onClose={closeCardDetails}
+          task={selectedTask()}
+          columnName={selectedTaskColumnName()}
+        />
+      </ShortcutProvider>
     </SystemProvider>
   );
 }

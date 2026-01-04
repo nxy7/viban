@@ -19,6 +19,7 @@ import {
   PRIcon,
   TrashIcon,
 } from "~/components/ui/Icons";
+import { Input, Textarea } from "~/components/design-system";
 
 const HIDE_DETAILS_KEY = "viban:hideDetails";
 const FULLSCREEN_KEY = "viban:fullscreen";
@@ -59,6 +60,7 @@ import LLMTodoList from "./LLMTodoList";
 import SubtaskList from "./SubtaskList";
 import ErrorBanner from "./ui/ErrorBanner";
 import SidePanel from "./ui/SidePanel";
+import { useShortcut } from "~/lib/useKeyboardShortcuts";
 
 interface TaskDetailsPanelProps {
   isOpen: boolean;
@@ -228,6 +230,26 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
     setIsFullscreen(newValue);
     setStoredBoolean(FULLSCREEN_KEY, newValue);
   };
+
+  useShortcut(["f"], toggleFullscreen, {
+    description: "Toggle fullscreen",
+    enabled: () => props.isOpen,
+  });
+
+  useShortcut(["Control", "d"], () => setShowDuplicateModal(true), {
+    description: "Duplicate task",
+    enabled: () => props.isOpen,
+  });
+
+  useShortcut(["Control", "h"], toggleHideDetails, {
+    description: "Toggle details",
+    enabled: () => props.isOpen,
+  });
+
+  useShortcut(["Backspace"], () => setShowDeleteConfirm(true), {
+    description: "Delete task",
+    enabled: () => props.isOpen,
+  });
 
   interface ColumnQueryResult {
     id: string;
@@ -733,6 +755,18 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
       console.error("Failed to open folder:", err);
     }
   };
+
+  useShortcut(
+    ["Control", "e"],
+    () => {
+      const path = props.task?.worktree_path;
+      if (path) openFolder(path);
+    },
+    {
+      description: "Open in explorer",
+      enabled: () => props.isOpen && !!props.task?.worktree_path,
+    },
+  );
 
   const handleDismissError = async () => {
     const t = props.task;

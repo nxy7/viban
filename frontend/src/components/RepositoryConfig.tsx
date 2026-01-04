@@ -1,5 +1,6 @@
 import { createEffect, createSignal, on, Show } from "solid-js";
 import * as sdk from "~/lib/generated/ash";
+import { Input } from "~/components/design-system";
 import ErrorBanner from "~/components/ui/ErrorBanner";
 import { ChevronRightIcon, ExternalLinkIcon } from "~/components/ui/Icons";
 import { type Repository, unwrap, useRepositories } from "~/lib/useKanban";
@@ -97,23 +98,23 @@ function RepositoryForm(props: RepositoryFormProps) {
     <div class="p-4 bg-gray-800 border border-gray-700 rounded-lg space-y-4">
       <div>
         <label class="block text-sm text-gray-400 mb-1">Name</label>
-        <input
+        <Input
           type="text"
           value={props.name}
           onInput={(e) => props.onNameChange(e.currentTarget.value)}
           placeholder="e.g., My Project"
-          class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+          variant="dark"
         />
       </div>
 
       <div>
         <label class="block text-sm text-gray-400 mb-1">Path</label>
-        <input
+        <Input
           type="text"
           value={props.path}
           onInput={(e) => props.onPathChange(e.currentTarget.value)}
           placeholder="/path/to/your/git/repository"
-          class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand-500"
+          variant="dark-mono"
         />
         <p class="text-xs text-gray-500 mt-1">
           Absolute path to the git repository on the server
@@ -122,12 +123,12 @@ function RepositoryForm(props: RepositoryFormProps) {
 
       <div>
         <label class="block text-sm text-gray-400 mb-1">Default Branch</label>
-        <input
+        <Input
           type="text"
           value={props.defaultBranch}
           onInput={(e) => props.onDefaultBranchChange(e.currentTarget.value)}
           placeholder="main"
-          class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+          variant="dark"
         />
         <p class="text-xs text-gray-500 mt-1">
           Base branch for creating new task worktrees

@@ -8,6 +8,7 @@ import {
 } from "solid-js";
 import * as sdk from "~/lib/generated/ash";
 import { type Branch, type Task, unwrap } from "~/lib/useKanban";
+import { Input, Textarea } from "~/components/design-system";
 import ErrorBanner from "./ui/ErrorBanner";
 import { LoadingSpinner, PRIcon } from "./ui/Icons";
 import Modal from "./ui/Modal";
@@ -187,13 +188,12 @@ export default function CreatePRModal(props: CreatePRModalProps) {
           >
             Title *
           </label>
-          <input
+          <Input
             id="title"
             type="text"
             value={title()}
             onInput={(e) => setTitle(e.currentTarget.value)}
             placeholder="Enter PR title..."
-            class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
             autofocus
           />
         </div>
@@ -205,13 +205,13 @@ export default function CreatePRModal(props: CreatePRModalProps) {
           >
             Description
           </label>
-          <textarea
+          <Textarea
             id="body"
             value={body()}
             onInput={(e) => setBody(e.currentTarget.value)}
             rows={6}
             placeholder="Enter PR description..."
-            class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent resize-none"
+            resizable={false}
           />
         </div>
 
