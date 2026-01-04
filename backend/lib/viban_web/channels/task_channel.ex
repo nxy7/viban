@@ -1,37 +1,28 @@
 defmodule VibanWeb.TaskChannel do
   @moduledoc """
-  Phoenix Channel for task communication.
+  Phoenix Channel for task RPC commands.
 
-  Handles real-time communication between users and executor agents
-  for a specific task. Supports:
-  - Sending messages (queued for AI execution)
-  - Receiving executor output streams
-  - Getting task/executor status
-  - Stopping running executors
-
-  Note: Message history is now synced via Electric SQL, not this channel.
+  This channel is used for sending commands to the backend (RPC-style).
+  All data synchronization (messages, sessions, output) is handled via
+  Electric SQL sync - this channel does NOT broadcast any data.
 
   ## AI Execution Flow
 
   When a user sends a message via `send_message`:
-  1. Message is queued on the task's `message_queue`
-  2. Task is moved to "In Progress" column (if not already there)
-  3. Execute AI hook processes queued messages until queue is empty
+  1. Message is saved to database (synced to frontend via Electric SQL)
+  2. Message is queued on the task's `message_queue`
+  3. Task is moved to "In Progress" column (if not already there)
+  4. Execute AI hook processes queued messages until queue is empty
+  5. Output is saved to database (synced to frontend via Electric SQL)
 
-  ## Events
+  ## Events (Incoming only - client -> server)
 
-  ### Incoming (client -> server)
   - `send_message` - Queue a message and move task to "In Progress"
   - `stop_executor` - Stop a running executor
   - `get_status` - Get current task/executor status
   - `get_history` - Get executor session history
   - `list_executors` - List available executors
-
-  ### Outgoing (server -> client)
-  - `executor_started` - Executor has started
-  - `executor_output` - Executor output (stdout/stderr)
-  - `executor_completed` - Executor has finished
-  - `executor_error` - Executor error occurred
+  - `create_worktree` - Create git worktree for task
   """
 
   use Phoenix.Channel
