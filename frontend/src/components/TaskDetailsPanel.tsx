@@ -4,7 +4,6 @@ import { marked } from "marked";
 import {
   createEffect,
   createMemo,
-  createResource,
   createSignal,
   For,
   onMount,
@@ -46,6 +45,7 @@ import {
   type Task,
   toDecimal,
   unwrap,
+  useHookExecutions,
 } from "~/hooks/useKanban";
 import { type OutputLine, useTaskChat } from "~/hooks/useTaskChat";
 import { AgentStatusBadge, type AgentStatusType } from "./AgentStatus";
@@ -103,6 +103,7 @@ type HookExecutionActivity = {
   queued_at: string | null;
   started_at?: string | null;
   completed_at?: string | null;
+  inserted_at: string;
 };
 
 type GroupedHooksActivity = {
@@ -137,7 +138,8 @@ const shouldShowOutput = (
   hideDetails: boolean = false,
 ): boolean => {
   if (line.type === "user" || line.role === "user") return true;
-  if (line.role === "tool") return true;
+  // Hide tool usage details when hideDetails is enabled
+  if (line.role === "tool") return !hideDetails;
 
   if (line.type === "parsed" || line.role === "assistant") {
     const content = typeof line.content === "string" ? line.content : "";
@@ -159,6 +161,8 @@ const shouldShowOutput = (
   if (line.type === "system" || line.role === "system") {
     const content = typeof line.content === "string" ? line.content : "";
     if (content.startsWith("Using tool:")) return false;
+    // Hide system status messages when hideDetails is enabled
+    if (hideDetails) return false;
     return true;
   }
 
@@ -312,44 +316,17 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
     createWorktree,
   } = useTaskChat(taskId);
 
-  const [hookExecutions, { refetch: refetchHookExecutions }] = createResource(
-    taskId,
-    async (id) => {
-      if (!id) return [];
-      const result = await sdk.hook_executions_for_task({
-        input: { task_id: id },
-        fields: [
-          "id",
-          "hook_name",
-          "status",
-          "skip_reason",
-          "error_message",
-          "queued_at",
-          "started_at",
-          "completed_at",
-        ],
-      });
-      if (result.success) {
-        return result.data;
-      }
-      return [];
-    },
-  );
-
-  createEffect(() => {
-    props.task?.agent_status;
-    refetchHookExecutions();
-  });
+  const { hookExecutions } = useHookExecutions(taskId);
 
   const getActivityTimestamp = (item: ActivityItem): number => {
     switch (item.type) {
       case "task_created":
         return new Date(item.timestamp).getTime();
       case "hook_execution":
-        return item.queued_at ? new Date(item.queued_at).getTime() : 0;
+        return new Date(item.inserted_at).getTime();
       case "grouped_hooks":
-        return item.hooks[0]?.queued_at
-          ? new Date(item.hooks[0].queued_at).getTime()
+        return item.hooks[0]
+          ? new Date(item.hooks[0].inserted_at).getTime()
           : 0;
       case "output":
         return item.line.timestamp
@@ -401,19 +378,22 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
       });
     }
 
-    const executions = hookExecutions() ?? [];
-    for (const exec of executions) {
-      items.push({
-        type: "hook_execution",
-        id: exec.id,
-        name: exec.hook_name,
-        status: exec.status,
-        skip_reason: exec.skip_reason,
-        error_message: exec.error_message,
-        queued_at: exec.queued_at,
-        started_at: exec.started_at,
-        completed_at: exec.completed_at,
-      });
+    if (!hideDetails()) {
+      const executions = hookExecutions() ?? [];
+      for (const exec of executions) {
+        items.push({
+          type: "hook_execution",
+          id: exec.id,
+          name: exec.hook_name ?? "Unknown Hook",
+          status: exec.status as HookExecutionActivity["status"],
+          skip_reason: exec.skip_reason as HookExecutionActivity["skip_reason"],
+          error_message: exec.error_message,
+          queued_at: exec.queued_at,
+          started_at: exec.started_at,
+          completed_at: exec.completed_at,
+          inserted_at: exec.inserted_at,
+        });
+      }
     }
 
     for (const line of output()) {
@@ -1311,6 +1291,8 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
                                 skip_reason={hookItem().skip_reason}
                                 error_message={hookItem().error_message}
                                 queued_at={hookItem().queued_at}
+                                started_at={hookItem().started_at}
+                                completed_at={hookItem().completed_at}
                                 formatDate={formatDate}
                               />
                             )}
@@ -1677,7 +1659,27 @@ interface HookExecutionActivityComponentProps {
     | null;
   error_message?: string | null;
   queued_at: string | null;
+  started_at?: string | null;
+  completed_at?: string | null;
   formatDate: (dateStr: string) => string;
+}
+
+function formatDuration(startedAt: string | null | undefined, completedAt: string | null | undefined): string | null {
+  if (!startedAt || !completedAt) return null;
+  const start = new Date(startedAt).getTime();
+  const end = new Date(completedAt).getTime();
+  const durationMs = end - start;
+
+  if (durationMs < 1000) {
+    return `${durationMs}ms`;
+  } else if (durationMs < 60000) {
+    const seconds = (durationMs / 1000).toFixed(1);
+    return `${seconds}s`;
+  } else {
+    const minutes = Math.floor(durationMs / 60000);
+    const seconds = Math.floor((durationMs % 60000) / 1000);
+    return `${minutes}m ${seconds}s`;
+  }
 }
 
 function HookExecutionActivityComponent(
@@ -1700,7 +1702,10 @@ function HookExecutionActivityComponent(
     }
   };
 
+  const duration = () => formatDuration(props.started_at, props.completed_at);
+
   const statusConfig = () => {
+    const dur = duration();
     switch (props.status) {
       case "pending":
         return {
@@ -1714,12 +1719,12 @@ function HookExecutionActivityComponent(
         };
       case "completed":
         return {
-          label: "Completed",
+          label: dur ? `Completed in ${dur}` : "Completed",
           textClass: "text-green-400",
         };
       case "failed":
         return {
-          label: "Failed",
+          label: dur ? `Failed after ${dur}` : "Failed",
           textClass: "text-red-400",
         };
       case "cancelled":
@@ -1866,6 +1871,8 @@ function GroupedHooksActivityComponent(
                 skip_reason={hook.skip_reason}
                 error_message={hook.error_message}
                 queued_at={hook.queued_at}
+                started_at={hook.started_at}
+                completed_at={hook.completed_at}
                 formatDate={props.formatDate}
               />
             )}

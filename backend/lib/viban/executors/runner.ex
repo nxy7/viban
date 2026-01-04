@@ -382,8 +382,8 @@ defmodule Viban.Executors.Runner do
 
       case create_session(task_id, executor_type, prompt, working_directory) do
         {:ok, session} ->
-          display_prompt = ImageHandler.build_display_prompt(prompt, image_paths)
-          save_message(task_id, session.id, :user, display_prompt)
+          # Note: User message is already saved by TaskChannel.send_message
+          # We only create the session here, no need to duplicate the message
 
           state = %__MODULE__{
             task_id: task_id,
@@ -520,9 +520,10 @@ defmodule Viban.Executors.Runner do
   defp handle_parsed_output(
          {:ok, %{type: :result, content: content}},
          task_id,
-         session_id
+         _session_id
        ) do
-    save_message(task_id, session_id, :assistant, content)
+    # Note: Don't save result as a message - it duplicates content from assistant_message events
+    # The result event is mainly used for status updates and PR detection
     PRDetector.process_output(task_id, content)
     update_task_agent_status(task_id, :idle, "Agent completed")
   end
