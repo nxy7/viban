@@ -23,6 +23,7 @@ import {
 import {
   BackArrowIcon,
   CloseIcon,
+  KeyboardIcon,
   PlusIcon,
   SearchIcon,
   SettingsIcon,
@@ -836,6 +837,13 @@ export default function KanbanBoard(props: KanbanBoardProps) {
               >
                 <SettingsIcon class="w-4 h-4" />
                 Settings
+              </button>
+              <button
+                onClick={() => setShowShortcutsHelp(true)}
+                class="flex items-center justify-center w-8 h-8 text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
+                title="Keyboard shortcuts (Shift+?)"
+              >
+                <KeyboardIcon class="w-4 h-4" />
               </button>
             </div>
           </div>
