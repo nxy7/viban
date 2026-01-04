@@ -3,9 +3,9 @@ import { createSignal, For, Show } from "solid-js";
 import ErrorBanner from "~/components/ui/ErrorBanner";
 import { ClipboardListIcon, CloseIcon, PlusIcon } from "~/components/ui/Icons";
 import { getErrorMessage } from "~/lib/errorUtils";
-import { useAuth } from "~/lib/useAuth";
-import { useBoards } from "~/lib/useKanban";
-import { createBoardWithRepo, useVCSRepos, type VCSRepo } from "~/lib/useVCS";
+import { useAuth } from "~/hooks/useAuth";
+import { useBoards } from "~/hooks/useKanban";
+import { createBoardWithRepo, useVCSRepos, type VCSRepo } from "~/hooks/useVCS";
 
 const SKELETON_COUNT = 3;
 

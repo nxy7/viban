@@ -5,7 +5,7 @@ import {
   type ParentComponent,
   useContext,
 } from "solid-js";
-import type { VCSProvider } from "./types/vcs";
+import type { VCSProvider } from "~/lib/types/vcs";
 
 export interface User {
   id: string;

@@ -3,8 +3,8 @@ import { Router } from "@solidjs/router";
 import { FileRoutes } from "@solidjs/start/router";
 import { Suspense } from "solid-js";
 import NotificationContainer from "./components/ui/NotificationContainer";
-import { AuthProvider } from "./lib/useAuth";
-import { EscapeStackProvider } from "./lib/useEscapeStack";
+import { AuthProvider } from "./hooks/useAuth";
+import { EscapeStackProvider } from "./hooks/useEscapeStack";
 import "./app.css";
 
 export default function App() {

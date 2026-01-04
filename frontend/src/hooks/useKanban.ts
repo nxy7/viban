@@ -1,10 +1,10 @@
 import { eq, inArray } from "@tanstack/db";
 import { useLiveQuery } from "@tanstack/solid-db";
 
-export * from "./generated/ash";
+export * from "~/lib/generated/ash";
 
-import * as sdk from "./generated/ash";
-import type { AshRpcError } from "./generated/ash";
+import * as sdk from "~/lib/generated/ash";
+import type { AshRpcError } from "~/lib/generated/ash";
 
 import {
   syncBoardsCollection as boardsCollection,
@@ -14,7 +14,7 @@ import {
   syncColumnHooksCollection as columnHooksCollection,
   syncRepositoriesCollection as repositoriesCollection,
   syncMessagesCollection as messagesCollection,
-} from "./generated/sync/collections";
+} from "~/lib/generated/sync/collections";
 
 import type {
   KanbanBoard,
@@ -25,7 +25,7 @@ import type {
   KanbanRepository,
   KanbanMessage,
   KanbanHookExecution,
-} from "./generated/sync/schema";
+} from "~/lib/generated/sync/schema";
 
 export {
   boardsCollection,

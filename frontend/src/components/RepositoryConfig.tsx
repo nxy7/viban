@@ -3,7 +3,7 @@ import * as sdk from "~/lib/generated/ash";
 import { Button, Input } from "~/components/design-system";
 import ErrorBanner from "~/components/ui/ErrorBanner";
 import { ChevronRightIcon, ExternalLinkIcon } from "~/components/ui/Icons";
-import { type Repository, unwrap, useRepositories } from "~/lib/useKanban";
+import { type Repository, unwrap, useRepositories } from "~/hooks/useKanban";
 
 interface RepositoryConfigProps {
   boardId: string;

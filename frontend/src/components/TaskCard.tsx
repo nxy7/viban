@@ -21,7 +21,7 @@ import {
   getPRBadgeClasses,
   getTaskBorderClass,
 } from "~/lib/taskStyles";
-import type { Task } from "~/lib/useKanban";
+import type { Task } from "~/hooks/useKanban";
 
 // Delay before click is allowed after drag ends (ms)
 const POST_DRAG_CLICK_DELAY = 50;

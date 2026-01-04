@@ -6,7 +6,7 @@ import {
   type ParentComponent,
 } from "solid-js";
 import * as sdk from "~/lib/generated/ash";
-import { type SystemTool, unwrap } from "~/lib/useKanban";
+import { type SystemTool, unwrap } from "~/hooks/useKanban";
 
 const EXECUTOR_PREFERENCE_KEY = "viban:preferredExecutor";
 

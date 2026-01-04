@@ -7,7 +7,7 @@ import type {
   UpdatePullRequestParams,
   VCSBranch,
   VCSRepo,
-} from "./types/vcs";
+} from "~/lib/types/vcs";
 
 // Re-export types for convenience
 export type {
@@ -19,7 +19,7 @@ export type {
   VCSBranch,
   VCSProvider,
   VCSRepo,
-} from "./types/vcs";
+} from "~/lib/types/vcs";
 
 /** Pull request state filter options */
 type PRState = "open" | "closed" | "all";

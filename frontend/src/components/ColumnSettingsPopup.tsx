@@ -25,7 +25,7 @@ import {
   fetchAllHooks,
   unwrap,
   useColumnHooks,
-} from "~/lib/useKanban";
+} from "~/hooks/useKanban";
 import { getDefaultSound, type SoundType } from "~/lib/sounds";
 import { Button, Input, Select, Textarea } from "~/components/design-system";
 import HookSoundSettings from "./HookSoundSettings";

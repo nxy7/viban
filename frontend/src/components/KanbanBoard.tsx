@@ -40,8 +40,8 @@ import {
   unwrap,
   useBoard,
   useColumns,
-} from "~/lib/useKanban";
-import { useShortcut } from "~/lib/useKeyboardShortcuts";
+} from "~/hooks/useKanban";
+import { useShortcut } from "~/hooks/useKeyboardShortcuts";
 import BoardSettings from "./BoardSettings";
 import ColumnSettingsPopup from "./ColumnSettingsPopup";
 import CreateTaskModal from "./CreateTaskModal";

@@ -6,7 +6,7 @@ import {
   fetchAllHooks,
   type HookKind,
   unwrap,
-} from "~/lib/useKanban";
+} from "~/hooks/useKanban";
 import { Button, Checkbox, Input, Select, Textarea } from "~/components/design-system";
 import ErrorBanner from "./ui/ErrorBanner";
 import {

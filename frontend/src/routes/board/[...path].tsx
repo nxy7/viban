@@ -4,8 +4,8 @@ import { createEffect, createMemo, on, onCleanup, onMount } from "solid-js";
 import KanbanBoard from "~/components/KanbanBoard";
 import TaskDetailsPanel from "~/components/TaskDetailsPanel";
 import { SystemProvider } from "~/lib/SystemContext";
-import { ShortcutProvider } from "~/lib/useKeyboardShortcuts";
-import { type Task, tasksCollection, useColumns } from "~/lib/useKanban";
+import { ShortcutProvider } from "~/hooks/useKeyboardShortcuts";
+import { type Task, tasksCollection, useColumns } from "~/hooks/useKanban";
 import {
   initAudio,
   playSound,

@@ -1,5 +1,5 @@
 import { createEffect, onCleanup } from "solid-js";
-import { useEscapeLayer } from "~/lib/useEscapeStack";
+import { useEscapeLayer } from "~/hooks/useEscapeStack";
 
 export function useOverlay(isOpen: () => boolean, onClose: () => void): void {
   useEscapeLayer(isOpen, onClose);

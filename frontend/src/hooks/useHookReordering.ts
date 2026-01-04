@@ -1,6 +1,6 @@
 import type { DragEvent } from "@thisbeyond/solid-dnd";
 import * as sdk from "~/lib/generated/ash";
-import { type ColumnHook, unwrap } from "~/lib/useKanban";
+import { type ColumnHook, unwrap } from "~/hooks/useKanban";
 
 export function useHookReordering(getSortedHooks: () => ColumnHook[]) {
   const handleDragEnd = async ({ draggable, droppable }: DragEvent) => {

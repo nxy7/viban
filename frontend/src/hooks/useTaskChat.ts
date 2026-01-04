@@ -1,5 +1,5 @@
 import { type Accessor, createEffect, createSignal, onCleanup } from "solid-js";
-import { getErrorMessage } from "./errorUtils";
+import { getErrorMessage } from "~/lib/errorUtils";
 import {
   type ExecutorCompletedPayload,
   type ExecutorErrorPayload,
@@ -11,7 +11,7 @@ import {
   type LLMTodoItem,
   type StoredMessage,
   socketManager,
-} from "./socket";
+} from "~/lib/socket";
 
 export type AgentStatusType = "idle" | "thinking" | "executing" | "error";
 

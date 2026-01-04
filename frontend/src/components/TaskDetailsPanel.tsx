@@ -45,8 +45,8 @@ import {
   type Task,
   toDecimal,
   unwrap,
-} from "~/lib/useKanban";
-import { type OutputLine, useTaskChat } from "~/lib/useTaskChat";
+} from "~/hooks/useKanban";
+import { type OutputLine, useTaskChat } from "~/hooks/useTaskChat";
 import { AgentStatusBadge, type AgentStatusType } from "./AgentStatus";
 import CreatePRModal from "./CreatePRModal";
 import CreateTaskModal from "./CreateTaskModal";
@@ -60,7 +60,7 @@ import LLMTodoList from "./LLMTodoList";
 import SubtaskList from "./SubtaskList";
 import ErrorBanner from "./ui/ErrorBanner";
 import SidePanel from "./ui/SidePanel";
-import { useShortcut } from "~/lib/useKeyboardShortcuts";
+import { useShortcut } from "~/hooks/useKeyboardShortcuts";
 
 interface TaskDetailsPanelProps {
   isOpen: boolean;

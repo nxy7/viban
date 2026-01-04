@@ -15,7 +15,7 @@ import {
   fetchAllHooks,
   unwrap,
   useColumnHooks,
-} from "~/lib/useKanban";
+} from "~/hooks/useKanban";
 import { Button, Checkbox, Select } from "~/components/design-system";
 import ErrorBanner from "./ui/ErrorBanner";
 import { CloseIcon, DragHandleIcon, SystemIcon } from "./ui/Icons";

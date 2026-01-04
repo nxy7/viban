@@ -1,5 +1,5 @@
 import { For, Show } from "solid-js";
-import { formatKeys, useShortcutRegistry } from "~/lib/useKeyboardShortcuts";
+import { formatKeys, useShortcutRegistry } from "~/hooks/useKeyboardShortcuts";
 import Modal from "./ui/Modal";
 
 interface KeyboardShortcutsHelpProps {

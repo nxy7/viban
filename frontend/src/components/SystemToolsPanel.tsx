@@ -1,6 +1,6 @@
 import { For, Show } from "solid-js";
 import { useSystem } from "~/lib/SystemContext";
-import { type SystemTool, type ToolCategory } from "~/lib/useKanban";
+import { type SystemTool, type ToolCategory } from "~/hooks/useKanban";
 
 interface ToolItemProps {
   tool: SystemTool;

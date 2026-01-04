@@ -7,7 +7,7 @@ import {
   Show,
 } from "solid-js";
 import * as sdk from "~/lib/generated/ash";
-import { type Branch, type Task, unwrap } from "~/lib/useKanban";
+import { type Branch, type Task, unwrap } from "~/hooks/useKanban";
 import { Button, Input, Select, Textarea } from "~/components/design-system";
 import ErrorBanner from "./ui/ErrorBanner";
 import { LoadingSpinner, PRIcon } from "./ui/Icons";
