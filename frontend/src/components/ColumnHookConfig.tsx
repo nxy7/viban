@@ -7,7 +7,7 @@ import {
   SortableProvider,
 } from "@thisbeyond/solid-dnd";
 import { createMemo, createResource, createSignal, For, Show } from "solid-js";
-import * as sdk from "~/lib/generated/ash";
+import { Button, Checkbox, Select } from "~/components/design-system";
 import { useHookReordering } from "~/hooks/useHookReordering";
 import {
   type ColumnHook,
@@ -16,7 +16,7 @@ import {
   unwrap,
   useColumnHooks,
 } from "~/hooks/useKanban";
-import { Button, Checkbox, Select } from "~/components/design-system";
+import * as sdk from "~/lib/generated/ash";
 import ErrorBanner from "./ui/ErrorBanner";
 import { CloseIcon, DragHandleIcon, SystemIcon } from "./ui/Icons";
 

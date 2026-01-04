@@ -23,8 +23,11 @@ This guide covers detailed installation instructions for all Viban components.
 
 At least one of the following AI agents must be installed:
 
-- **Claude Code CLI**: `npm install -g @anthropic-ai/claude-code`
+- **Claude Code CLI**: `npm install -g @anthropic-ai/claude-code` (recommended)
 - **Gemini CLI**: Google's Gemini CLI for AI tasks
+- **Codex**: OpenAI Codex executor
+- **OpenCode**: OpenCode agent
+- **Cursor Agent**: Cursor AI agent
 
 ## Backend Setup
 

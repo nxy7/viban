@@ -2,10 +2,10 @@ import { useLocation } from "@solidjs/router";
 import { useLiveQuery } from "@tanstack/solid-db";
 import {
   type CollisionDetector,
-  type Draggable,
   DragDropProvider,
   DragDropSensors,
   type DragEvent,
+  type Draggable,
   DragOverlay,
   type Droppable,
 } from "@thisbeyond/solid-dnd";
@@ -20,6 +20,7 @@ import {
   onMount,
   Show,
 } from "solid-js";
+import { Button, Input } from "~/components/design-system";
 import {
   BackArrowIcon,
   CloseIcon,
@@ -28,10 +29,6 @@ import {
   SearchIcon,
   SettingsIcon,
 } from "~/components/ui/Icons";
-import { Button, Input } from "~/components/design-system";
-import { fuzzyMatch } from "~/lib/fuzzySearch";
-import * as sdk from "~/lib/generated/ash";
-import { TaskRelationProvider } from "~/lib/TaskRelationContext";
 import {
   type Column,
   type Task,
@@ -42,6 +39,9 @@ import {
   useColumns,
 } from "~/hooks/useKanban";
 import { useShortcut } from "~/hooks/useKeyboardShortcuts";
+import { fuzzyMatch } from "~/lib/fuzzySearch";
+import * as sdk from "~/lib/generated/ash";
+import { TaskRelationProvider } from "~/lib/TaskRelationContext";
 import BoardSettings from "./BoardSettings";
 import ColumnSettingsPopup from "./ColumnSettingsPopup";
 import CreateTaskModal from "./CreateTaskModal";

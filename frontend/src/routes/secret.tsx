@@ -1,9 +1,9 @@
-import { createMemo, createSignal, Show } from "solid-js";
+import { and, eq } from "@tanstack/db";
 import { useLiveQuery } from "@tanstack/solid-db";
-import { eq, and } from "@tanstack/db";
-import { syncActorStatesCollection } from "~/lib/generated/sync/collections";
-import * as sdk from "~/lib/generated/ash";
+import { createMemo, createSignal, Show } from "solid-js";
 import { unwrap } from "~/hooks/useKanban";
+import * as sdk from "~/lib/generated/ash";
+import { syncActorStatesCollection } from "~/lib/generated/sync/collections";
 
 export default function SecretPage() {
   const actorStatesQuery = useLiveQuery((q) =>

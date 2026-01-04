@@ -6,8 +6,8 @@
  */
 
 import { createContext, createSignal, type JSX, useContext } from "solid-js";
-import type { GlowState } from "./taskStyles";
 import type { Task } from "../hooks/useKanban";
+import type { GlowState } from "./taskStyles";
 
 /** Extended glow state including "none" for no relationship */
 type TaskGlowState = GlowState | "none";

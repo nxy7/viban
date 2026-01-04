@@ -35,9 +35,10 @@ Use the "Refine" button on any task to transform a simple description into a hig
 ### Multiple AI Agents
 Viban supports multiple AI executors:
 - **Claude Code**: Anthropic's autonomous coding agent (default)
-- **Gemini CLI**: Google's AI model for code tasks
-
-Additional executors may be added in future releases.
+- **Gemini CLI**: Google's Gemini model for code tasks
+- **Codex**: OpenAI Codex executor
+- **OpenCode**: OpenCode agent
+- **Cursor Agent**: Cursor AI agent
 
 ## Architecture
 

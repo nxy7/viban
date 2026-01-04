@@ -1,9 +1,9 @@
 import {
   createContext,
   createEffect,
+  type JSX,
   onCleanup,
   useContext,
-  type JSX,
 } from "solid-js";
 
 type EscapeHandler = () => void;

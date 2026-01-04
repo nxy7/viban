@@ -1,7 +1,7 @@
 import { createResource, createSignal, For, Show } from "solid-js";
-import * as sdk from "~/lib/generated/ash";
-import { type Subtask, type Task, unwrap } from "~/hooks/useKanban";
 import { Button } from "~/components/design-system";
+import { type Subtask, type Task, unwrap } from "~/hooks/useKanban";
+import * as sdk from "~/lib/generated/ash";
 import ErrorBanner from "./ui/ErrorBanner";
 import {
   ChevronRightIcon,

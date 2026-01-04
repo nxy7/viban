@@ -1,7 +1,7 @@
 import { createDroppable } from "@thisbeyond/solid-dnd";
 import { createMemo, For, Show } from "solid-js";
-import { CheckIcon, PlusIcon, SettingsIcon } from "~/components/ui/Icons";
 import { Button } from "~/components/design-system";
+import { CheckIcon, PlusIcon, SettingsIcon } from "~/components/ui/Icons";
 import type { Column, Task } from "~/hooks/useKanban";
 import type { DropTarget } from "./KanbanBoard";
 import TaskCard from "./TaskCard";

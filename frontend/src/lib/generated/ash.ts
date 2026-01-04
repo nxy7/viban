@@ -2086,7 +2086,7 @@ type InferPaginationType<Page> = Page extends { offset: any }
 
 // Returns either non-paginated (array) or paginated result based on page params
 // For single pagination type support (offset-only or keyset-only)
-// @ts-ignore
+// @ts-expect-error
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 type ConditionalPaginatedResult<Page, RecordType, PaginatedType> =
   Page extends undefined

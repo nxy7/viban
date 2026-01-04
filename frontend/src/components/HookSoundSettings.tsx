@@ -1,11 +1,11 @@
 import { type Accessor, createSignal, For, Show } from "solid-js";
+import { Button, Select } from "~/components/design-system";
 import {
   getSoundOptions,
   playSound,
-  stopSound,
   type SoundType,
+  stopSound,
 } from "~/lib/sounds";
-import { Button, Select } from "~/components/design-system";
 import { PlayIcon, StopIcon } from "./ui/Icons";
 
 interface HookSoundSettingsProps {

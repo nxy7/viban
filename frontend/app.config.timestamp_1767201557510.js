@@ -3,6 +3,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "@solidjs/start/config";
 import { loadEnv } from "vite";
+
 var __dirname = dirname(fileURLToPath(import.meta.url));
 var projectRoot = resolve(__dirname, "..");
 var env = loadEnv("development", projectRoot, "");

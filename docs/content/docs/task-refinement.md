@@ -97,29 +97,19 @@ You can refine multiple times:
 3. Add your own details
 4. Refine again for polish
 
-## Configuration
+## How It's Implemented
 
-### Model Selection
+Task refinement uses Claude Code CLI with the Haiku model for fast, cost-effective processing:
 
-Refinement uses a fast model (Haiku) by default. Configure in settings:
+- **Model**: Haiku (optimized for speed)
+- **Timeout**: 60 seconds
+- **Output format**: Markdown with structured sections
 
-```elixir
-config :viban, :refinement,
-  model: "haiku"  # or "sonnet" for more detailed output
-```
-
-### Custom Prompts
-
-Customize the refinement prompt:
-
-```elixir
-config :viban, :refinement,
-  system_prompt: """
-  Transform this task into a detailed specification.
-  Include: objectives, requirements, acceptance criteria.
-  Keep it concise but comprehensive.
-  """
-```
+The refinement prompt instructs the AI to:
+- Output only the refined task (no conversational text)
+- Add clear title and objective
+- Include acceptance criteria
+- Define appropriate scope
 
 ## Troubleshooting
 

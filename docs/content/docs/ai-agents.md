@@ -55,7 +55,21 @@ Google's Gemini model accessible through the CLI for code tasks.
 # Follow Google's official installation guide
 ```
 
-Note: Additional executors (Codex, OpenCode, etc.) may be added in future releases.
+### Codex
+
+OpenAI's Codex executor for code generation tasks.
+
+**Strengths:**
+- Strong code completion capabilities
+- Wide language support
+
+### OpenCode
+
+OpenCode agent for autonomous development.
+
+### Cursor Agent
+
+Cursor AI agent for IDE-integrated development tasks.
 
 ## Agent Selection
 

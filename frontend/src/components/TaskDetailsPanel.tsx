@@ -9,6 +9,7 @@ import {
   onMount,
   Show,
 } from "solid-js";
+import { Button, Input, Select, Textarea } from "~/components/design-system";
 import {
   CodeEditorIcon,
   DuplicateIcon,
@@ -18,7 +19,6 @@ import {
   PRIcon,
   TrashIcon,
 } from "~/components/ui/Icons";
-import { Button, Input, Select, Textarea } from "~/components/design-system";
 
 const HIDE_DETAILS_KEY = "viban:hideDetails";
 const FULLSCREEN_KEY = "viban:fullscreen";
@@ -34,12 +34,7 @@ function setStoredBoolean(key: string, value: boolean): void {
   if (typeof window === "undefined") return;
   localStorage.setItem(key, String(value));
 }
-import * as sdk from "~/lib/generated/ash";
-import { formatDate, formatTime } from "~/lib/dateFormat";
-import { getErrorMessage } from "~/lib/errorUtils";
-import { CHAT_PROSE_CLASSES, renderMarkdown } from "~/lib/markdown";
-import { useSystem } from "~/lib/SystemContext";
-import { getPRBadgeHoverClasses } from "~/lib/taskStyles";
+
 import {
   columnsCollection,
   type Task,
@@ -47,7 +42,14 @@ import {
   unwrap,
   useHookExecutions,
 } from "~/hooks/useKanban";
+import { useShortcut } from "~/hooks/useKeyboardShortcuts";
 import { type OutputLine, useTaskChat } from "~/hooks/useTaskChat";
+import { formatDate, formatTime } from "~/lib/dateFormat";
+import { getErrorMessage } from "~/lib/errorUtils";
+import * as sdk from "~/lib/generated/ash";
+import { CHAT_PROSE_CLASSES, renderMarkdown } from "~/lib/markdown";
+import { useSystem } from "~/lib/SystemContext";
+import { getPRBadgeHoverClasses } from "~/lib/taskStyles";
 import { AgentStatusBadge, type AgentStatusType } from "./AgentStatus";
 import CreatePRModal from "./CreatePRModal";
 import CreateTaskModal from "./CreateTaskModal";
@@ -61,7 +63,6 @@ import LLMTodoList from "./LLMTodoList";
 import SubtaskList from "./SubtaskList";
 import ErrorBanner from "./ui/ErrorBanner";
 import SidePanel from "./ui/SidePanel";
-import { useShortcut } from "~/hooks/useKeyboardShortcuts";
 
 interface TaskDetailsPanelProps {
   isOpen: boolean;
@@ -176,7 +177,7 @@ const shouldShowOutput = (
       // Filter out JSON that looks like system init messages
       if (
         trimmed.startsWith('{"type":"system"') ||
-        trimmed.startsWith('{\"type\":\"system\"')
+        trimmed.startsWith('{"type":"system"')
       ) {
         return false;
       }

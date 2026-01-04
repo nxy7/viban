@@ -2,10 +2,10 @@ import { A } from "@solidjs/router";
 import { createSignal, For, Show } from "solid-js";
 import ErrorBanner from "~/components/ui/ErrorBanner";
 import { ClipboardListIcon, CloseIcon, PlusIcon } from "~/components/ui/Icons";
-import { getErrorMessage } from "~/lib/errorUtils";
 import { useAuth } from "~/hooks/useAuth";
 import { useBoards } from "~/hooks/useKanban";
 import { createBoardWithRepo, useVCSRepos, type VCSRepo } from "~/hooks/useVCS";
+import { getErrorMessage } from "~/lib/errorUtils";
 
 const SKELETON_COUNT = 3;
 

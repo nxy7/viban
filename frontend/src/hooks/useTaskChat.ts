@@ -5,17 +5,17 @@ import {
   createSignal,
   onCleanup,
 } from "solid-js";
+import {
+  type TaskEvent,
+  useExecutorSessions,
+  useTaskEvents,
+} from "~/hooks/useKanban";
 import { getErrorMessage } from "~/lib/errorUtils";
 import {
   type ExecutorInfo,
   type LLMTodoItem,
   socketManager,
 } from "~/lib/socket";
-import {
-  useTaskEvents,
-  useExecutorSessions,
-  type TaskEvent,
-} from "~/hooks/useKanban";
 
 export type AgentStatusType = "idle" | "thinking" | "executing" | "error";
 

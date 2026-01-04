@@ -5,245 +5,210 @@ description: Build powerful automations with custom hooks in Viban.
 
 # Custom Hooks
 
-Build powerful automations with custom hooks. This guide covers advanced hook patterns and real-world examples.
+Build powerful automations with custom hooks. This guide covers how to create and configure hooks beyond the built-in system hooks.
 
 ## Hook Types
 
-### Shell Hooks
-
-Run shell commands:
-
-```yaml
-on_completed:
-  - name: build
-    type: shell
-    command: npm run build
-```
-
-### HTTP Hooks
-
-Make HTTP requests:
-
-```yaml
-on_completed:
-  - name: webhook
-    type: http
-    url: https://api.example.com/webhook
-    method: POST
-    headers:
-      Authorization: Bearer $API_TOKEN
-    body:
-      task_id: $TASK_ID
-      status: completed
-```
+Viban supports two types of custom hooks:
 
 ### Script Hooks
 
-Run script files:
+Execute shell commands in the task's worktree directory.
 
-```yaml
-on_completed:
-  - name: deploy
-    type: script
-    path: .viban/scripts/deploy.sh
+**Required fields:**
+- `name`: Display name for the hook
+- `command`: Shell command to execute
+
+**Example use cases:**
+- Run tests before review
+- Build the project
+- Deploy to preview environments
+- Run linting/formatting
+
+### Agent Hooks
+
+Run AI agents with custom prompts for automated code changes.
+
+**Required fields:**
+- `name`: Display name for the hook
+- `agent_prompt`: System prompt for the AI agent
+
+**Optional fields:**
+- `agent_executor`: Which AI to use (`claude_code`, `gemini_cli`, `codex`, `opencode`, `cursor_agent`)
+- `agent_auto_approve`: Whether the agent can auto-approve tool calls
+
+## Creating Custom Hooks
+
+### Via the UI
+
+1. Open board settings
+2. Navigate to the "Hooks" section
+3. Click "Create Hook"
+4. Fill in the required fields
+5. Save the hook
+
+### Adding Hooks to Columns
+
+1. Click the column settings (gear icon)
+2. Go to the "Hooks" tab
+3. Click "Add Hook" and select your custom hook
+4. Configure position, execute-once, and other settings
+5. Save
+
+## Script Hook Examples
+
+### Run Tests
+
+```bash
+# Elixir project
+mix test
+
+# Node.js project
+npm test
+
+# Python project
+pytest
 ```
 
-## Real-World Examples
+### Deploy Preview
 
-### CI/CD Integration
+```bash
+#!/bin/bash
+set -e
 
-Trigger CI pipeline on completion:
+# Build the project
+npm run build
 
-```yaml
-on_completed:
-  - name: trigger-ci
-    type: http
-    url: https://api.github.com/repos/$REPO/dispatches
-    method: POST
-    headers:
-      Authorization: token $GITHUB_TOKEN
-      Accept: application/vnd.github.v3+json
-    body:
-      event_type: viban-task-complete
-      client_payload:
-        task_id: $TASK_ID
-        branch: $BRANCH_NAME
+# Deploy to preview
+vercel deploy --prebuilt
 ```
 
-### Slack Notifications
+### Run Linting
 
-```yaml
-on_started:
-  - name: notify-start
-    type: http
-    url: $SLACK_WEBHOOK
-    method: POST
-    body:
-      text: "Started: $TASK_TITLE"
-
-on_completed:
-  - name: notify-complete
-    type: http
-    url: $SLACK_WEBHOOK
-    method: POST
-    body:
-      text: "Completed: $TASK_TITLE"
-      attachments:
-        - color: good
-          fields:
-            - title: Branch
-              value: $BRANCH_NAME
-              short: true
-```
-
-### Auto-Deploy Preview
-
-Deploy preview environments:
-
-```yaml
-on_completed:
-  - name: deploy-preview
-    type: shell
-    command: |
-      vercel deploy --prebuilt \
-        --token $VERCEL_TOKEN \
-        --scope $VERCEL_SCOPE \
-        --meta taskId=$TASK_ID
-    working_dir: $WORKTREE_PATH
-```
-
-### Run Tests with Coverage
-
-```yaml
-on_completed:
-  - name: test-coverage
-    type: shell
-    command: |
-      npm run test:coverage
-      if [ $? -ne 0 ]; then
-        echo "Tests failed!"
-        exit 1
-      fi
-
-      # Upload coverage
-      curl -s https://codecov.io/bash | bash
-    working_dir: $WORKTREE_PATH
+```bash
+# Multi-language linting
+if [ -f "mix.exs" ]; then
+  mix format --check-formatted
+elif [ -f "package.json" ]; then
+  npm run lint
+fi
 ```
 
 ### Security Scanning
 
-```yaml
-on_completed:
-  - name: security-scan
-    type: shell
-    command: |
-      npm audit --audit-level=high
-      if [ $? -ne 0 ]; then
-        echo "Security vulnerabilities found!"
-        exit 1
-      fi
+```bash
+npm audit --audit-level=high
+if [ $? -ne 0 ]; then
+  echo "Security vulnerabilities found!"
+  exit 1
+fi
 ```
 
-## Advanced Patterns
+## Agent Hook Examples
 
-### Conditional Execution
+### Code Review Agent
 
-```yaml
-on_completed:
-  - name: deploy-staging
-    type: shell
-    command: ./deploy.sh staging
-    condition: |
-      $BRANCH_NAME =~ ^feature/.*
+```
+You are a code reviewer. Review all changes in this worktree:
 
-  - name: deploy-production
-    type: shell
-    command: ./deploy.sh production
-    condition: |
-      $BRANCH_NAME == "main"
+1. Check for common bugs and issues
+2. Verify proper error handling
+3. Look for security vulnerabilities
+4. Suggest improvements
+
+Output a summary of findings as a markdown file.
 ```
 
-### Error Handling
+### Documentation Generator
 
-```yaml
-on_completed:
-  - name: critical-task
-    type: shell
-    command: ./critical.sh
-    on_failure: abort
-    retry:
-      attempts: 3
-      delay: 5  # seconds
+```
+Generate documentation for all new or modified files in this worktree.
 
-  - name: optional-task
-    type: shell
-    command: ./optional.sh
-    on_failure: continue
+For each file:
+1. Add JSDoc/typedoc comments to functions
+2. Update README if needed
+3. Add inline comments for complex logic
 ```
 
-### Parallel Execution
+## Hook Configuration
 
-```yaml
-on_completed:
-  - name: parallel-tasks
-    parallel:
-      - name: lint
-        command: npm run lint
-      - name: test
-        command: npm run test
-      - name: typecheck
-        command: npm run typecheck
-```
+### Default Settings
 
-## Secret Management
+When creating a hook, you can set defaults that apply when the hook is added to a column:
 
-### Environment Variables
+- `default_execute_once`: Whether the hook should only run once per task (default: false)
+- `default_transparent`: Whether the hook should run even when task is in error state (default: false)
 
-Reference secrets from environment:
+### Per-Column Settings
 
-```yaml
-on_completed:
-  - name: deploy
-    type: shell
-    command: ./deploy.sh
-    env:
-      AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
-      AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
-```
+When adding a hook to a column, you can override:
 
-### Secret Files
+- **Position**: Execution order (hooks run in ascending position order)
+- **Execute Once**: Only run first time task enters column
+- **Transparent**: Run even when task is in error state
+- **Hook Settings**: Hook-specific configuration (varies by hook type)
 
-For complex secrets, use files:
+## Script Execution Details
 
-```yaml
-on_completed:
-  - name: deploy
-    type: shell
-    command: |
-      source .viban/secrets.env
-      ./deploy.sh
-```
+Script hooks are executed with these behaviors:
 
-**Note**: Never commit secrets to git!
+1. **Shebang handling**: If your command doesn't start with `#!`, bash is used
+2. **Fail-fast**: `set -e` is added automatically for non-shebang scripts
+3. **Working directory**: Always the task's worktree
+4. **Output capture**: stdout and stderr are captured and logged
+5. **Temp files**: Scripts are written to temp files and cleaned up after execution
 
-## Testing Hooks
+### Exit Codes
 
-### Local Testing
+- `0`: Success - hook completes, next hook runs
+- Non-zero: Failure - error is logged, subsequent hooks are skipped
+
+## Agent Execution Details
+
+Agent hooks:
+
+1. Build a prompt from `agent_prompt` plus task context
+2. Start the specified executor in the worktree
+3. Wait for completion
+4. Capture output for logging
+
+## Best Practices
+
+### Keep Hooks Focused
+
+Each hook should do one thing well:
+- ✅ Run tests
+- ✅ Deploy preview
+- ❌ Run tests AND deploy AND notify (split into multiple hooks)
+
+### Handle Errors Gracefully
+
+Script hooks should:
+- Use `set -e` for fail-fast behavior
+- Provide clear error messages
+- Return appropriate exit codes
+
+### Make Hooks Idempotent
+
+Running a hook multiple times should be safe:
+- Check if work is already done
+- Use "execute once" for one-time operations
+- Handle partial completion gracefully
+
+### Use Appropriate Timeouts
+
+Long-running hooks can block task processing. Consider:
+- Breaking long tasks into smaller hooks
+- Using background processes for non-blocking work
+
+### Test Locally First
+
+Before attaching hooks to production columns:
 
 ```bash
 # Export test variables
-export TASK_ID=test-123
-export TASK_TITLE="Test Task"
-export WORKTREE_PATH=/tmp/test
+export WORKTREE_PATH=/path/to/test/worktree
 
-# Run hook manually
-./.viban/scripts/your-hook.sh
+# Run your hook command manually
+./your-hook-script.sh
 ```
-
-### Dry Run
-
-```bash
-mix viban.hooks.test --dry-run --event completed
-```
-
-This shows what would execute without running it.

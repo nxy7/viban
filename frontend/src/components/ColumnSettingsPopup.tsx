@@ -16,7 +16,13 @@ import {
   Show,
 } from "solid-js";
 import { Portal } from "solid-js/web";
-import * as sdk from "~/lib/generated/ash";
+import {
+  Button,
+  Chip,
+  Input,
+  Select,
+  Textarea,
+} from "~/components/design-system";
 import { useHookReordering } from "~/hooks/useHookReordering";
 import {
   type Column,
@@ -26,14 +32,8 @@ import {
   unwrap,
   useColumnHooks,
 } from "~/hooks/useKanban";
+import * as sdk from "~/lib/generated/ash";
 import { getDefaultSound, type SoundType } from "~/lib/sounds";
-import {
-  Button,
-  Chip,
-  Input,
-  Select,
-  Textarea,
-} from "~/components/design-system";
 import HookSoundSettings from "./HookSoundSettings";
 import ErrorBanner, { InfoBanner } from "./ui/ErrorBanner";
 import {

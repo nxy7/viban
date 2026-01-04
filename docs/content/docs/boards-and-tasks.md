@@ -67,15 +67,16 @@ Use the "Refine" button to automatically enhance task descriptions:
    - Scope boundaries
    - Implementation suggestions
 
-### Task States
+### Task Position
 
-| State | Description |
-|-------|-------------|
-| `todo` | Not started |
-| `inprogress` | AI is actively working |
-| `inreview` | Ready for human review |
-| `done` | Completed and merged |
-| `cancelled` | Abandoned task |
+Tasks don't have explicit status fields - their status is determined by which column they belong to. Moving a task between columns changes its effective state. Tasks also have an `agent_status` that tracks AI execution state:
+
+| Agent Status | Description |
+|-------------|-------------|
+| `idle` | No AI activity |
+| `thinking` | AI is processing |
+| `executing` | AI is running commands |
+| `error` | An error occurred |
 
 ## Moving Tasks
 

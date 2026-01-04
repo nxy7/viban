@@ -2,11 +2,11 @@ import {
   createContext,
   createSignal,
   onMount,
-  useContext,
   type ParentComponent,
+  useContext,
 } from "solid-js";
-import * as sdk from "~/lib/generated/ash";
 import { type SystemTool, unwrap } from "~/hooks/useKanban";
+import * as sdk from "~/lib/generated/ash";
 import type { ExecutorInfo } from "~/lib/socket";
 
 const EXECUTOR_PREFERENCE_KEY = "viban:preferredExecutor";

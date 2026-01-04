@@ -82,7 +82,7 @@ test-backend:
 
 # Run frontend tests
 test-frontend:
-    cd frontend && bun run test
+    cd frontend && bun run check:fix && bun run test
 
 # Start services for E2E testing (with E2E_TEST=true)
 dev-e2e:
@@ -122,7 +122,7 @@ clean:
 # Format all code
 format:
     cd backend && mix format
-    cd frontend && npm run format:fix
+    cd frontend && bun run format:fix
 
 # Alias for format
 fmt: format

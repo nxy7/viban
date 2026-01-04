@@ -3,16 +3,16 @@ import { useLiveQuery } from "@tanstack/solid-db";
 import { createEffect, createMemo, on, onCleanup, onMount } from "solid-js";
 import KanbanBoard from "~/components/KanbanBoard";
 import TaskDetailsPanel from "~/components/TaskDetailsPanel";
-import { SystemProvider } from "~/lib/SystemContext";
-import { ShortcutProvider } from "~/hooks/useKeyboardShortcuts";
 import { type Task, tasksCollection, useColumns } from "~/hooks/useKanban";
+import { ShortcutProvider } from "~/hooks/useKeyboardShortcuts";
+import { SystemProvider } from "~/lib/SystemContext";
+import { type ClientActionPayload, socketManager } from "~/lib/socket";
 import {
   initAudio,
   playSound,
   preloadSounds,
   type SoundType,
 } from "~/lib/sounds";
-import { socketManager, type ClientActionPayload } from "~/lib/socket";
 
 /** Route segment for card detail views */
 const CARD_ROUTE_SEGMENT = "card";

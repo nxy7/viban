@@ -1,7 +1,7 @@
 import { createEffect, createSignal, on, Show } from "solid-js";
-import * as sdk from "~/lib/generated/ash";
-import { type Column, toDecimal, unwrap } from "~/hooks/useKanban";
 import { Button, Checkbox, Input } from "~/components/design-system";
+import { type Column, toDecimal, unwrap } from "~/hooks/useKanban";
+import * as sdk from "~/lib/generated/ash";
 import ImageTextarea, {
   type InlineImage,
   prepareImagesForApi,

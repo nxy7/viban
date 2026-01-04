@@ -5,121 +5,100 @@ description: Automate your workflow with Viban's powerful column hooks system.
 
 # Hooks System
 
-Viban uses a column-based hook system that automates your workflow. When tasks enter or leave columns, hooks are executed in sequence, enabling powerful automation pipelines.
+Viban uses a column-based hook system that automates your workflow. When tasks enter columns, hooks are executed in sequence, enabling powerful automation pipelines.
 
 ## Mental Model
 
 Think of hooks as **actions attached to columns**. When a task enters a column, its hooks run. This creates a simple yet powerful model:
 
 ```
-Task moves to column → onEntry hooks run → persistent hooks start
-Task leaves column → persistent hooks cleanup
+Task moves to column → onEntry hooks run in sequence
 ```
 
-## Hook Types
+All hooks in Viban are `on_entry` hooks - they trigger when a task enters the column.
 
-### onEntry Hooks
+## Hook Kinds
 
-Run once when a task enters a column. Use for:
-- Running tests before review
-- Linting code
-- Sending notifications
-- Refining task descriptions with AI
+Viban supports three kinds of hooks:
 
+### Script Hooks
+
+Run shell commands in the task's worktree directory.
+
+```bash
+# Example: Run tests
+mix test
+
+# Example: Build the project
+npm run build
 ```
-[Backlog] → [In Progress] → [To Review] → [Done]
-              ↑                 ↑
-              │                 │
-              onEntry:         onEntry:
-              - create branch  - run tests
-              - refine prompt  - lint code
-```
 
-### Persistent Hooks
+### Agent Hooks
 
-Run continuously while a task is in a column. Use for:
-- AI agent execution
-- Long-running processes
-- Watching for changes
+Run AI agents with custom prompts. Supported executors:
+- `claude_code` (default)
+- `gemini_cli`
+- `codex`
+- `opencode`
+- `cursor_agent`
 
-When the task leaves the column, persistent hooks **cleanup** gracefully.
+### System Hooks
 
-## Execution Order
+Built-in hooks that provide core functionality.
 
-When a task enters a column:
+## Built-in System Hooks
 
-1. **onEntry hooks** execute sequentially (in defined order)
-2. **Persistent hooks** start (in defined order)
+### Execute AI (`system:execute-ai`)
 
-When a task leaves a column:
+The primary hook for AI-powered task execution.
 
-1. **Persistent hooks cleanup** (reverse order)
+- Processes messages from the task's message queue
+- Falls back to task title/description if queue is empty
+- Starts the AI executor in the task's worktree
+- Requires a worktree to be available
 
-```
-Task enters "In Progress":
-  1. [onEntry] Create git branch
-  2. [onEntry] Refine task with AI
-  3. [Persistent] Start AI agent ← runs until task leaves
+### Auto-Refine Task Description (`system:refine-prompt`)
 
-Task leaves "In Progress":
-  1. [Cleanup] Stop AI agent gracefully
-```
+Uses AI to automatically improve the task description with:
+- Success criteria
+- Clear requirements
+- Proper markdown formatting
+
+Skips tasks that already have detailed descriptions (>500 characters).
+
+### Play Sound (`system:play-sound`)
+
+Plays a notification sound in the browser when a task enters the column.
+
+**Settings:**
+- `sound`: The sound to play. Options: `ding` (default), `bell`, `chime`, `success`, `notification`
+
+### Move Task (`system:move-task`)
+
+Automatically moves the task to another column.
+
+**Settings:**
+- `target_column`: Where to move the task
+  - `"next"` (default) - Move to the next column by position
+  - Column name (e.g., `"To Review"`) - Move to specific column
+
+This hook is transparent by default (runs even when task is in error state).
 
 ## Execute-Once Hooks
 
 Hooks can be marked as "execute once" - they only run the first time a task enters that column. Useful for:
-- Creating branches (don't recreate on re-entry)
 - Initial setup tasks
 - One-time notifications
+- Preventing duplicate actions on re-entry
 
-## Built-in System Hooks
+Execution is tracked in the task's `executed_hooks` field.
 
-### Create Branch
-Creates a git worktree and branch for isolated development.
-- Type: onEntry
-- Recommended: execute-once
+## Transparent Hooks
 
-### Refine Prompt
-Uses AI to refine the task description with implementation details.
-- Type: onEntry
-- Recommended: execute-once
-
-### Run Tests
-Runs your test suite in the task's worktree.
-- Type: onEntry
-- Works with: Elixir, JavaScript, Python
-
-### Lint Code
-Runs linting/formatting checks.
-- Type: onEntry
-- Works with: Various languages
-
-### Shell Command
-Runs a custom shell command.
-- Type: onEntry
-- Configurable command and environment
-
-## The AI Executor (Special Persistent Hook)
-
-The "In Progress" column has a special persistent hook that:
-
-1. **Processes pending messages** - Sends queued chat messages to the AI agent
-2. **Executes AI tasks** - The agent works on the task
-3. **Auto-moves on completion** - When done, moves task to "To Review"
-
-This is implemented as a persistent hook, making the entire system composable.
-
-### Message Queue Behavior
-
-When the AI agent is running:
-- New messages are **queued** (status: pending)
-- Agent processes messages in order
-- When all messages are processed and agent is idle, task moves to review
-
-If you move a task out of "In Progress":
-- The AI agent **stops gracefully**
-- The task can be moved back to resume work
-- Pending messages are preserved
+Hooks can be marked as "transparent":
+- Runs even when the task is in an error state
+- Doesn't change the task's status
+- Useful for cleanup or notification hooks
 
 ## Configuring Hooks
 
@@ -132,41 +111,50 @@ If you move a task out of "In Progress":
 
 ### Hook Settings
 
-Each hook can have:
-- **Position**: Order in the execution sequence
+Each column hook can have:
+- **Position**: Order in the execution sequence (ascending)
 - **Execute Once**: Only run first time task enters column
-- **Configuration**: Hook-specific settings (command, timeout, etc.)
+- **Transparent**: Run even when task is in error state
+- **Removable**: Whether the hook can be removed (some core hooks are non-removable)
+- **Hook Settings**: Hook-specific configuration (e.g., sound selection, target column)
 
-## Custom Shell Hooks
+## Execution Details
 
-Create custom automation with shell commands:
+### Script Execution
 
-```yaml
-Name: Deploy Preview
-Command: ./scripts/deploy-preview.sh
-Timeout: 300  # seconds
-Environment:
-  DEPLOY_ENV: preview
-  BRANCH: $BRANCH_NAME
-```
+Script hooks:
+1. Write the command to a temporary script file
+2. Add a shebang (`#!/bin/bash`) if not present
+3. Add `set -e` for fail-fast behavior
+4. Execute in the task's worktree directory
+5. Capture stdout/stderr
+6. Clean up the temp script
 
-### Available Variables
-
-| Variable | Description |
-|----------|-------------|
-| `$TASK_ID` | Unique task identifier |
-| `$TASK_TITLE` | Task title |
-| `$WORKTREE_PATH` | Path to git worktree |
-| `$BRANCH_NAME` | Git branch name |
-| `$BOARD_ID` | Board identifier |
-
-## Error Handling
+### Error Handling
 
 When a hook fails:
-- The error is displayed on the task card
+- The error is logged
 - Subsequent hooks in the sequence **do not run**
-- The task remains in its current column
+- The task's error state is updated
 - You can retry by moving the task out and back in
+
+## Custom Database Hooks
+
+Beyond system hooks, you can create custom hooks per board:
+
+### Creating Script Hooks
+
+Script hooks execute shell commands:
+- Require a `command` field
+- Run in the task's worktree directory
+- Support any shell command or script
+
+### Creating Agent Hooks
+
+Agent hooks run AI agents:
+- Require an `agent_prompt` field
+- Specify an `agent_executor` (defaults to `claude_code`)
+- Optionally enable `agent_auto_approve` for tool calls
 
 ## Best Practices
 
@@ -175,22 +163,17 @@ When a hook fails:
 Design your columns around your workflow stages:
 
 ```
-[Backlog]
+[Todo]
   └─ No hooks (just planning)
 
-[Ready]
-  └─ onEntry: Create branch (execute-once)
-  └─ onEntry: Refine prompt (execute-once)
-
 [In Progress]
-  └─ Persistent: AI Executor
+  └─ Execute AI hook
 
 [To Review]
-  └─ onEntry: Run tests
-  └─ onEntry: Lint code
+  └─ Play Sound (notify of completion)
 
 [Done]
-  └─ onEntry: Notify team (optional)
+  └─ No hooks
 ```
 
 ### Hook Ordering
@@ -202,4 +185,4 @@ Order hooks from fastest/most-likely-to-fail first:
 
 ### Idempotent Hooks
 
-Design hooks to be idempotent when possible - running them multiple times should be safe.
+Design hooks to be idempotent when possible - running them multiple times should be safe. Use "execute once" for hooks that shouldn't repeat.

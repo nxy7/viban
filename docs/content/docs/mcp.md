@@ -5,45 +5,38 @@ description: Viban MCP server for AI-to-AI communication and task management.
 
 # MCP Server
 
-Viban includes a Model Context Protocol (MCP) server that enables AI-to-AI communication for task management.
+Viban includes a Model Context Protocol (MCP) server that enables AI-to-AI communication for task management, powered by [AshAi](https://github.com/ash-project/ash_ai).
 
 ## Overview
 
 The MCP server allows AI agents like Claude Code to:
-- List and manage projects
+- List and manage boards
 - Create and update tasks
-- Start task execution
-- Query task status
+- Move tasks between columns
+- Manage hooks and repositories
 
 This enables scenarios where an AI can autonomously manage its own workload through Viban.
 
-## Configuration
+## Endpoint
 
-### Enabling MCP Server
+The MCP server is available at:
 
-The MCP server runs alongside the main Viban backend:
-
-```elixir
-# config/config.exs
-config :viban, :mcp,
-  enabled: true,
-  port: 4001
+```
+http://localhost:7771/mcp
 ```
 
-### Claude Code Integration
+(In production, use your configured domain and port)
 
-Add to your Claude Code MCP configuration:
+## Claude Code Integration
+
+Add to your Claude Code MCP configuration (`~/.claude/claude_desktop_config.json` or similar):
 
 ```json
 {
   "mcpServers": {
-    "vibe_kanban": {
-      "command": "npx",
-      "args": ["-y", "viban-mcp"],
-      "env": {
-        "VIBAN_API_URL": "http://localhost:4000",
-        "VIBAN_API_TOKEN": "your-token"
-      }
+    "viban": {
+      "url": "http://localhost:7771/mcp",
+      "transport": "streamable-http"
     }
   }
 }
@@ -51,161 +44,61 @@ Add to your Claude Code MCP configuration:
 
 ## Available Tools
 
-### list_projects
+The MCP server exposes tools based on the Ash domain resources:
 
-List all available projects.
+### Board Tools
 
-```typescript
-// Returns
-{
-  projects: [
-    { id: "proj_abc", name: "My Project" }
-  ]
-}
-```
+#### list_boards
+List all kanban boards accessible to the current user.
 
-### list_tasks
+### Task Tools
 
-List tasks in a project with optional filtering.
+#### list_tasks
+List tasks with optional filtering by column, status, or priority.
 
-```typescript
-// Parameters
-{
-  project_id: "proj_abc",     // Required
-  status?: "todo",            // Optional filter
-  limit?: 50                  // Optional limit
-}
+#### create_task
+Create a new task in a specified column.
 
-// Returns
-{
-  tasks: [
-    {
-      id: "task_xyz",
-      title: "Add auth",
-      status: "todo"
-    }
-  ]
-}
-```
+#### update_task
+Update a task's title, description, or priority.
 
-### get_task
+#### move_task
+Move a task to a different column or reorder within the same column.
 
-Get detailed task information.
+#### delete_task
+Permanently delete a task and its associated data.
 
-```typescript
-// Parameters
-{
-  task_id: "task_xyz"
-}
+### Column Tools
 
-// Returns
-{
-  id: "task_xyz",
-  title: "Add authentication",
-  description: "Full description...",
-  status: "todo",
-  created_at: "2024-01-15T10:30:00Z"
-}
-```
+#### list_columns
+List all columns for a specific board, ordered by position.
 
-### create_task
+### Hook Tools
 
-Create a new task.
+#### list_hooks
+List automation hooks configured for a board.
 
-```typescript
-// Parameters
-{
-  project_id: "proj_abc",
-  title: "New feature",
-  description?: "Optional description"
-}
+#### create_hook
+Create a new automation hook with shell command or AI agent.
 
-// Returns
-{
-  id: "task_new123",
-  title: "New feature",
-  status: "todo"
-}
-```
+### Repository Tools
 
-### update_task
-
-Update an existing task.
-
-```typescript
-// Parameters
-{
-  task_id: "task_xyz",
-  title?: "Updated title",
-  description?: "Updated description",
-  status?: "inprogress"
-}
-```
-
-### delete_task
-
-Delete a task.
-
-```typescript
-// Parameters
-{
-  task_id: "task_xyz"
-}
-```
-
-### start_workspace_session
-
-Start working on a task (creates worktree and launches agent).
-
-```typescript
-// Parameters
-{
-  task_id: "task_xyz",
-  executor: "CLAUDE_CODE",  // or "CODEX", "GEMINI"
-  repos: [
-    {
-      repo_id: "repo_abc",
-      base_branch: "main"
-    }
-  ]
-}
-```
-
-### list_repos
-
-List repositories for a project.
-
-```typescript
-// Parameters
-{
-  project_id: "proj_abc"
-}
-
-// Returns
-{
-  repos: [
-    {
-      id: "repo_abc",
-      name: "my-repo",
-      url: "https://github.com/user/repo"
-    }
-  ]
-}
-```
+#### list_repositories
+List git repositories associated with boards.
 
 ## Usage Examples
 
 ### From Claude Code
 
-When Claude Code has the Viban MCP server configured, it can:
+When Claude Code has the Viban MCP server configured:
 
 ```
-User: "Check what tasks are in my Viban project and start working on the highest priority one"
+User: "Check what tasks are in my Viban board and start the next one"
 
 Claude Code:
-1. Calls list_projects to find projects
-2. Calls list_tasks to see todo items
-3. Calls start_workspace_session to begin work
+1. Calls list_boards to find available boards
+2. Calls list_tasks to see tasks in each column
+3. Uses move_task to move a task to "In Progress"
 ```
 
 ### Self-Managing Workflows
@@ -220,50 +113,47 @@ Claude Code:
 2. Calls create_task for "Create dashboard layout"
 3. Calls create_task for "Add user stats component"
 4. Calls create_task for "Implement data fetching"
-5. Starts working on first task
 ```
 
-## Security
+## How It Works
 
-### Authentication
+Viban uses AshAi's MCP implementation which:
 
-All MCP calls require valid authentication:
+1. Follows the MCP Streamable HTTP Transport specification
+2. Uses JSON-RPC for message processing
+3. Manages sessions with unique IDs
+4. Supports streaming responses
 
-```typescript
-// Passed via environment
-VIBAN_API_TOKEN=your-secure-token
+The tools are automatically generated from the Ash domain's tool definitions:
+
+```elixir
+# In Viban.Kanban domain
+tools do
+  tool :list_boards, Viban.Kanban.Board, :read do
+    description "List all kanban boards accessible to the current user"
+  end
+
+  tool :create_task, Viban.Kanban.Task, :create do
+    description "Create a new task in a specified column"
+  end
+  # ... more tools
+end
 ```
-
-### Permissions
-
-MCP operations respect the same permissions as the REST API:
-- Users can only access their projects
-- Project members have appropriate access levels
-
-### Rate Limiting
-
-MCP calls count toward API rate limits:
-- 1000 requests/minute default
-- Configurable per token
 
 ## Troubleshooting
 
 ### Connection Issues
 
-```bash
-# Test MCP server connectivity
-curl http://localhost:4001/health
-```
-
-### Authentication Errors
-
-Verify your token:
+Test the MCP endpoint:
 
 ```bash
-curl -H "Authorization: Bearer $VIBAN_API_TOKEN" \
-  http://localhost:4000/api/v1/projects
+curl http://localhost:7771/mcp
 ```
 
 ### Tool Not Found
 
-Ensure the MCP server is properly configured in Claude Code's settings and restart Claude Code after changes.
+Ensure the Viban backend is running and the MCP route is configured. Check `lib/viban_web/router.ex` for the MCP scope.
+
+### Authentication
+
+Currently, the MCP endpoint follows the same authentication as the main API. Ensure proper headers are passed if authentication is required.

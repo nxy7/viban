@@ -1,6 +1,6 @@
 import { For, Show } from "solid-js";
-import { type Column, useColumns } from "~/hooks/useKanban";
 import { Button } from "~/components/design-system";
+import { type Column, useColumns } from "~/hooks/useKanban";
 import ColumnHookConfig from "./ColumnHookConfig";
 import HookManager from "./HookManager";
 import RepositoryConfig from "./RepositoryConfig";

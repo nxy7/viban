@@ -3,10 +3,10 @@ import { electricCollectionOptions } from "@tanstack/electric-db-collection";
 import type {
   KanbanBoard,
   KanbanColumn,
-  KanbanTask,
-  KanbanHook,
   KanbanColumnHook,
+  KanbanHook,
   KanbanRepository,
+  KanbanTask,
   KanbanTaskEvent,
   StateServerActorState,
 } from "./schema";

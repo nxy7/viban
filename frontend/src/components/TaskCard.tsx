@@ -12,6 +12,7 @@ import {
   QueuedIcon,
   SubtaskIcon,
 } from "~/components/ui/Icons";
+import type { Task } from "~/hooks/useKanban";
 import { renderMarkdown, TASK_CARD_PROSE_CLASSES } from "~/lib/markdown";
 import { useTaskRelation } from "~/lib/TaskRelationContext";
 import {
@@ -21,7 +22,6 @@ import {
   getPRBadgeClasses,
   getTaskBorderClass,
 } from "~/lib/taskStyles";
-import type { Task } from "~/hooks/useKanban";
 
 // Delay before click is allowed after drag ends (ms)
 const POST_DRAG_CLICK_DELAY = 50;
