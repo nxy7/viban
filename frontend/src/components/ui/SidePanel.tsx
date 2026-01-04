@@ -15,7 +15,7 @@ import { CloseIcon } from "./Icons";
 import { createBackdropClickHandler, useOverlay } from "./useOverlay";
 
 /** Available panel width options */
-type PanelWidth = "sm" | "md" | "lg" | "xl" | "full";
+type PanelWidth = "sm" | "md" | "lg" | "xl" | "2xl" | "full";
 
 /** Props for the SidePanel component */
 interface SidePanelProps {
@@ -39,6 +39,7 @@ const WIDTH_CLASSES: Record<PanelWidth, string> = {
   md: "max-w-md",
   lg: "max-w-lg",
   xl: "max-w-xl",
+  "2xl": "max-w-2xl",
   full: "max-w-full",
 };
 

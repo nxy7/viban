@@ -31,7 +31,6 @@ defmodule Viban.Kanban.Servers.HookExecutionServer do
 
   @type state :: %__MODULE__{
           task_id: String.t(),
-          task_server_pid: pid(),
           board_id: String.t(),
           current_execution_id: String.t() | nil,
           awaiting_external_executor: boolean(),
@@ -42,7 +41,6 @@ defmodule Viban.Kanban.Servers.HookExecutionServer do
 
   defstruct [
     :task_id,
-    :task_server_pid,
     :board_id,
     :current_execution_id,
     :script_task_ref,
@@ -55,9 +53,15 @@ defmodule Viban.Kanban.Servers.HookExecutionServer do
   # Client API
   # ============================================================================
 
+  @registry Viban.Kanban.ActorRegistry
+
   @spec start_link(map()) :: GenServer.on_start()
   def start_link(args) do
-    GenServer.start_link(__MODULE__, args)
+    GenServer.start_link(__MODULE__, args, name: via_tuple(args.task_id))
+  end
+
+  defp via_tuple(task_id) do
+    {:via, Registry, {@registry, {:hook_executor, task_id}}}
   end
 
   @doc """
@@ -89,7 +93,6 @@ defmodule Viban.Kanban.Servers.HookExecutionServer do
   def init(args) do
     state = %__MODULE__{
       task_id: args.task_id,
-      task_server_pid: args.task_server_pid,
       board_id: args.board_id
     }
 

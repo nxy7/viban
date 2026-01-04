@@ -27,7 +27,7 @@ import {
   useColumnHooks,
 } from "~/hooks/useKanban";
 import { getDefaultSound, type SoundType } from "~/lib/sounds";
-import { Button, Input, Select, Textarea } from "~/components/design-system";
+import { Button, Chip, Input, Select, Textarea } from "~/components/design-system";
 import HookSoundSettings from "./HookSoundSettings";
 import ErrorBanner, { InfoBanner } from "./ui/ErrorBanner";
 import {
@@ -738,9 +738,7 @@ function HookSection(props: HookSectionProps) {
               >
                 <span class="truncate">{hook.name}</span>
                 <Show when={hook.is_system}>
-                  <span class="text-xs px-1.5 py-0.5 bg-purple-500/20 text-purple-400 rounded flex-shrink-0">
-                    System
-                  </span>
+                  <Chip variant="purple">System</Chip>
                 </Show>
               </Button>
             )}
@@ -764,37 +762,34 @@ function HookSection(props: HookSectionProps) {
             <SortableProvider ids={hookIds()}>
               <div class="space-y-1">
                 <For each={sortedHooks()}>
-                  {(columnHook) => (
-                    <SortableHookItem
-                      columnHook={columnHook}
-                      hookDetails={getHookDetails(columnHook.hook_id)}
-                      onRemove={handleRemoveHook}
-                      onToggleExecuteOnce={async () => {
-                        try {
-                          await sdk
+                  {(columnHook) => {
+                    const getHook = () =>
+                      sortedHooks().find((h) => h.id === columnHook.id) ??
+                      columnHook;
+                    return (
+                      <SortableHookItem
+                        columnHook={getHook}
+                        hookDetails={() => getHookDetails(getHook().hook_id)}
+                        onRemove={handleRemoveHook}
+                        onToggleExecuteOnce={() =>
+                          sdk
                             .update_column_hook({
-                              identity: columnHook.id,
-                              input: { execute_once: !columnHook.execute_once },
+                              identity: getHook().id,
+                              input: { execute_once: !getHook().execute_once },
                             })
-                            .then(unwrap);
-                        } catch (err) {
-                          console.error("Failed to toggle execute_once:", err);
+                            .then(unwrap)
                         }
-                      }}
-                      onToggleTransparent={async () => {
-                        try {
-                          await sdk
+                        onToggleTransparent={() =>
+                          sdk
                             .update_column_hook({
-                              identity: columnHook.id,
-                              input: { transparent: !columnHook.transparent },
+                              identity: getHook().id,
+                              input: { transparent: !getHook().transparent },
                             })
-                            .then(unwrap);
-                        } catch (err) {
-                          console.error("Failed to toggle transparent:", err);
+                            .then(unwrap)
                         }
-                      }}
-                    />
-                  )}
+                      />
+                    );
+                  }}
                 </For>
               </div>
             </SortableProvider>
@@ -825,8 +820,8 @@ function HookSection(props: HookSectionProps) {
 
 // Sortable hook item component
 interface SortableHookItemProps {
-  columnHook: ColumnHook;
-  hookDetails: CombinedHook | undefined;
+  columnHook: () => ColumnHook;
+  hookDetails: () => CombinedHook | undefined;
   onRemove: (id: string) => void;
   onToggleExecuteOnce: () => void;
   onToggleTransparent: () => void;
@@ -839,26 +834,29 @@ const isPlaySoundHook = (hookId: string) => hookId === "system:play-sound";
 const isMoveTaskHook = (hookId: string) => hookId === "system:move-task";
 
 function SortableHookItem(props: SortableHookItemProps) {
-  const sortable = createSortable(props.columnHook.id);
+  const columnHook = () => props.columnHook();
+  const hookDetails = () => props.hookDetails();
 
-  const isRemovable = () => props.columnHook.removable !== false;
+  const sortable = createSortable(columnHook().id);
+
+  const isRemovable = () => columnHook().removable !== false;
 
   // Get current sound setting, defaulting to "ding"
   const currentSound = () =>
-    (props.columnHook.hook_settings?.sound as SoundType) || getDefaultSound();
+    (columnHook().hook_settings?.sound as SoundType) || getDefaultSound();
 
   // Get current target column for move-task hook
   const targetColumn = () =>
-    (props.columnHook.hook_settings?.target_column as string) || "next";
+    (columnHook().hook_settings?.target_column as string) || "next";
 
   // Handle sound setting change
   const handleSoundChange = async (sound: SoundType) => {
     try {
       await sdk
         .update_column_hook({
-          identity: props.columnHook.id,
+          identity: columnHook().id,
           input: {
-            hook_settings: { ...props.columnHook.hook_settings, sound },
+            hook_settings: { ...columnHook().hook_settings, sound },
           },
         })
         .then(unwrap);
@@ -869,11 +867,13 @@ function SortableHookItem(props: SortableHookItemProps) {
 
   // Choose icon based on hook type
   const HookIcon = () =>
-    isPlaySoundHook(props.columnHook.hook_id) ? (
+    isPlaySoundHook(columnHook().hook_id) ? (
       <SpeakerIcon class="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
     ) : (
       <TerminalIcon class="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
     );
+
+  const showMetaRow = () => hookDetails()?.is_system || !isRemovable();
 
   return (
     <div
@@ -883,53 +883,43 @@ function SortableHookItem(props: SortableHookItemProps) {
       }`}
       classList={{ "cursor-grabbing": sortable.isActiveDraggable }}
     >
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-2 min-w-0">
-          {/* Drag handle - disabled for non-removable hooks */}
-          <div
-            {...(isRemovable() ? sortable.dragActivators : {})}
-            class={`p-0.5 ${
-              isRemovable()
-                ? "cursor-grab hover:text-gray-300 text-gray-500"
-                : "text-gray-600 cursor-not-allowed"
-            }`}
-          >
-            <DragHandleIcon class="w-3.5 h-3.5" />
-          </div>
-          <HookIcon />
-          <span class="text-sm text-white truncate">
-            {props.hookDetails?.name || "Unknown Hook"}
-          </span>
-          <Show when={props.hookDetails?.is_system}>
-            <span class="text-xs px-1.5 py-0.5 bg-purple-500/20 text-purple-400 rounded flex-shrink-0">
-              System
-            </span>
-          </Show>
+      {/* Row 1: Drag handle, icon, title, settings */}
+      <div class="flex items-center gap-2">
+        {/* Drag handle - disabled for non-removable hooks */}
+        <div
+          {...(isRemovable() ? sortable.dragActivators : {})}
+          class={`flex-shrink-0 p-0.5 ${
+            isRemovable()
+              ? "cursor-grab hover:text-gray-300 text-gray-500"
+              : "text-gray-600 cursor-not-allowed"
+          }`}
+        >
+          <DragHandleIcon class="w-3.5 h-3.5" />
         </div>
-        <div class="flex items-center gap-1">
+        <HookIcon />
+        <span class="text-sm text-white truncate flex-1 min-w-0">
+          {hookDetails()?.name || "Unknown Hook"}
+        </span>
+        <div class="flex items-center gap-0.5 flex-shrink-0">
           {/* Execute once toggle */}
           <Button
             onClick={(e) => {
               e.stopPropagation();
               props.onToggleExecuteOnce();
             }}
-            variant="ghost"
-            buttonSize="sm"
+            variant="badge"
             title={
-              props.columnHook.execute_once
+              columnHook().execute_once
                 ? "Runs only once per task (click to disable)"
                 : "Runs every time (click to enable execute-once)"
             }
+            class={
+              columnHook().execute_once
+                ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/30"
+                : "bg-gray-700/50 text-gray-500 border-gray-600/30 hover:bg-gray-700"
+            }
           >
-            <span
-              class={`text-xs px-1.5 py-0.5 rounded border transition-colors ${
-                props.columnHook.execute_once
-                  ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
-                  : "bg-gray-700/50 text-gray-500 border-gray-600/30"
-              }`}
-            >
-              {props.columnHook.execute_once ? "1x" : "∞"}
-            </span>
+            {columnHook().execute_once ? "1x" : "∞"}
           </Button>
           {/* Transparent toggle */}
           <Button
@@ -937,47 +927,47 @@ function SortableHookItem(props: SortableHookItemProps) {
               e.stopPropagation();
               props.onToggleTransparent();
             }}
-            variant="ghost"
-            buttonSize="sm"
+            variant="badge"
             title={
-              props.columnHook.transparent
+              columnHook().transparent
                 ? "Transparent: runs even on error, doesn't change status (click to disable)"
                 : "Normal: skipped on error, changes status on failure (click to make transparent)"
             }
+            class={
+              columnHook().transparent
+                ? "bg-blue-500/20 text-blue-400 border-blue-500/30 hover:bg-blue-500/30"
+                : "bg-gray-700/50 text-gray-500 border-gray-600/30 hover:bg-gray-700"
+            }
           >
-            <span
-              class={`text-xs px-1.5 py-0.5 rounded border transition-colors ${
-                props.columnHook.transparent
-                  ? "bg-blue-500/20 text-blue-400 border-blue-500/30"
-                  : "bg-gray-700/50 text-gray-500 border-gray-600/30"
-              }`}
-            >
-              {props.columnHook.transparent ? "T" : "N"}
-            </span>
+            {columnHook().transparent ? "T" : "N"}
           </Button>
           {/* Remove button - only show if removable */}
           <Show when={isRemovable()}>
             <Button
-              onClick={() => props.onRemove(props.columnHook.id)}
+              onClick={() => props.onRemove(columnHook().id)}
               variant="icon"
               title="Remove hook"
             >
               <CloseIcon class="w-3.5 h-3.5" />
             </Button>
           </Show>
-          <Show when={!isRemovable()}>
-            <span
-              class="p-1 text-gray-600 text-xs"
-              title="This hook cannot be removed"
-            >
-              Required
-            </span>
-          </Show>
         </div>
       </div>
 
+      {/* Row 2: System badge and Required status (only if applicable) */}
+      <Show when={showMetaRow()}>
+        <div class="flex items-center gap-2 mt-1.5">
+          <Show when={hookDetails()?.is_system}>
+            <Chip variant="purple">System</Chip>
+          </Show>
+          <Show when={!isRemovable()}>
+            <Chip variant="gray">Required</Chip>
+          </Show>
+        </div>
+      </Show>
+
       {/* Sound settings for play-sound hook */}
-      <Show when={isPlaySoundHook(props.columnHook.hook_id)}>
+      <Show when={isPlaySoundHook(columnHook().hook_id)}>
         <HookSoundSettings
           currentSound={currentSound()}
           onChange={handleSoundChange}
@@ -985,9 +975,9 @@ function SortableHookItem(props: SortableHookItemProps) {
       </Show>
 
       {/* Target column settings for move-task hook */}
-      <Show when={isMoveTaskHook(props.columnHook.hook_id)}>
+      <Show when={isMoveTaskHook(columnHook().hook_id)}>
         <MoveTaskSettings
-          columnHook={props.columnHook}
+          columnHook={columnHook()}
           targetColumn={targetColumn()}
           disabled={!isRemovable()}
         />

@@ -1,6 +1,6 @@
-import { type JSX, Show, splitProps } from "solid-js";
+import { createMemo, type JSX, Show, splitProps } from "solid-js";
 
-type ButtonVariant = "primary" | "secondary" | "danger" | "ghost" | "icon";
+type ButtonVariant = "primary" | "secondary" | "danger" | "ghost" | "icon" | "badge";
 type ButtonSize = "sm" | "md" | "lg";
 
 interface ButtonProps extends Omit<JSX.ButtonHTMLAttributes<HTMLButtonElement>, "class"> {
@@ -9,6 +9,7 @@ interface ButtonProps extends Omit<JSX.ButtonHTMLAttributes<HTMLButtonElement>, 
   fullWidth?: boolean;
   loading?: boolean;
   children?: JSX.Element;
+  class?: string;
 }
 
 const variantClasses: Record<ButtonVariant, string> = {
@@ -16,7 +17,8 @@ const variantClasses: Record<ButtonVariant, string> = {
   secondary: "bg-gray-800 hover:bg-gray-700 text-gray-300",
   danger: "bg-red-600 hover:bg-red-700 disabled:bg-red-800 text-white",
   ghost: "bg-transparent hover:bg-gray-800 text-gray-400 hover:text-white",
-  icon: "p-1.5 text-gray-400 hover:text-brand-400 hover:bg-brand-500/10",
+  icon: "w-6 h-6 flex items-center justify-center text-gray-400 hover:text-brand-400 active:text-brand-500",
+  badge: "text-xs w-5 h-5 rounded border flex items-center justify-center",
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
@@ -33,28 +35,32 @@ export default function Button(props: ButtonProps) {
     "loading",
     "children",
     "disabled",
+    "class",
   ]);
 
-  const variant = local.variant ?? "primary";
-  const size = local.buttonSize ?? "md";
-  const isIcon = variant === "icon";
+  const variant = () => local.variant ?? "primary";
+  const size = () => local.buttonSize ?? "md";
+  const isCompact = () => variant() === "icon" || variant() === "badge";
 
-  const baseClasses = isIcon
-    ? "rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-    : "rounded-lg transition-colors disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2";
+  const classes = createMemo(() => {
+    const baseClasses = isCompact()
+      ? "transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      : "rounded-lg transition-colors disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2";
 
-  const classes = [
-    baseClasses,
-    variantClasses[variant],
-    !isIcon ? sizeClasses[size] : "",
-    local.fullWidth ? "w-full" : "",
-  ].filter(Boolean).join(" ");
+    return [
+      baseClasses,
+      variantClasses[variant()],
+      !isCompact() ? sizeClasses[size()] : "",
+      local.fullWidth ? "w-full" : "",
+      local.class,
+    ].filter(Boolean).join(" ");
+  });
 
   return (
     <button
       {...rest}
       disabled={local.disabled || local.loading}
-      class={classes}
+      class={classes()}
     >
       <Show when={local.loading}>
         <svg

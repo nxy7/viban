@@ -30,7 +30,7 @@ defmodule Viban.Kanban.Actors.BoardActor do
   require Logger
 
   alias Viban.Kanban.Task
-  alias Viban.Kanban.Servers.TaskServer
+  alias Viban.Kanban.Servers.TaskSupervisor
 
   # PubSub topic for task updates
   @task_updates_topic "task:updates"
@@ -297,29 +297,29 @@ defmodule Viban.Kanban.Actors.BoardActor do
   defp spawn_task_actor(state, task) do
     case DynamicSupervisor.start_child(
            state.task_supervisor_name,
-           {TaskServer, {state.board_id, task}}
+           {TaskSupervisor, {state.board_id, task}}
          ) do
       {:ok, pid} ->
-        Logger.debug("Spawned TaskServer for task #{task.id}")
+        Logger.debug("Spawned TaskSupervisor for task #{task.id}")
         %{state | task_pids: Map.put(state.task_pids, task.id, pid)}
 
       {:error, {:already_started, pid}} ->
         %{state | task_pids: Map.put(state.task_pids, task.id, pid)}
 
       {:error, reason} ->
-        Logger.error("Failed to spawn TaskServer for task #{task.id}: #{inspect(reason)}")
+        Logger.error("Failed to spawn TaskSupervisor for task #{task.id}: #{inspect(reason)}")
         state
     end
   end
 
   defp ensure_task_actor_exists(state, task) do
-    case Registry.lookup(@registry, {:task_server, task.id}) do
+    case Registry.lookup(@registry, {:task_supervisor, task.id}) do
       [{pid, _}] ->
-        Logger.info("TaskServer already exists for task #{task.id}, pid: #{inspect(pid)}")
+        Logger.info("TaskSupervisor already exists for task #{task.id}, pid: #{inspect(pid)}")
         state
 
       [] ->
-        Logger.info("Spawning TaskServer for existing task #{task.id} (was missing)")
+        Logger.info("Spawning TaskSupervisor for existing task #{task.id} (was missing)")
         spawn_task_actor(state, task)
     end
   end
@@ -339,7 +339,7 @@ defmodule Viban.Kanban.Actors.BoardActor do
 
   @spec terminate_task_actor_by_registry(state(), String.t()) :: :ok
   defp terminate_task_actor_by_registry(state, task_id) do
-    case Registry.lookup(@registry, {:task_server, task_id}) do
+    case Registry.lookup(@registry, {:task_supervisor, task_id}) do
       [{pid, _}] ->
         DynamicSupervisor.terminate_child(state.task_supervisor_name, pid)
 

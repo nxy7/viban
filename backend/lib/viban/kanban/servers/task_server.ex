@@ -31,7 +31,7 @@ defmodule Viban.Kanban.Servers.TaskServer do
   require Logger
 
   alias Viban.Kanban.{Column, ColumnHook, Hook, HookExecution, Task, WorktreeManager}
-  alias Viban.Kanban.Servers.HookExecutionServer
+  alias Viban.Kanban.Servers.{HookExecutionServer, TaskSupervisor}
   alias Viban.Kanban.Actors.ColumnSemaphore
   alias Phoenix.PubSub
 
@@ -44,8 +44,7 @@ defmodule Viban.Kanban.Servers.TaskServer do
           current_column_id: String.t() | nil,
           worktree_path: String.t() | nil,
           worktree_branch: String.t() | nil,
-          custom_branch_name: String.t() | nil,
-          hook_executor_pid: pid() | nil
+          custom_branch_name: String.t() | nil
         }
 
   defstruct [
@@ -54,8 +53,7 @@ defmodule Viban.Kanban.Servers.TaskServer do
     :current_column_id,
     :worktree_path,
     :worktree_branch,
-    :custom_branch_name,
-    :hook_executor_pid
+    :custom_branch_name
   ]
 
   # ============================================================================
@@ -161,10 +159,9 @@ defmodule Viban.Kanban.Servers.TaskServer do
     Logger.info("Initializing", task_id: state.task_id)
 
     state = maybe_create_worktree(state)
-    state = start_hook_executor(state)
     self_heal(state)
     queue_column_hooks(state.task_id, state.current_column_id, state.board_id)
-    schedule_next_hook(state)
+    schedule_next_hook(state.task_id)
 
     {:noreply, state}
   end
@@ -183,6 +180,12 @@ defmodule Viban.Kanban.Servers.TaskServer do
   end
 
   @impl true
+  def handle_info({:schedule_next_hook, task_id, retries}, state) do
+    schedule_next_hook(task_id, retries)
+    {:noreply, state}
+  end
+
+  @impl true
   def handle_info(_msg, state) do
     {:noreply, state}
   end
@@ -191,16 +194,15 @@ defmodule Viban.Kanban.Servers.TaskServer do
   def handle_call({:move, new_column_id, _new_position}, _from, state) do
     Logger.info("Moving to column #{new_column_id}", task_id: state.task_id)
 
-    state = stop_hook_executor_sync(state)
+    stop_hook_executor_sync(state.task_id)
     cancel_pending_executions(state.task_id, :column_change)
 
     if state.current_column_id do
       ColumnSemaphore.task_left_column(state.current_column_id, state.task_id)
     end
 
-    state = start_hook_executor(state)
     queue_column_hooks(state.task_id, new_column_id, state.board_id)
-    schedule_next_hook(state)
+    schedule_next_hook(state.task_id)
 
     {:reply, :ok, %{state | current_column_id: new_column_id}}
   end
@@ -209,10 +211,9 @@ defmodule Viban.Kanban.Servers.TaskServer do
   def handle_call(:stop_execution, _from, state) do
     Logger.info("Stop execution requested", task_id: state.task_id)
 
-    state = stop_hook_executor_sync(state)
+    stop_hook_executor_sync(state.task_id)
     cancel_pending_executions(state.task_id, :user_cancelled)
     clear_task_status(state.task_id)
-    state = start_hook_executor(state)
 
     {:reply, :ok, state}
   end
@@ -220,7 +221,7 @@ defmodule Viban.Kanban.Servers.TaskServer do
   @impl true
   def handle_cast({:hook_completed, execution_id, result}, state) do
     Logger.info("Hook #{execution_id} completed with #{inspect(result)}", task_id: state.task_id)
-    schedule_next_hook(state)
+    schedule_next_hook(state.task_id)
     {:noreply, state}
   end
 
@@ -233,10 +234,7 @@ defmodule Viban.Kanban.Servers.TaskServer do
   @impl true
   def terminate(reason, state) do
     Logger.info("Terminating: #{inspect(reason)}", task_id: state.task_id)
-
-    stop_hook_executor_sync(state)
     maybe_cleanup_worktree(state)
-
     :ok
   end
 
@@ -244,45 +242,38 @@ defmodule Viban.Kanban.Servers.TaskServer do
   # HookExecutionServer Management
   # ============================================================================
 
-  defp start_hook_executor(state) do
-    case HookExecutionServer.start_link(%{
-           task_id: state.task_id,
-           task_server_pid: self(),
-           board_id: state.board_id
-         }) do
+  defp stop_hook_executor_sync(task_id) do
+    case TaskSupervisor.get_hook_executor(task_id) do
       {:ok, pid} ->
-        Logger.debug("Started HookExecutionServer for task #{state.task_id}")
-        %{state | hook_executor_pid: pid}
+        case HookExecutionServer.stop(pid) do
+          :ok -> :ok
+          {:error, reason} -> Logger.warning("Failed to stop HookExecutionServer: #{inspect(reason)}")
+        end
 
-      {:error, reason} ->
-        Logger.error("Failed to start HookExecutionServer: #{inspect(reason)}")
-        state
+      {:error, :not_found} ->
+        :ok
     end
   end
 
-  defp stop_hook_executor_sync(%{hook_executor_pid: nil} = state), do: state
+  defp schedule_next_hook(task_id, retries \\ 3) do
+    case TaskSupervisor.get_hook_executor(task_id) do
+      {:ok, pid} ->
+        case HookExecution.pending_for_task(task_id) do
+          {:ok, [next_execution | _]} ->
+            HookExecutionServer.execute(pid, next_execution)
 
-  defp stop_hook_executor_sync(%{hook_executor_pid: pid} = state) do
-    case HookExecutionServer.stop(pid) do
-      :ok -> :ok
-      {:error, reason} -> Logger.warning("Failed to stop HookExecutionServer: #{inspect(reason)}")
-    end
+          {:ok, []} ->
+            finalize_hook_execution(task_id)
 
-    %{state | hook_executor_pid: nil}
-  end
+          {:error, reason} ->
+            Logger.error("Failed to get pending hooks: #{inspect(reason)}")
+        end
 
-  defp schedule_next_hook(%{hook_executor_pid: nil}), do: :ok
+      {:error, :not_found} when retries > 0 ->
+        Process.send_after(self(), {:schedule_next_hook, task_id, retries - 1}, 50)
 
-  defp schedule_next_hook(%{hook_executor_pid: pid, task_id: task_id}) do
-    case HookExecution.pending_for_task(task_id) do
-      {:ok, [next_execution | _]} ->
-        HookExecutionServer.execute(pid, next_execution)
-
-      {:ok, []} ->
-        finalize_hook_execution(task_id)
-
-      {:error, reason} ->
-        Logger.error("Failed to get pending hooks: #{inspect(reason)}")
+      {:error, :not_found} ->
+        Logger.warning("HookExecutionServer not found for task #{task_id}")
     end
   end
 

@@ -789,7 +789,7 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
       onClose={props.onClose}
       title=""
       subtitle={props.columnName}
-      width={isFullscreen() ? "full" : "lg"}
+      width={isFullscreen() ? "full" : "xl"}
     >
       <Show when={props.task}>
         {(task) => (
