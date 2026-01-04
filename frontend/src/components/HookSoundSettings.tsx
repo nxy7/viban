@@ -1,4 +1,4 @@
-import { createSignal, For, Show } from "solid-js";
+import { type Accessor, createSignal, For, Show } from "solid-js";
 import {
   getSoundOptions,
   playSound,
@@ -9,7 +9,7 @@ import { Button, Select } from "~/components/design-system";
 import { PlayIcon, StopIcon } from "./ui/Icons";
 
 interface HookSoundSettingsProps {
-  currentSound: SoundType;
+  currentSound: Accessor<SoundType>;
   onChange: (sound: SoundType) => void;
 }
 
@@ -26,18 +26,15 @@ export default function HookSoundSettings(props: HookSoundSettingsProps) {
 
   const handlePreview = () => {
     if (isPlaying()) {
-      // Stop currently playing sound
       stopSound(currentAudio());
       setCurrentAudio(null);
       setIsPlaying(false);
     } else {
-      // Play new sound
-      const audio = playSound(props.currentSound);
+      const audio = playSound(props.currentSound());
       if (audio) {
         setCurrentAudio(audio);
         setIsPlaying(true);
 
-        // Reset state when sound ends
         audio.onended = () => {
           setIsPlaying(false);
           setCurrentAudio(null);
@@ -53,7 +50,7 @@ export default function HookSoundSettings(props: HookSoundSettingsProps) {
       </label>
       <div class="flex gap-2">
         <Select
-          value={props.currentSound}
+          value={props.currentSound()}
           onChange={(e) => {
             if (isPlaying()) {
               stopSound(currentAudio());

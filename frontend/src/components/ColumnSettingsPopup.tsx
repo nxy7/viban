@@ -975,7 +975,7 @@ function SortableHookItem(props: SortableHookItemProps) {
       {/* Sound settings for play-sound hook */}
       <Show when={isPlaySoundHook(columnHook().hook_id)}>
         <HookSoundSettings
-          currentSound={currentSound()}
+          currentSound={currentSound}
           onChange={handleSoundChange}
         />
       </Show>

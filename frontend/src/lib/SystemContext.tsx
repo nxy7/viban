@@ -68,12 +68,13 @@ export const SystemProvider: ParentComponent = (props) => {
     setToolsError(null);
     try {
       const result = await sdk.list_tools({}).then(unwrap);
-      setTools(result as SystemTool[]);
+      setTools((result as SystemTool[]) ?? []);
     } catch (err) {
       console.error("[SystemContext] Failed to fetch tools:", err);
       setToolsError(
         err instanceof Error ? err.message : "Failed to fetch tools",
       );
+      setTools([]);
     } finally {
       setToolsLoading(false);
     }

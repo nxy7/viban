@@ -733,6 +733,37 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
     },
   );
 
+  useShortcut(
+    ["Control", "c"],
+    () => {
+      const path = props.task?.worktree_path;
+      if (path) openInEditor(path);
+    },
+    {
+      description: "Open in code editor",
+      enabled: () => props.isOpen && !!props.task?.worktree_path,
+    },
+  );
+
+  useShortcut(
+    ["Control", "p"],
+    () => {
+      const task = props.task;
+      if (!task) return;
+
+      const hasActivePR = task.pr_url && task.pr_status && task.pr_status !== "closed";
+      if (hasActivePR) {
+        window.open(task.pr_url!, "_blank");
+      } else if (task.worktree_branch) {
+        setShowCreatePRModal(true);
+      }
+    },
+    {
+      description: "Open/Create PR",
+      enabled: () => props.isOpen && !!(props.task?.pr_url || props.task?.worktree_branch),
+    },
+  );
+
   const handleDismissError = async () => {
     const t = props.task;
     if (!t) return;
