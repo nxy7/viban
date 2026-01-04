@@ -751,7 +751,8 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
       const task = props.task;
       if (!task) return;
 
-      const hasActivePR = task.pr_url && task.pr_status && task.pr_status !== "closed";
+      const hasActivePR =
+        task.pr_url && task.pr_status && task.pr_status !== "closed";
       if (hasActivePR) {
         window.open(task.pr_url!, "_blank");
       } else if (task.worktree_branch) {
@@ -760,7 +761,8 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
     },
     {
       description: "Open/Create PR",
-      enabled: () => props.isOpen && !!(props.task?.pr_url || props.task?.worktree_branch),
+      enabled: () =>
+        props.isOpen && !!(props.task?.pr_url || props.task?.worktree_branch),
     },
   );
 

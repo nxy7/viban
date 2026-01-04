@@ -18,7 +18,15 @@
 - [x] seems like hook settings are not synced up correctly, 'PLAY sound' hook shows incorrect option selected, but when the sound is played it plays correct one
   so this issue is related just to settings, not the actual sound being played
   (COMPLETED: Fixed by passing currentSound as an accessor instead of a static value, maintaining SolidJS reactivity)
-- make commit
-- make design document on how we can start showing PR line diff between task and base branch (just amount of lines being changed is fine, bonus points if we
+- [x] make commit
+- [x] make design document on how we can start showing PR line diff between task and base branch (just amount of lines being changed is fine, bonus points if we
   didn't have to commit the changes to do that and we could somehow calculate the diff even if changes weren't committed). The most important thing here is
   for us to be correct about this, we can't have mistakes
+  (COMPLETED: Created docs/PR_LINE_DIFF_DESIGN.md with comprehensive design including:
+  - Technical analysis of git diff mechanisms
+  - Recommended hybrid approach using merge-base
+  - Backend Ash action implementation
+  - Frontend hook and component design
+  - Edge case handling
+  - Performance considerations with caching
+  - Phased implementation plan)
