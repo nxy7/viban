@@ -19,6 +19,8 @@ jobs:
 
       - name: Setup Nix cache
         uses: DeterminateSystems/magic-nix-cache-action@main
+        with:
+          use-gha-cache: false
 
       - name: Build devShell
         run: nix develop --command true
@@ -52,6 +54,8 @@ jobs:
 
       - name: Setup Nix cache
         uses: DeterminateSystems/magic-nix-cache-action@main
+        with:
+          use-gha-cache: false
 
       - name: Restore Mix cache
         uses: actions/cache@v4
@@ -97,6 +101,8 @@ jobs:
 
       - name: Setup Nix cache
         uses: DeterminateSystems/magic-nix-cache-action@main
+        with:
+          use-gha-cache: false
 
       - name: Restore Bun cache
         uses: actions/cache@v4
@@ -131,6 +137,8 @@ jobs:
 
       - name: Setup Nix cache
         uses: DeterminateSystems/magic-nix-cache-action@main
+        with:
+          use-gha-cache: false
 
       - name: Restore Mix cache
         uses: actions/cache@v4
@@ -171,6 +179,8 @@ jobs:
 
       - name: Setup Nix cache
         uses: DeterminateSystems/magic-nix-cache-action@main
+        with:
+          use-gha-cache: false
 
       - name: Start PostgreSQL
         run: docker compose up db -d --wait
