@@ -6,3 +6,4 @@
    - Currently periodical tasks set `auto_start: true` but manual move is needed
    - This hook would also fix CreateTaskModal's autostart to respect Todo hooks
    - Should run after environment setup hooks on Todo column
+- simplify DEV with selfhosted elixir (without Caddy proxy)
