@@ -9,53 +9,43 @@ Get up and running with Viban in minutes. This guide will walk you through setti
 
 ## Prerequisites
 
-Before you begin, ensure you have:
+| Tool | Required | Installation |
+|------|----------|--------------|
+| Docker | **Yes** | [Get Docker](https://docs.docker.com/get-docker/) |
+| Node.js | For npx install | [Get Node.js](https://nodejs.org/) |
 
-- **Elixir 1.15+** and **Erlang/OTP 26+**
-- **Node.js 20+** and **Bun** (or npm)
-- **PostgreSQL 15+**
-- **Claude Code CLI** installed and authenticated
-
-## Installation
-
-### 1. Clone the Repository
+## Install & Run
 
 ```bash
-git clone https://github.com/nxy7/viban.git
-cd viban
+npx @nxy7/viban
 ```
 
-### 2. Set Up the Backend
+That's it! Viban will:
+1. Download the appropriate binary for your platform
+2. Start a PostgreSQL container automatically
+3. Open your browser to the app
+
+> **Note**: Viban uses HTTPS with a self-signed certificate for HTTP/2 support. Your browser may show a security warning on first visit - this is expected. Click "Advanced" → "Proceed" to continue.
+
+## Alternative: Direct Binary Download
+
+You can also download the binary directly from [GitHub Releases](https://github.com/nxy7/viban/releases):
 
 ```bash
-cd backend
-mix deps.get
-mix ecto.setup
+# macOS (Apple Silicon)
+curl -L https://github.com/nxy7/viban/releases/latest/download/viban-macos_arm -o viban
+chmod +x viban
+./viban
+
+# Linux (x64)
+curl -L https://github.com/nxy7/viban/releases/latest/download/viban-linux_intel -o viban
+chmod +x viban
+./viban
 ```
-
-### 3. Set Up the Frontend
-
-```bash
-cd frontend
-bun install
-```
-
-### 4. Start the Development Servers
-
-```bash
-# In the root directory
-just dev
-```
-
-This will start:
-- Caddy HTTPS proxy at `https://localhost:8000`
-- Backend server at `http://localhost:7771`
-- Frontend at `http://localhost:3000`
-- Electric SQL sync service
 
 ## Creating Your First Project
 
-1. Open the Viban dashboard at `https://localhost:8000`
+1. Open the Viban dashboard at `http://localhost:7777`
 2. Click "New Project" and give it a name
 3. Connect your GitHub repository (optional but recommended)
 
@@ -75,6 +65,42 @@ This will start:
    - Streams real-time output
 3. Once complete, the task moves to "In Review"
 4. Review the changes and merge when ready
+
+## Optional Tools
+
+Viban detects available tools at startup and enables features accordingly. Check **Board Settings > System** to see detected tools.
+
+| Tool | Purpose | Feature Enabled |
+|------|---------|-----------------|
+| `gh` (GitHub CLI) | GitHub integration | Pull Request creation, PR status sync |
+| `claude` (Claude Code) | AI-powered task execution | Claude Code executor |
+| `codex` (OpenAI Codex) | AI-powered task execution | Codex executor |
+| `aider` | AI-powered coding assistant | Aider executor |
+| `goose` | AI-powered coding assistant | Goose executor |
+
+### Installing Optional Tools
+
+**GitHub CLI** (for PR functionality):
+```bash
+# macOS
+brew install gh
+gh auth login
+
+# Linux
+curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+sudo apt update && sudo apt install gh
+```
+
+**Claude Code** (for Claude AI executor):
+```bash
+npm install -g @anthropic-ai/claude-code
+```
+
+**Aider** (for Aider executor):
+```bash
+pip install aider-chat
+```
 
 ## Next Steps
 

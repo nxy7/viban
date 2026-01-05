@@ -53,4 +53,10 @@ Viban consists of three main components:
 
 ## Getting Started
 
-Ready to start using Viban? Head to the [Quick Start](/docs/getting-started) guide to set up your first project.
+Ready to start using Viban? It's as simple as:
+
+```bash
+npx @nxy7/viban
+```
+
+Head to the [Quick Start](/docs/getting-started) guide for more details.
