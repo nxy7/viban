@@ -45,7 +45,7 @@ export default function Modal(props: ModalProps) {
           onClick={handleBackdropClick}
         >
           <div
-            class="bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl w-full max-w-md mx-4 animate-in fade-in zoom-in-95 duration-200"
+            class="bg-gray-900 border border-gray-800 rounded-md shadow-2xl w-full max-w-md mx-4 animate-in fade-in zoom-in-95 duration-200"
             role="dialog"
             aria-modal="true"
             aria-labelledby={props.title ? "modal-title" : undefined}

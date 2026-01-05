@@ -141,6 +141,7 @@ defmodule Viban.MixProject do
       # Dev/Test
       {:floki, ">= 0.30.0", only: :test},
       {:tidewave, "~> 0.2", only: :dev},
+      {:reverse_proxy_plug, "~> 3.0", only: :dev},
 
       # Single-binary packaging
       {:burrito, "~> 1.0"}

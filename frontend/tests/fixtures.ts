@@ -5,11 +5,7 @@ import {
   type Page,
 } from "@playwright/test";
 
-// In prod mode, API is on same host as frontend (port 8000)
-// In dev mode, backend runs on port 7771
-const API_BASE = process.env.PROD_E2E
-  ? "http://localhost:8000"
-  : "http://localhost:7771";
+const API_BASE = "https://localhost:8000";
 
 interface TestFixtures {
   testApi: APIRequestContext;
@@ -21,6 +17,7 @@ export const test = base.extend<TestFixtures>({
   testApi: async ({ playwright }, use) => {
     const context = await playwright.request.newContext({
       baseURL: API_BASE,
+      ignoreHTTPSErrors: true,
     });
     await use(context);
     await context.dispose();

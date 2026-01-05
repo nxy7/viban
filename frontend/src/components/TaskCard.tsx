@@ -138,7 +138,7 @@ export default function TaskCard(props: TaskCardProps) {
     <div
       ref={setRefs}
       class={`
-        relative border rounded-lg p-3 cursor-pointer
+        relative border rounded-md p-3 cursor-pointer
         transition-transform duration-150
         hover:border-gray-600 hover:bg-gray-800
         ${isBeingDragged() ? "hidden" : ""}
@@ -257,7 +257,7 @@ export function TaskCardOverlay(props: TaskCardOverlayProps) {
   return (
     <div
       class={`
-        border rounded-lg p-3 shadow-xl ring-2 ring-brand-500
+        border rounded-md p-3 shadow-xl ring-2 ring-brand-500
         w-64 max-w-64 transition-transform duration-75
         bg-gray-800 ${borderClass()}
       `}

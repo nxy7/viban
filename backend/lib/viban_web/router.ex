@@ -112,11 +112,21 @@ defmodule VibanWeb.Router do
       live_dashboard "/dashboard", metrics: VibanWeb.Telemetry
       oban_dashboard("/oban")
     end
+
+    forward "/_build", ReverseProxyPlug,
+      upstream: "http://127.0.0.1:3000/_build",
+      client: ReverseProxyPlug.HTTPClient.Adapters.Req
   end
 
-  scope "/", VibanWeb do
-    pipe_through :spa
-
-    get "/*path", SPAController, :index
+  if Application.compile_env(:viban, :dev_routes) do
+    scope "/" do
+      pipe_through :spa
+      forward "/", VibanWeb.Plugs.DevProxy
+    end
+  else
+    scope "/", VibanWeb do
+      pipe_through :spa
+      get "/*path", SPAController, :index
+    end
   end
 end

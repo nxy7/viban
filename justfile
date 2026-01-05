@@ -1,6 +1,6 @@
 # Viban Justfile - Development commands
 #
-# App runs at: https://localhost:8000 (via Caddy HTTP/2 proxy)
+# App runs at: https://localhost:8000 (Phoenix with self-signed HTTPS)
 
 # Default recipe - show available commands
 default:
@@ -30,16 +30,16 @@ dev-simple:
     @echo "Waiting for database..."
     @sleep 3
     @just backend-setup
-    @echo "Starting backend, frontend and caddy in parallel..."
-    @just backend & just frontend & just caddy
+    @echo "Starting backend and frontend in parallel..."
+    @just backend & just frontend
 
-# Trust Caddy's local CA (run once)
-caddy-trust:
-    caddy trust
+# [DEPRECATED] Trust Caddy's local CA - no longer needed, using Phoenix HTTPS directly
+# caddy-trust:
+#     caddy trust
 
-# Start Caddy reverse proxy
-caddy:
-    caddy run --config Caddyfile
+# [DEPRECATED] Start Caddy reverse proxy - no longer needed, using Phoenix HTTPS directly
+# caddy:
+#     caddy run --config Caddyfile
 
 # Start only the database
 db:

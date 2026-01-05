@@ -8,7 +8,8 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: "html",
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL: "https://localhost:8000",
+    ignoreHTTPSErrors: true,
     trace: "on-first-retry",
   },
   projects: [
@@ -23,7 +24,8 @@ export default defineConfig({
     {
       // E2E_TEST=true enables /api/test/* endpoints
       command: "cd ../backend && E2E_TEST=true mix phx.server",
-      url: "http://localhost:7771",
+      url: "https://localhost:8000/api/health",
+      ignoreHTTPSErrors: true,
       reuseExistingServer: !process.env.CI,
       timeout: 120 * 1000,
     },

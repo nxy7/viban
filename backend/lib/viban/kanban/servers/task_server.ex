@@ -160,7 +160,11 @@ defmodule Viban.Kanban.Servers.TaskServer do
 
     state = maybe_create_worktree(state)
     self_heal(state)
-    queue_column_hooks(state.task_id, state.current_column_id, state.board_id)
+    # On restart, only queue hooks that don't already have executions
+    queue_column_hooks(state.task_id, state.current_column_id, state.board_id,
+      restart_recovery: true
+    )
+
     schedule_next_hook(state.task_id)
 
     {:noreply, state}
@@ -201,7 +205,8 @@ defmodule Viban.Kanban.Servers.TaskServer do
       ColumnSemaphore.task_left_column(state.current_column_id, state.task_id)
     end
 
-    queue_column_hooks(state.task_id, new_column_id, state.board_id)
+    # Fresh queue - always queue all applicable hooks
+    queue_column_hooks(state.task_id, new_column_id, state.board_id, restart_recovery: false)
     schedule_next_hook(state.task_id)
 
     {:reply, :ok, %{state | current_column_id: new_column_id}}
@@ -328,42 +333,41 @@ defmodule Viban.Kanban.Servers.TaskServer do
   # Hook Queue Management
   # ============================================================================
 
-  defp queue_column_hooks(_task_id, nil, _board_id), do: :ok
+  defp queue_column_hooks(_task_id, nil, _board_id, _opts), do: :ok
 
-  defp queue_column_hooks(task_id, column_id, _board_id) do
-    Logger.info("Queuing hooks for column #{column_id}", task_id: task_id)
+  defp queue_column_hooks(task_id, column_id, _board_id, opts) do
+    restart_recovery = Keyword.get(opts, :restart_recovery, false)
 
-    # Check if ANY hook executions already exist for this task+column combo
-    # This prevents re-queuing hooks on server restart when they've already been processed
-    existing_for_column =
-      case HookExecution.for_task_and_column(task_id, column_id) do
-        {:ok, executions} -> executions
-        _ -> []
-      end
+    Logger.info("Queuing hooks for column #{column_id} (restart_recovery: #{restart_recovery})",
+      task_id: task_id
+    )
 
-    if length(existing_for_column) > 0 do
-      Logger.info(
-        "Found #{length(existing_for_column)} existing hooks for column #{column_id}, skipping queue (restart recovery)",
-        task_id: task_id
-      )
-
-      :ok
-    else
-      queue_column_hooks_impl(task_id, column_id)
-    end
-  end
-
-  defp queue_column_hooks_impl(task_id, column_id) do
     task = get_task_or_nil(task_id)
     hooks_enabled = column_hooks_enabled?(column_id)
     task_in_error = task && task.agent_status == :error
     executed_hooks = (task && task.executed_hooks) || []
 
+    # On restart recovery, skip hooks that already have ANY execution record for this task+column
+    # On fresh queue (from move), only skip pending/running executions (completed ones are fine to re-run)
+    already_queued_column_hook_ids =
+      if restart_recovery do
+        case HookExecution.for_task_and_column(task_id, column_id) do
+          {:ok, executions} -> Enum.map(executions, & &1.column_hook_id) |> MapSet.new()
+          _ -> MapSet.new()
+        end
+      else
+        MapSet.new()
+      end
+
     entry_hooks = get_hooks_for_column(column_id)
 
+    # Filter out hooks that:
+    # 1. Are execute_once and already in task.executed_hooks
+    # 2. Already have a HookExecution record for this task+column (only on restart recovery)
     entry_hooks =
       Enum.filter(entry_hooks, fn {column_hook, _hook} ->
-        not (column_hook.execute_once and column_hook.id in executed_hooks)
+        not (column_hook.execute_once and column_hook.id in executed_hooks) and
+          not MapSet.member?(already_queued_column_hook_ids, column_hook.id)
       end)
 
     if not hooks_enabled do

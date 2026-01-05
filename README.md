@@ -4,20 +4,56 @@ A fast-iteration task management tool inspired by [Vibe Kanban](https://vibekanb
 
 The main motivation for this project is the belief that a different tech stack can enable much faster iteration speed for development.
 
-## Getting Started
+## Quick Start
 
-### Requirements
+### Prerequisites
 
-Viban requires certain CLI tools to provide full functionality. The application detects available tools at startup and enables/disables features accordingly.
+| Tool | Required | Installation |
+|------|----------|--------------|
+| Docker | **Yes** | [Get Docker](https://docs.docker.com/get-docker/) |
+| Node.js | For npx install | [Get Node.js](https://nodejs.org/) |
 
-#### Core Requirements
+### Install & Run
+
+```bash
+npx @nxy7/viban
+```
+
+That's it! Viban will:
+1. Download the appropriate binary for your platform
+2. Start a PostgreSQL container automatically
+3. Open your browser to the app
+
+> **Note**: Viban uses HTTPS with a self-signed certificate for HTTP/2 support. Your browser may show a security warning on first visit - this is expected. Click "Advanced" → "Proceed" to continue.
+
+### Alternative: Direct Binary Download
+
+You can also download the binary directly from [GitHub Releases](https://github.com/nxy7/viban/releases):
+
+```bash
+# macOS (Apple Silicon)
+curl -L https://github.com/nxy7/viban/releases/latest/download/viban-macos_arm -o viban
+chmod +x viban
+./viban
+
+# Linux (x64)
+curl -L https://github.com/nxy7/viban/releases/latest/download/viban-linux_intel -o viban
+chmod +x viban
+./viban
+```
+
+## Requirements
+
+### Core Requirements
 
 | Tool | Required | Purpose |
 |------|----------|---------|
-| Docker | **Yes** | PostgreSQL database |
+| Docker | **Yes** | PostgreSQL database (auto-managed) |
 | Git | **Yes** | Version control, worktree management |
 
-#### Optional Tools
+### Optional Tools
+
+Viban detects available tools at startup and enables features accordingly. Check **Board Settings > System** to see detected tools.
 
 | Tool | Purpose | Feature Enabled |
 |------|---------|-----------------|
@@ -26,8 +62,6 @@ Viban requires certain CLI tools to provide full functionality. The application 
 | `codex` (OpenAI Codex) | AI-powered task execution | Codex executor |
 | `aider` | AI-powered coding assistant | Aider executor |
 | `goose` | AI-powered coding assistant | Goose executor |
-
-You can check which tools are detected in **Board Settings > System** tab.
 
 ### Installing Optional Tools
 

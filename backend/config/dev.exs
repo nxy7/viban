@@ -11,7 +11,13 @@ config :viban, Viban.Repo,
   pool_size: 10
 
 config :viban, VibanWeb.Endpoint,
-  http: [ip: {127, 0, 0, 1}, port: 7771],
+  https: [
+    ip: {127, 0, 0, 1},
+    port: 8000,
+    cipher_suite: :strong,
+    certfile: "priv/cert/selfsigned.pem",
+    keyfile: "priv/cert/selfsigned_key.pem"
+  ],
   check_origin: false,
   code_reloader: true,
   debug_errors: true,
@@ -33,6 +39,7 @@ config :viban, VibanWeb.Endpoint,
 
 config :viban, dev_routes: true
 
+config :logger, level: :info
 config :logger, :console, format: "[$level] $message\n"
 
 config :phoenix, :stacktrace_depth, 20
@@ -49,7 +56,14 @@ if System.get_env("E2E_TEST") == "true" do
 
   # Disable Bandit compression for E2E tests to avoid Playwright decompression issues
   config :viban, VibanWeb.Endpoint,
-    http: [ip: {127, 0, 0, 1}, port: 7771, http_options: [compress: false]]
+    https: [
+      ip: {127, 0, 0, 1},
+      port: 8000,
+      cipher_suite: :strong,
+      certfile: "priv/cert/selfsigned.pem",
+      keyfile: "priv/cert/selfsigned_key.pem",
+      http_options: [compress: false]
+    ]
 end
 
 # Import secrets if they exist (GitHub OAuth credentials)

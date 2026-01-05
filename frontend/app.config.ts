@@ -8,7 +8,6 @@ const projectRoot = resolve(__dirname, "..");
 
 const env = loadEnv("development", projectRoot, "");
 const frontendPort = parseInt(env.FRONTEND_PORT || "3000", 10);
-const caddyPort = parseInt(env.CADDY_PORT || "8000", 10);
 
 const hmrPorts: Record<string, number> = {
   client: parseInt(env.FRONTEND_HMR_CLIENT_PORT || "3001", 10),
@@ -29,16 +28,16 @@ export default defineConfig({
       },
     },
     server: {
+      host: "0.0.0.0",
       port: frontendPort,
       strictPort: true,
       hmr:
         router === "client"
           ? {
               port: hmrPorts[router],
-              path: `/_hmr/${router}`,
               host: "localhost",
-              clientPort: caddyPort,
-              protocol: "wss",
+              clientPort: hmrPorts[router],
+              protocol: "ws",
             }
           : undefined,
     },

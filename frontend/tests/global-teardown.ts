@@ -1,12 +1,13 @@
 import { request } from "@playwright/test";
 
-const API_BASE = "http://localhost:7771";
+const API_BASE = "https://localhost:8000";
 
 async function globalTeardown() {
   console.log("Cleaning up E2E test data...");
 
   const context = await request.newContext({
     baseURL: API_BASE,
+    ignoreHTTPSErrors: true,
   });
 
   try {

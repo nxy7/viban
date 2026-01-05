@@ -16,6 +16,7 @@ defmodule Viban.Application do
   def start(_type, _args) do
     Viban.CLI.run()
     setup_deploy_mode()
+    ensure_ssl_certs_for_dev()
     setup_shutdown_hook()
     run_migrations()
     configure_phoenix_sync()
@@ -44,6 +45,16 @@ defmodule Viban.Application do
   def stop(_state) do
     Viban.DeployMode.stop_postgres()
     :ok
+  end
+
+  # ============================================================================
+  # SSL Certificate Setup
+  # ============================================================================
+
+  defp ensure_ssl_certs_for_dev do
+    if Application.get_env(:viban, :dev_routes) do
+      Viban.Release.ensure_ssl_certs()
+    end
   end
 
   # ============================================================================
