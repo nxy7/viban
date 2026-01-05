@@ -12,8 +12,32 @@ on:
         default: 'dev'
 
 jobs:
+  nix-setup:
+    name: Setup Nix (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+          - os: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Build devShell
+        run: nix develop --command true
+
   build:
     name: Build ${{ matrix.target }}
+    needs: [nix-setup]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -48,7 +72,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: frontend/node_modules
-          key: ${{ runner.os }}-bun-${{ hashFiles('frontend/bun.lock') }}
+          key: ${{ runner.os }}-bun-${{ hashFiles('flake.lock', 'frontend/bun.lock') }}
           restore-keys: |
             ${{ runner.os }}-bun-
 
