@@ -1,9 +1,9 @@
-- request rate limiting protection (if agent is request rate limited or internet connection is stopped then agent will pick the job up again after some time, in other words it's retry policy)
-- ~~periodic tasks (run some tasks at schedule)~~ (IMPLEMENTED)
-   - refactor task that suggests code improvements
-   - security tasks that's looking to find security vurnelabilities
-- autostart hook: Create a transparent, execute-once hook that moves tasks with `auto_start: true` to In Progress after Todo hooks complete
-   - Currently periodical tasks set `auto_start: true` but manual move is needed
-   - This hook would also fix CreateTaskModal's autostart to respect Todo hooks
-   - Should run after environment setup hooks on Todo column
-- simplify DEV with selfhosted elixir (without Caddy proxy)
+- update FE and BE dependencies (all that you can)
+- Make sure all tests are passing
+
+
+
+
+
+
+- (DONT IMPLEMENT RIGHT NOW) request rate limiting protection (if agent is request rate limited or internet connection is stopped then agent will pick the job up again after some time, in other words it's retry policy)

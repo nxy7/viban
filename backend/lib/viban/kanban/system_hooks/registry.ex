@@ -5,6 +5,7 @@ defmodule Viban.Kanban.SystemHooks.Registry do
   """
 
   alias Viban.Kanban.SystemHooks.{
+    AutoStartHook,
     ExecuteAIHook,
     RefinePromptHook,
     PlaySoundHook,
@@ -12,6 +13,7 @@ defmodule Viban.Kanban.SystemHooks.Registry do
   }
 
   @system_hooks [
+    AutoStartHook,
     ExecuteAIHook,
     RefinePromptHook,
     PlaySoundHook,

@@ -29,6 +29,7 @@ defmodule Viban.Kanban.Board.Changes.CreateDefaultColumns do
     %{name: "Cancelled", position: 4, color: "#ef4444"}
   ]
 
+  @auto_start_hook_id "system:auto-start"
   @execute_ai_hook_id "system:execute-ai"
   @move_task_hook_id "system:move-task"
 
@@ -63,7 +64,25 @@ defmodule Viban.Kanban.Board.Changes.CreateDefaultColumns do
   end
 
   defp add_default_hooks(columns) do
+    todo_column = Enum.find(columns, fn col -> col.name == "TODO" end)
     in_progress_column = Enum.find(columns, fn col -> col.name == "In Progress" end)
+
+    if todo_column do
+      case ColumnHook.create(%{
+             column_id: todo_column.id,
+             hook_id: @auto_start_hook_id,
+             position: 0,
+             execute_once: true,
+             transparent: false,
+             removable: true
+           }) do
+        {:ok, _} ->
+          Logger.debug("Added 'Auto-Start' hook to 'TODO' column #{todo_column.id}")
+
+        {:error, error} ->
+          Logger.warning("Failed to add 'Auto-Start' hook: #{inspect(error)}")
+      end
+    end
 
     if in_progress_column do
       case ColumnHook.create(%{
