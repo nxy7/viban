@@ -1,13 +1,23 @@
-import { For, Show } from "solid-js";
+import { eq } from "@tanstack/db";
+import { useLiveQuery } from "@tanstack/solid-db";
+import { createMemo, For, Show } from "solid-js";
 import { Button } from "~/components/design-system";
-import { type Column, useColumns } from "~/hooks/useKanban";
+import {
+  type AgentExecutor,
+  type Column,
+  unwrap,
+  useColumns,
+} from "~/hooks/useKanban";
+import * as sdk from "~/lib/generated/ash";
+import { syncPeriodicalTasksCollection } from "~/lib/generated/sync/collections";
 import ColumnHookConfig from "./ColumnHookConfig";
 import HookManager from "./HookManager";
+import PeriodicalTasksConfig from "./PeriodicalTasksConfig";
 import RepositoryConfig from "./RepositoryConfig";
 import SystemToolsPanel from "./SystemToolsPanel";
 import SidePanel from "./ui/SidePanel";
 
-type TabId = "general" | "hooks" | "columns" | "system";
+type TabId = "general" | "hooks" | "columns" | "scheduled" | "system";
 
 interface BoardSettingsProps {
   isOpen: boolean;
@@ -23,6 +33,83 @@ interface BoardSettingsProps {
 export default function BoardSettings(props: BoardSettingsProps) {
   const { columns } = useColumns(() => props.boardId);
 
+  const periodicalTasksQuery = useLiveQuery((q) => {
+    if (!props.boardId) return undefined;
+    return q
+      .from({ tasks: syncPeriodicalTasksCollection })
+      .where(({ tasks }) => eq(tasks.board_id, props.boardId))
+      .select(({ tasks }) => ({
+        id: tasks.id,
+        title: tasks.title,
+        description: tasks.description,
+        schedule: tasks.schedule,
+        executor: tasks.executor,
+        execution_count: tasks.execution_count,
+        last_executed_at: tasks.last_executed_at,
+        next_execution_at: tasks.next_execution_at,
+        enabled: tasks.enabled,
+        board_id: tasks.board_id,
+      }));
+  });
+
+  const periodicalTasks = createMemo(() => {
+    const data = periodicalTasksQuery.data;
+    if (!Array.isArray(data)) return [];
+    return data as Array<{
+      id: string;
+      title: string;
+      description: string | null;
+      schedule: string;
+      executor: AgentExecutor;
+      execution_count: number;
+      last_executed_at: string | null;
+      next_execution_at: string | null;
+      enabled: boolean;
+      board_id: string;
+    }>;
+  });
+
+  const handleCreatePeriodicalTask = async (task: {
+    title: string;
+    description: string;
+    schedule: string;
+    executor: AgentExecutor;
+  }) => {
+    await sdk
+      .create_periodical_task({
+        input: {
+          title: task.title,
+          description: task.description || null,
+          schedule: task.schedule,
+          executor: task.executor,
+          board_id: props.boardId,
+        },
+      })
+      .then(unwrap);
+  };
+
+  const handleUpdatePeriodicalTask = async (
+    id: string,
+    updates: Partial<{
+      title: string;
+      description: string;
+      schedule: string;
+      executor: AgentExecutor;
+      enabled: boolean;
+    }>,
+  ) => {
+    await sdk
+      .update_periodical_task({
+        identity: id,
+        input: updates,
+      })
+      .then(unwrap);
+  };
+
+  const handleDeletePeriodicalTask = async (id: string) => {
+    await sdk.destroy_periodical_task({ identity: id }).then(unwrap);
+  };
+
   // Use prop for active tab, default to "general"
   const activeTab = () => props.activeTab ?? "general";
 
@@ -30,6 +117,7 @@ export default function BoardSettings(props: BoardSettingsProps) {
     { id: "general", label: "General" },
     { id: "hooks", label: "Hooks" },
     { id: "columns", label: "Column Hooks" },
+    { id: "scheduled", label: "Scheduled" },
     { id: "system", label: "System" },
   ];
 
@@ -118,6 +206,16 @@ export default function BoardSettings(props: BoardSettingsProps) {
               </div>
             </Show>
           </div>
+        </Show>
+
+        <Show when={activeTab() === "scheduled"}>
+          <PeriodicalTasksConfig
+            boardId={props.boardId}
+            periodicalTasks={periodicalTasks()}
+            onCreate={handleCreatePeriodicalTask}
+            onUpdate={handleUpdatePeriodicalTask}
+            onDelete={handleDeletePeriodicalTask}
+          />
         </Show>
 
         <Show when={activeTab() === "system"}>

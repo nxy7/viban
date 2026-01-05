@@ -5,6 +5,7 @@ import type {
   KanbanColumn,
   KanbanColumnHook,
   KanbanHook,
+  KanbanPeriodicalTask,
   KanbanRepository,
   KanbanTask,
   KanbanTaskEvent,
@@ -100,6 +101,17 @@ export const syncTaskEventsCollection = createCollection(
     shapeOptions: {
       url: getUrl("/api/sync/"),
       params: { query: "sync_task_events" },
+    },
+  }),
+);
+
+export const syncPeriodicalTasksCollection = createCollection(
+  electricCollectionOptions<KanbanPeriodicalTask>({
+    id: "sync_periodical_tasks",
+    getKey: (item) => item.id,
+    shapeOptions: {
+      url: getUrl("/api/sync/"),
+      params: { query: "sync_periodical_tasks" },
     },
   }),
 );

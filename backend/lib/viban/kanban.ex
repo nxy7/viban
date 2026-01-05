@@ -64,6 +64,10 @@ defmodule Viban.Kanban do
     resource Viban.Kanban.TaskEvent do
       query(:sync_task_events, :read)
     end
+
+    resource Viban.Kanban.PeriodicalTask do
+      query(:sync_periodical_tasks, :read)
+    end
   end
 
   # ============================================================================
@@ -89,6 +93,9 @@ defmodule Viban.Kanban do
     resource Viban.Kanban.HookExecution
     resource Viban.Executors.ExecutorSession
     resource Viban.Executors.ExecutorMessage
+
+    # Scheduled tasks
+    resource Viban.Kanban.PeriodicalTask
   end
 
   # ============================================================================
@@ -233,6 +240,14 @@ defmodule Viban.Kanban do
       rpc_action(:list_executor_sessions, :read)
       rpc_action(:get_executor_session, :read, get?: true)
       rpc_action(:executor_sessions_for_task, :for_task)
+    end
+
+    resource Viban.Kanban.PeriodicalTask do
+      rpc_action(:create_periodical_task, :create)
+      rpc_action(:list_periodical_tasks, :read)
+      rpc_action(:get_periodical_task, :read, get?: true)
+      rpc_action(:update_periodical_task, :update)
+      rpc_action(:destroy_periodical_task, :destroy)
     end
   end
 end

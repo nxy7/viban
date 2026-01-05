@@ -90,8 +90,10 @@ export type TaskResourceSchema = {
     | "subtask_position"
     | "subtask_generation_status"
     | "executed_hooks"
+    | "auto_start"
     | "column_id"
-    | "parent_task_id";
+    | "parent_task_id"
+    | "periodical_task_id";
   id: UUID;
   title: string;
   description: string | null;
@@ -114,8 +116,10 @@ export type TaskResourceSchema = {
   subtask_position: number | null;
   subtask_generation_status: "generating" | "completed" | "failed" | null;
   executed_hooks: Array<string> | null;
+  auto_start: boolean;
   column_id: UUID;
   parent_task_id: UUID | null;
+  periodical_task_id: UUID | null;
   message_queue: {
     __type: "Relationship";
     __array: true;
@@ -125,6 +129,10 @@ export type TaskResourceSchema = {
   parent_task: {
     __type: "Relationship";
     __resource: TaskResourceSchema | null;
+  };
+  periodical_task: {
+    __type: "Relationship";
+    __resource: PeriodicalTaskResourceSchema | null;
   };
   subtasks: {
     __type: "Relationship";
@@ -430,6 +438,46 @@ export type ExecutorSessionResourceSchema = {
   metadata: Record<string, any> | null;
   task_id: UUID;
   task: { __type: "Relationship"; __resource: TaskResourceSchema };
+};
+
+// PeriodicalTask Schema
+export type PeriodicalTaskResourceSchema = {
+  __type: "Resource";
+  __primitiveFields:
+    | "id"
+    | "title"
+    | "description"
+    | "schedule"
+    | "executor"
+    | "execution_count"
+    | "last_executed_at"
+    | "next_execution_at"
+    | "enabled"
+    | "last_created_task_id"
+    | "board_id";
+  id: UUID;
+  title: string;
+  description: string | null;
+  schedule: string;
+  executor:
+    | "claude_code"
+    | "gemini_cli"
+    | "codex"
+    | "opencode"
+    | "cursor_agent"
+    | null;
+  execution_count: number;
+  last_executed_at: UtcDateTimeUsec | null;
+  next_execution_at: UtcDateTimeUsec | null;
+  enabled: boolean;
+  last_created_task_id: UUID | null;
+  board_id: UUID;
+  board: { __type: "Relationship"; __resource: BoardResourceSchema };
+  tasks: {
+    __type: "Relationship";
+    __array: true;
+    __resource: TaskResourceSchema;
+  };
 };
 
 // SystemTool Schema
@@ -738,6 +786,11 @@ export type TaskFilterInput = {
     in?: Array<Array<VibanKanbanTypesMessageQueueEntryResourceSchema>>;
   };
 
+  auto_start?: {
+    eq?: boolean;
+    not_eq?: boolean;
+  };
+
   column_id?: {
     eq?: UUID;
     not_eq?: UUID;
@@ -750,9 +803,17 @@ export type TaskFilterInput = {
     in?: Array<UUID>;
   };
 
+  periodical_task_id?: {
+    eq?: UUID;
+    not_eq?: UUID;
+    in?: Array<UUID>;
+  };
+
   column?: ColumnFilterInput;
 
   parent_task?: TaskFilterInput;
+
+  periodical_task?: PeriodicalTaskFilterInput;
 
   subtasks?: TaskFilterInput;
 
@@ -1506,6 +1567,99 @@ export type ExecutorSessionFilterInput = {
   };
 
   task?: TaskFilterInput;
+};
+export type PeriodicalTaskFilterInput = {
+  and?: Array<PeriodicalTaskFilterInput>;
+  or?: Array<PeriodicalTaskFilterInput>;
+  not?: Array<PeriodicalTaskFilterInput>;
+
+  id?: {
+    eq?: UUID;
+    not_eq?: UUID;
+    in?: Array<UUID>;
+  };
+
+  title?: {
+    eq?: string;
+    not_eq?: string;
+    in?: Array<string>;
+  };
+
+  description?: {
+    eq?: string;
+    not_eq?: string;
+    in?: Array<string>;
+  };
+
+  schedule?: {
+    eq?: string;
+    not_eq?: string;
+    in?: Array<string>;
+  };
+
+  executor?: {
+    eq?: "claude_code" | "gemini_cli" | "codex" | "opencode" | "cursor_agent";
+    not_eq?:
+      | "claude_code"
+      | "gemini_cli"
+      | "codex"
+      | "opencode"
+      | "cursor_agent";
+    in?: Array<
+      "claude_code" | "gemini_cli" | "codex" | "opencode" | "cursor_agent"
+    >;
+  };
+
+  execution_count?: {
+    eq?: number;
+    not_eq?: number;
+    greater_than?: number;
+    greater_than_or_equal?: number;
+    less_than?: number;
+    less_than_or_equal?: number;
+    in?: Array<number>;
+  };
+
+  last_executed_at?: {
+    eq?: UtcDateTimeUsec;
+    not_eq?: UtcDateTimeUsec;
+    greater_than?: UtcDateTimeUsec;
+    greater_than_or_equal?: UtcDateTimeUsec;
+    less_than?: UtcDateTimeUsec;
+    less_than_or_equal?: UtcDateTimeUsec;
+    in?: Array<UtcDateTimeUsec>;
+  };
+
+  next_execution_at?: {
+    eq?: UtcDateTimeUsec;
+    not_eq?: UtcDateTimeUsec;
+    greater_than?: UtcDateTimeUsec;
+    greater_than_or_equal?: UtcDateTimeUsec;
+    less_than?: UtcDateTimeUsec;
+    less_than_or_equal?: UtcDateTimeUsec;
+    in?: Array<UtcDateTimeUsec>;
+  };
+
+  enabled?: {
+    eq?: boolean;
+    not_eq?: boolean;
+  };
+
+  last_created_task_id?: {
+    eq?: UUID;
+    not_eq?: UUID;
+    in?: Array<UUID>;
+  };
+
+  board_id?: {
+    eq?: UUID;
+    not_eq?: UUID;
+    in?: Array<UUID>;
+  };
+
+  board?: BoardFilterInput;
+
+  tasks?: TaskFilterInput;
 };
 export type SystemToolFilterInput = {
   and?: Array<SystemToolFilterInput>;
@@ -2826,6 +2980,8 @@ export type CreateTaskInput = {
   column_id: UUID;
   custom_branch_name?: string | null;
   description_images?: Array<Record<string, any>> | null;
+  periodical_task_id?: UUID | null;
+  auto_start?: boolean;
 };
 
 export type CreateTaskFields = UnifiedFieldSelection<TaskResourceSchema>[];
@@ -4843,6 +4999,250 @@ export async function executor_sessions_for_task<
     payload,
     config,
   );
+}
+
+export type CreatePeriodicalTaskInput = {
+  title: string;
+  description?: string | null;
+  schedule: string;
+  executor?:
+    | "claude_code"
+    | "gemini_cli"
+    | "codex"
+    | "opencode"
+    | "cursor_agent"
+    | null;
+  enabled?: boolean;
+  board_id: UUID;
+};
+
+export type CreatePeriodicalTaskFields =
+  UnifiedFieldSelection<PeriodicalTaskResourceSchema>[];
+
+export type InferCreatePeriodicalTaskResult<
+  Fields extends CreatePeriodicalTaskFields | undefined,
+> = InferResult<PeriodicalTaskResourceSchema, Fields>;
+
+export type CreatePeriodicalTaskResult<
+  Fields extends CreatePeriodicalTaskFields | undefined = undefined,
+> =
+  | { success: true; data: InferCreatePeriodicalTaskResult<Fields> }
+  | { success: false; errors: AshRpcError[] };
+
+export async function create_periodical_task<
+  Fields extends CreatePeriodicalTaskFields | undefined = undefined,
+>(config: {
+  input: CreatePeriodicalTaskInput;
+  hookCtx?: ActionHookContext;
+  fields?: Fields;
+  headers?: Record<string, string>;
+  fetchOptions?: RequestInit;
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<
+  CreatePeriodicalTaskResult<Fields extends undefined ? [] : Fields>
+> {
+  const payload = {
+    action: "create_periodical_task",
+    input: config.input,
+    ...(config.fields !== undefined && { fields: config.fields }),
+  };
+
+  return executeActionRpcRequest<
+    CreatePeriodicalTaskResult<Fields extends undefined ? [] : Fields>
+  >(payload, config);
+}
+
+export type ListPeriodicalTasksFields =
+  UnifiedFieldSelection<PeriodicalTaskResourceSchema>[];
+
+export type InferListPeriodicalTasksResult<
+  Fields extends ListPeriodicalTasksFields | undefined,
+  Page extends ListPeriodicalTasksConfig["page"] = undefined,
+> = ConditionalPaginatedResultMixed<
+  Page,
+  Array<InferResult<PeriodicalTaskResourceSchema, Fields>>,
+  {
+    results: Array<InferResult<PeriodicalTaskResourceSchema, Fields>>;
+    has_more: boolean;
+    limit: number;
+    offset: number;
+    count?: number | null;
+    type: "offset";
+  },
+  {
+    results: Array<InferResult<PeriodicalTaskResourceSchema, Fields>>;
+    has_more: boolean;
+    limit: number;
+    after: string | null;
+    before: string | null;
+    previous_page: string;
+    next_page: string;
+    count?: number | null;
+    type: "keyset";
+  }
+>;
+
+export type ListPeriodicalTasksConfig = {
+  hookCtx?: ActionHookContext;
+  fields: ListPeriodicalTasksFields;
+  filter?: PeriodicalTaskFilterInput;
+  sort?: string;
+  page?:
+    | {
+        limit?: number;
+        offset?: number;
+        count?: boolean;
+      }
+    | {
+        limit?: number;
+        after?: string;
+        before?: string;
+      };
+  headers?: Record<string, string>;
+  fetchOptions?: RequestInit;
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+};
+
+export type ListPeriodicalTasksResult<
+  Fields extends ListPeriodicalTasksFields,
+  Page extends ListPeriodicalTasksConfig["page"] = undefined,
+> =
+  | { success: true; data: InferListPeriodicalTasksResult<Fields, Page> }
+  | { success: false; errors: AshRpcError[] };
+
+export async function list_periodical_tasks<
+  Fields extends ListPeriodicalTasksFields,
+  Config extends ListPeriodicalTasksConfig = ListPeriodicalTasksConfig,
+>(
+  config: Config & { fields: Fields },
+): Promise<ListPeriodicalTasksResult<Fields, Config["page"]>> {
+  const payload = {
+    action: "list_periodical_tasks",
+    ...(config.fields !== undefined && { fields: config.fields }),
+    ...(config.filter && { filter: config.filter }),
+    ...(config.sort && { sort: config.sort }),
+    ...(config.page && { page: config.page }),
+  };
+
+  return executeActionRpcRequest<
+    ListPeriodicalTasksResult<Fields, Config["page"]>
+  >(payload, config);
+}
+
+export type GetPeriodicalTaskFields =
+  UnifiedFieldSelection<PeriodicalTaskResourceSchema>[];
+export type InferGetPeriodicalTaskResult<
+  Fields extends GetPeriodicalTaskFields,
+> = InferResult<PeriodicalTaskResourceSchema, Fields>;
+
+export type GetPeriodicalTaskResult<Fields extends GetPeriodicalTaskFields> =
+  | { success: true; data: InferGetPeriodicalTaskResult<Fields> }
+  | { success: false; errors: AshRpcError[] };
+
+export async function get_periodical_task<
+  Fields extends GetPeriodicalTaskFields,
+>(config: {
+  hookCtx?: ActionHookContext;
+  fields: Fields;
+  headers?: Record<string, string>;
+  fetchOptions?: RequestInit;
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<GetPeriodicalTaskResult<Fields>> {
+  const payload = {
+    action: "get_periodical_task",
+    ...(config.fields !== undefined && { fields: config.fields }),
+  };
+
+  return executeActionRpcRequest<GetPeriodicalTaskResult<Fields>>(
+    payload,
+    config,
+  );
+}
+
+export type UpdatePeriodicalTaskInput = {
+  title?: string;
+  description?: string | null;
+  schedule?: string;
+  executor?:
+    | "claude_code"
+    | "gemini_cli"
+    | "codex"
+    | "opencode"
+    | "cursor_agent"
+    | null;
+  enabled?: boolean;
+};
+
+export type UpdatePeriodicalTaskFields =
+  UnifiedFieldSelection<PeriodicalTaskResourceSchema>[];
+
+export type InferUpdatePeriodicalTaskResult<
+  Fields extends UpdatePeriodicalTaskFields | undefined,
+> = InferResult<PeriodicalTaskResourceSchema, Fields>;
+
+export type UpdatePeriodicalTaskResult<
+  Fields extends UpdatePeriodicalTaskFields | undefined = undefined,
+> =
+  | { success: true; data: InferUpdatePeriodicalTaskResult<Fields> }
+  | { success: false; errors: AshRpcError[] };
+
+export async function update_periodical_task<
+  Fields extends UpdatePeriodicalTaskFields | undefined = undefined,
+>(config: {
+  identity: UUID;
+  input: UpdatePeriodicalTaskInput;
+  hookCtx?: ActionHookContext;
+  fields?: Fields;
+  headers?: Record<string, string>;
+  fetchOptions?: RequestInit;
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<
+  UpdatePeriodicalTaskResult<Fields extends undefined ? [] : Fields>
+> {
+  const payload = {
+    action: "update_periodical_task",
+    identity: config.identity,
+    input: config.input,
+    ...(config.fields !== undefined && { fields: config.fields }),
+  };
+
+  return executeActionRpcRequest<
+    UpdatePeriodicalTaskResult<Fields extends undefined ? [] : Fields>
+  >(payload, config);
+}
+
+export type DestroyPeriodicalTaskResult =
+  | { success: true; data: {} }
+  | { success: false; errors: AshRpcError[] };
+
+export async function destroy_periodical_task(config: {
+  identity: UUID;
+  hookCtx?: ActionHookContext;
+  headers?: Record<string, string>;
+  fetchOptions?: RequestInit;
+  customFetch?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
+}): Promise<DestroyPeriodicalTaskResult> {
+  const payload = {
+    action: "destroy_periodical_task",
+    identity: config.identity,
+  };
+
+  return executeActionRpcRequest<DestroyPeriodicalTaskResult>(payload, config);
 }
 
 export type InferListToolsResult = Record<string, any>;

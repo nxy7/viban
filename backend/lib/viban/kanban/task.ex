@@ -242,6 +242,17 @@ defmodule Viban.Kanban.Task do
       description "Queue of messages waiting to be processed by Execute AI hook"
     end
 
+    # =========================================================================
+    # Periodical Task Attributes
+    # =========================================================================
+
+    attribute :auto_start, :boolean do
+      public? true
+      default false
+      allow_nil? false
+      description "Whether to auto-move to In Progress after Todo hooks complete"
+    end
+
     timestamps()
   end
 
@@ -258,6 +269,13 @@ defmodule Viban.Kanban.Task do
       public? true
       attribute_writable? true
       description "Parent task if this is a subtask"
+    end
+
+    belongs_to :periodical_task, Viban.Kanban.PeriodicalTask do
+      allow_nil? true
+      public? true
+      attribute_writable? true
+      description "Periodical task that spawned this task (if any)"
     end
 
     has_many :subtasks, Viban.Kanban.Task do
@@ -302,7 +320,9 @@ defmodule Viban.Kanban.Task do
         :priority,
         :column_id,
         :custom_branch_name,
-        :description_images
+        :description_images,
+        :periodical_task_id,
+        :auto_start
       ]
 
       primary? true

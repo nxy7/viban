@@ -50,7 +50,7 @@ import KeyboardShortcutsHelp from "./KeyboardShortcutsHelp";
 import { TaskCardOverlay } from "./TaskCard";
 
 /** Valid settings tabs */
-type SettingsTab = "general" | "hooks" | "columns";
+type SettingsTab = "general" | "hooks" | "columns" | "scheduled" | "system";
 
 /** Represents where a task will be dropped */
 export interface DropTarget {

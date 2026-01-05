@@ -20,11 +20,14 @@ case Ash.run_action(action_input) do
     IO.puts("Error creating test message: #{inspect(error)}")
 end
 
-# Create default Kanban board if none exists
+# Create default Kanban board if none exists with this name
 # Note: Columns are automatically created by the Board :create action after_action hook
 board =
-  case Ash.read(Board) do
-    {:ok, []} ->
+  Board
+  |> Ash.Query.filter(name == "My Kanban Board")
+  |> Ash.read_one()
+  |> case do
+    {:ok, nil} ->
       IO.puts("Creating default Kanban board...")
 
       {:ok, board} =
@@ -41,7 +44,7 @@ board =
 
       board
 
-    {:ok, [board | _]} ->
+    {:ok, board} ->
       IO.puts("Kanban board already exists: #{board.name}")
       board
 

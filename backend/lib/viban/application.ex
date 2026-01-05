@@ -59,6 +59,9 @@ defmodule Viban.Application do
       # Background job processing
       {Oban, Application.fetch_env!(:viban, Oban)},
 
+      # Periodical task scheduler
+      Viban.Kanban.Servers.PeriodicalTaskScheduler,
+
       # Registries for actor system
       {Registry, keys: :unique, name: Viban.Kanban.ActorRegistry},
       {Registry, keys: :unique, name: Viban.Executors.RunnerRegistry},

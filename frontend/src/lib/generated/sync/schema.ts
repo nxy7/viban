@@ -57,10 +57,12 @@ export const kanbanTaskSchema = z.object({
     .nullable(),
   executed_hooks: z.array(z.string()).nullable(),
   message_queue: z.array(messageQueueEntrySchema).nullable(),
+  auto_start: z.boolean(),
   inserted_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   column_id: z.string().uuid(),
   parent_task_id: z.string().uuid().nullable(),
+  periodical_task_id: z.string().uuid().nullable(),
 });
 export type KanbanTask = z.infer<typeof kanbanTaskSchema>;
 
@@ -171,6 +173,23 @@ export const kanbanTaskEventSchema = z.object({
   column_hook_id: z.string().uuid().nullable(),
 });
 export type KanbanTaskEvent = z.infer<typeof kanbanTaskEventSchema>;
+
+export const kanbanPeriodicalTaskSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string(),
+  description: z.string().nullable(),
+  schedule: z.string(),
+  executor: z.enum(["claude_code", "gemini_cli"]).nullable(),
+  execution_count: z.number().int(),
+  last_executed_at: z.string().datetime().nullable(),
+  next_execution_at: z.string().datetime().nullable(),
+  enabled: z.boolean(),
+  last_created_task_id: z.string().uuid().nullable(),
+  inserted_at: z.string().datetime(),
+  updated_at: z.string().datetime(),
+  board_id: z.string().uuid(),
+});
+export type KanbanPeriodicalTask = z.infer<typeof kanbanPeriodicalTaskSchema>;
 
 export const stateServerActorStateSchema = z.object({
   id: z.string().uuid(),

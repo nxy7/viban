@@ -128,6 +128,9 @@ defmodule Viban.MixProject do
       {:oban, "~> 2.18"},
       {:oban_web, "~> 2.11"},
 
+      # Cron Expression Parsing
+      {:crontab, "~> 1.1"},
+
       # GitHub OAuth
       {:ueberauth, "~> 0.10"},
       {:ueberauth_github, "~> 0.8"},

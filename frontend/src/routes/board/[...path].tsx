@@ -35,7 +35,7 @@ const PATH_INDEX = {
 } as const;
 
 /** Valid settings tabs */
-type SettingsTab = "general" | "hooks" | "columns" | "system";
+type SettingsTab = "general" | "hooks" | "columns" | "scheduled" | "system";
 
 /** Parsed route information from URL path */
 interface ParsedBoardPath {
@@ -79,6 +79,7 @@ export default function BoardPage() {
       if (
         tabParam === "hooks" ||
         tabParam === "columns" ||
+        tabParam === "scheduled" ||
         tabParam === "system"
       ) {
         settingsTab = tabParam;
