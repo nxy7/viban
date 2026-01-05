@@ -16,13 +16,22 @@ defmodule Viban.Application do
   def start(_type, _args) do
     Viban.CLI.run()
     setup_deploy_mode()
+    setup_shutdown_hook()
     run_migrations()
     configure_phoenix_sync()
 
     children = core_children() ++ optional_children() ++ endpoint_children()
 
     opts = [strategy: :one_for_one, name: Viban.Supervisor]
-    Supervisor.start_link(children, opts)
+    result = Supervisor.start_link(children, opts)
+
+    # Open browser after successful startup (only in deploy mode)
+    case result do
+      {:ok, _pid} -> Viban.Browser.open()
+      _ -> :ok
+    end
+
+    result
   end
 
   @impl true
@@ -31,9 +40,30 @@ defmodule Viban.Application do
     :ok
   end
 
+  @impl true
+  def stop(_state) do
+    Viban.DeployMode.stop_postgres()
+    :ok
+  end
+
   # ============================================================================
   # Deploy Mode & Migrations
   # ============================================================================
+
+  defp setup_shutdown_hook do
+    # Trap SIGTERM/SIGINT to stop Postgres container on Ctrl+C or kill
+    if Viban.DeployMode.enabled?() do
+      System.trap_signal(:sigterm, fn ->
+        Viban.DeployMode.stop_postgres()
+        :ok
+      end)
+
+      System.trap_signal(:sigquit, fn ->
+        Viban.DeployMode.stop_postgres()
+        :ok
+      end)
+    end
+  end
 
   defp setup_deploy_mode do
     if Viban.DeployMode.enabled?() do

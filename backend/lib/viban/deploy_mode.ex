@@ -192,6 +192,20 @@ defmodule Viban.DeployMode do
     end
   end
 
+  def stop_postgres do
+    if enabled?() do
+      case container_status() do
+        :running ->
+          log_status("🐘", "Stopping PostgreSQL container...")
+          {_, _} = System.cmd("docker", ["stop", @postgres_container], stderr_to_stdout: true)
+          log_success("✅", "PostgreSQL stopped")
+
+        _ ->
+          :ok
+      end
+    end
+  end
+
   defp wait_for_postgres(attempts \\ 30) do
     log_waiting("Waiting for database... (#{31 - attempts}s)")
 

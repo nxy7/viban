@@ -333,6 +333,27 @@ defmodule Viban.Kanban.Servers.TaskServer do
   defp queue_column_hooks(task_id, column_id, _board_id) do
     Logger.info("Queuing hooks for column #{column_id}", task_id: task_id)
 
+    # Check if ANY hook executions already exist for this task+column combo
+    # This prevents re-queuing hooks on server restart when they've already been processed
+    existing_for_column =
+      case HookExecution.for_task_and_column(task_id, column_id) do
+        {:ok, executions} -> executions
+        _ -> []
+      end
+
+    if length(existing_for_column) > 0 do
+      Logger.info(
+        "Found #{length(existing_for_column)} existing hooks for column #{column_id}, skipping queue (restart recovery)",
+        task_id: task_id
+      )
+
+      :ok
+    else
+      queue_column_hooks_impl(task_id, column_id)
+    end
+  end
+
+  defp queue_column_hooks_impl(task_id, column_id) do
     task = get_task_or_nil(task_id)
     hooks_enabled = column_hooks_enabled?(column_id)
     task_in_error = task && task.agent_status == :error

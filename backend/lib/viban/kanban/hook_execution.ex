@@ -202,6 +202,14 @@ defmodule Viban.Kanban.HookExecution do
       filter expr(task_id == ^arg(:task_id))
       prepare build(sort: [queued_at: :desc])
     end
+
+    read :for_task_and_column do
+      argument :task_id, :uuid, allow_nil?: false
+      argument :column_id, :uuid, allow_nil?: false
+
+      filter expr(task_id == ^arg(:task_id) and triggering_column_id == ^arg(:column_id))
+      prepare build(sort: [queued_at: :desc])
+    end
   end
 
   code_interface do
@@ -214,6 +222,7 @@ defmodule Viban.Kanban.HookExecution do
     define :pending_for_task, args: [:task_id]
     define :active_for_task, args: [:task_id]
     define :history_for_task, args: [:task_id]
+    define :for_task_and_column, args: [:task_id, :column_id]
     define :get, action: :read, get_by: [:id]
   end
 end
