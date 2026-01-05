@@ -86,6 +86,7 @@ jobs:
         env:
           BURRITO_BUILD: "1"
           BURRITO_TARGET: ${{ matrix.target }}
+          GH_CLIENT_ID: ${{ secrets.GH_CLIENT_ID }}
         run: just build burrito=true
 
       - name: Get version
