@@ -7,8 +7,25 @@ on:
     branches: [master, main]
 
 jobs:
+  nix-setup:
+    name: Setup Nix
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Build devShell
+        run: nix develop --command true
+
   backend-test:
     name: Backend Tests
+    needs: [nix-setup]
     runs-on: ubuntu-latest
 
     services:
@@ -68,6 +85,7 @@ jobs:
 
   frontend-build:
     name: Frontend Build
+    needs: [nix-setup]
     runs-on: ubuntu-latest
 
     steps:
@@ -144,24 +162,6 @@ jobs:
     needs: [build]
     runs-on: ubuntu-latest
 
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: viban_e2e
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-          -c wal_level=logical
-          -c max_wal_senders=10
-          -c max_replication_slots=10
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -172,6 +172,9 @@ jobs:
       - name: Setup Nix cache
         uses: DeterminateSystems/magic-nix-cache-action@main
 
+      - name: Start PostgreSQL
+        run: docker compose up db -d --wait
+
       - name: Download build artifact
         uses: actions/download-artifact@v4
         with:
@@ -179,7 +182,10 @@ jobs:
           path: backend/_build/prod/rel/viban/
 
       - name: Make release executable
-        run: chmod +x backend/_build/prod/rel/viban/bin/*
+        run: |
+          chmod +x backend/_build/prod/rel/viban/bin/*
+          chmod +x backend/_build/prod/rel/viban/releases/*/elixir
+          chmod +x backend/_build/prod/rel/viban/erts-*/bin/*
 
       - name: Restore Bun cache
         uses: actions/cache@v4
@@ -197,7 +203,7 @@ jobs:
           E2E_TEST=true \
           PHX_SERVER=true \
           PORT=8000 \
-          DATABASE_URL="postgres://postgres:postgres@localhost:5432/viban_e2e" \
+          DATABASE_URL="postgres://postgres:postgres@localhost:5432/viban_dev" \
           SECRET_KEY_BASE="test_secret_key_base_that_is_at_least_64_bytes_long_for_e2e_testing_only" \
           backend/_build/prod/rel/viban/bin/viban start &
 
@@ -222,3 +228,7 @@ jobs:
           name: playwright-report-prod
           path: frontend/playwright-report/
           retention-days: 7
+
+      - name: Stop PostgreSQL
+        if: always()
+        run: docker compose down
