@@ -2,8 +2,8 @@ defmodule Viban.Kanban.Board do
   @moduledoc """
   Board resource representing a Kanban board.
 
-  Each board belongs to a user and contains columns, hooks, and repositories.
-  When a board is created, default columns are automatically generated.
+  Each board belongs to a user and contains columns, hooks, repositories, and templates.
+  When a board is created, default columns and task templates are automatically generated.
 
   ## Uniqueness
 
@@ -19,9 +19,17 @@ defmodule Viban.Kanban.Board do
   - Done (position 3)
   - Cancelled (position 4)
 
+  ## Default Task Templates
+
+  When created, boards automatically get these templates:
+  - Feature - For new feature implementation
+  - Bugfix - For bug fixes with reproduction steps
+  - Refactor - For code refactoring tasks
+  - Research - For research and exploration tasks
+
   ## Cascade Deletion
 
-  When a board is deleted, all associated columns, hooks, and repositories
+  When a board is deleted, all associated columns, hooks, repositories, and templates
   are automatically deleted.
   """
 
@@ -89,18 +97,25 @@ defmodule Viban.Kanban.Board do
       public? true
       description "Git repositories associated with this board"
     end
+
+    has_many :task_templates, Viban.Kanban.TaskTemplate do
+      public? true
+      sort position: :asc
+      description "Task templates for this board, ordered by position"
+    end
   end
 
   actions do
     defaults [:read]
 
     create :create do
-      description "Create a new board with default columns"
+      description "Create a new board with default columns and templates"
 
       accept [:name, :description, :user_id]
       primary? true
 
       change Changes.CreateDefaultColumns
+      change Changes.CreateDefaultTemplates
     end
 
     update :update do
@@ -119,6 +134,7 @@ defmodule Viban.Kanban.Board do
       change cascade_destroy(:columns)
       change cascade_destroy(:hooks)
       change cascade_destroy(:repositories)
+      change cascade_destroy(:task_templates)
     end
 
     read :for_user do

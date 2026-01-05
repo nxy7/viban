@@ -1,5 +1,5 @@
-import { createEffect, createSignal, on, Show } from "solid-js";
-import { Button, Checkbox, Input } from "~/components/design-system";
+import { createEffect, createSignal, For, on, Show } from "solid-js";
+import { Button, Checkbox, Input, Select } from "~/components/design-system";
 import { type Column, toDecimal, unwrap } from "~/hooks/useKanban";
 import * as sdk from "~/lib/generated/ash";
 import ImageTextarea, {
@@ -9,6 +9,12 @@ import ImageTextarea, {
 import ErrorBanner from "./ui/ErrorBanner";
 import { LightningIcon, PlayIcon } from "./ui/Icons";
 import Modal from "./ui/Modal";
+
+export interface TaskTemplate {
+  id: string;
+  name: string;
+  description_template: string | null;
+}
 
 const MAX_BRANCH_NAME_LENGTH = 200;
 const AUTO_BRANCH_NAME_LENGTH = 25;
@@ -23,6 +29,8 @@ interface CreateTaskModalProps {
   columnName: string;
   /** All columns for autostart feature */
   columns?: Column[];
+  /** Available task templates for this board */
+  templates?: TaskTemplate[];
   /** Optional initial values for pre-populating the form (e.g., when duplicating) */
   initialValues?: {
     title?: string;
@@ -51,10 +59,21 @@ export default function CreateTaskModal(props: CreateTaskModalProps) {
   const [isRefining, setIsRefining] = createSignal(false);
   const [autostart, setAutostart] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
+  const [selectedTemplateId, setSelectedTemplateId] = createSignal<string>("");
 
   // Auto-update branch name when title changes (if not manually edited)
   const [branchNameManuallyEdited, setBranchNameManuallyEdited] =
     createSignal(false);
+
+  const handleTemplateChange = (templateId: string) => {
+    setSelectedTemplateId(templateId);
+    if (!templateId) return;
+
+    const template = props.templates?.find((t) => t.id === templateId);
+    if (template?.description_template) {
+      setDescription(template.description_template);
+    }
+  };
 
   /**
    * Find the "In Progress" column for autostart feature.
@@ -125,6 +144,7 @@ export default function CreateTaskModal(props: CreateTaskModalProps) {
     setCustomBranchName("");
     setBranchNameManuallyEdited(false);
     setAutostart(false);
+    setSelectedTemplateId("");
     setError(null);
     if (clearStorage) {
       localStorage.removeItem(STORAGE_KEY_TITLE);
@@ -235,6 +255,30 @@ export default function CreateTaskModal(props: CreateTaskModalProps) {
             placeholder="Enter task title..."
           />
         </div>
+
+        <Show when={props.templates && props.templates.length > 0}>
+          <div>
+            <label
+              for="template"
+              class="block text-sm font-medium text-gray-300 mb-1"
+            >
+              Template
+            </label>
+            <Select
+              id="template"
+              value={selectedTemplateId()}
+              onChange={(e) => handleTemplateChange(e.currentTarget.value)}
+              fullWidth
+            >
+              <option value="">No template</option>
+              <For each={props.templates}>
+                {(template) => (
+                  <option value={template.id}>{template.name}</option>
+                )}
+              </For>
+            </Select>
+          </div>
+        </Show>
 
         <div>
           <div class="flex items-center justify-between mb-1">

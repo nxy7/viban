@@ -68,6 +68,10 @@ defmodule Viban.Kanban do
     resource Viban.Kanban.PeriodicalTask do
       query(:sync_periodical_tasks, :read)
     end
+
+    resource Viban.Kanban.TaskTemplate do
+      query(:sync_task_templates, :read)
+    end
   end
 
   # ============================================================================
@@ -96,6 +100,9 @@ defmodule Viban.Kanban do
 
     # Scheduled tasks
     resource Viban.Kanban.PeriodicalTask
+
+    # Task templates
+    resource Viban.Kanban.TaskTemplate
   end
 
   # ============================================================================
@@ -248,6 +255,14 @@ defmodule Viban.Kanban do
       rpc_action(:get_periodical_task, :read, get?: true)
       rpc_action(:update_periodical_task, :update)
       rpc_action(:destroy_periodical_task, :destroy)
+    end
+
+    resource Viban.Kanban.TaskTemplate do
+      rpc_action(:create_task_template, :create)
+      rpc_action(:list_task_templates, :read)
+      rpc_action(:get_task_template, :read, get?: true)
+      rpc_action(:update_task_template, :update)
+      rpc_action(:destroy_task_template, :destroy)
     end
   end
 end

@@ -31,6 +31,8 @@
               # Build tools
               pkgs.just
               pkgs.overmind
+              pkgs.zig
+              pkgs.xz
 
               # Elixir/Erlang (pinned to OTP 27 for Burrito builds)
               erlang

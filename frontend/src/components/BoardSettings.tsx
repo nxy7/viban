@@ -9,15 +9,25 @@ import {
   useColumns,
 } from "~/hooks/useKanban";
 import * as sdk from "~/lib/generated/ash";
-import { syncPeriodicalTasksCollection } from "~/lib/generated/sync/collections";
+import {
+  syncPeriodicalTasksCollection,
+  syncTaskTemplatesCollection,
+} from "~/lib/generated/sync/collections";
 import ColumnHookConfig from "./ColumnHookConfig";
 import HookManager from "./HookManager";
 import PeriodicalTasksConfig from "./PeriodicalTasksConfig";
 import RepositoryConfig from "./RepositoryConfig";
 import SystemToolsPanel from "./SystemToolsPanel";
+import TaskTemplatesConfig from "./TaskTemplatesConfig";
 import SidePanel from "./ui/SidePanel";
 
-type TabId = "general" | "hooks" | "columns" | "scheduled" | "system";
+type TabId =
+  | "general"
+  | "templates"
+  | "hooks"
+  | "columns"
+  | "scheduled"
+  | "system";
 
 interface BoardSettingsProps {
   isOpen: boolean;
@@ -110,11 +120,78 @@ export default function BoardSettings(props: BoardSettingsProps) {
     await sdk.destroy_periodical_task({ identity: id }).then(unwrap);
   };
 
+  const taskTemplatesQuery = useLiveQuery((q) => {
+    if (!props.boardId) return undefined;
+    return q
+      .from({ templates: syncTaskTemplatesCollection })
+      .where(({ templates }) => eq(templates.board_id, props.boardId))
+      .select(({ templates }) => ({
+        id: templates.id,
+        name: templates.name,
+        description_template: templates.description_template,
+        position: templates.position,
+        board_id: templates.board_id,
+      }));
+  });
+
+  const taskTemplates = createMemo(() => {
+    const data = taskTemplatesQuery.data;
+    if (!Array.isArray(data)) return [];
+    return data as Array<{
+      id: string;
+      name: string;
+      description_template: string | null;
+      position: number;
+      board_id: string;
+    }>;
+  });
+
+  const handleCreateTaskTemplate = async (template: {
+    name: string;
+    description_template: string;
+  }) => {
+    const maxPosition = taskTemplates().reduce(
+      (max, t) => Math.max(max, t.position),
+      -1,
+    );
+    await sdk
+      .create_task_template({
+        input: {
+          name: template.name,
+          description_template: template.description_template || null,
+          position: maxPosition + 1,
+          board_id: props.boardId,
+        },
+      })
+      .then(unwrap);
+  };
+
+  const handleUpdateTaskTemplate = async (
+    id: string,
+    updates: Partial<{
+      name: string;
+      description_template: string;
+      position: number;
+    }>,
+  ) => {
+    await sdk
+      .update_task_template({
+        identity: id,
+        input: updates,
+      })
+      .then(unwrap);
+  };
+
+  const handleDeleteTaskTemplate = async (id: string) => {
+    await sdk.destroy_task_template({ identity: id }).then(unwrap);
+  };
+
   // Use prop for active tab, default to "general"
   const activeTab = () => props.activeTab ?? "general";
 
   const tabs: { id: TabId; label: string }[] = [
     { id: "general", label: "General" },
+    { id: "templates", label: "Templates" },
     { id: "hooks", label: "Hooks" },
     { id: "columns", label: "Column Hooks" },
     { id: "scheduled", label: "Scheduled" },
@@ -174,6 +251,16 @@ export default function BoardSettings(props: BoardSettingsProps) {
               <RepositoryConfig boardId={props.boardId} singleMode={true} />
             </div>
           </div>
+        </Show>
+
+        <Show when={activeTab() === "templates"}>
+          <TaskTemplatesConfig
+            boardId={props.boardId}
+            templates={taskTemplates()}
+            onCreate={handleCreateTaskTemplate}
+            onUpdate={handleUpdateTaskTemplate}
+            onDelete={handleDeleteTaskTemplate}
+          />
         </Show>
 
         <Show when={activeTab() === "hooks"}>

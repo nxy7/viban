@@ -42,7 +42,7 @@ jobs:
           path: |
             backend/deps
             backend/_build
-          key: ${{ runner.os }}-nix-mix-${{ hashFiles('backend/mix.lock') }}
+          key: ${{ runner.os }}-nix-mix-${{ hashFiles('flake.lock', 'backend/mix.lock') }}
           restore-keys: ${{ runner.os }}-nix-mix-
 
       - name: Install dependencies
@@ -84,7 +84,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: frontend/node_modules
-          key: ${{ runner.os }}-nix-bun-${{ hashFiles('frontend/bun.lockb') }}
+          key: ${{ runner.os }}-nix-bun-${{ hashFiles('flake.lock', 'frontend/bun.lock') }}
           restore-keys: ${{ runner.os }}-nix-bun-
 
       - name: Install dependencies
@@ -120,14 +120,14 @@ jobs:
           path: |
             backend/deps
             backend/_build
-          key: ${{ runner.os }}-nix-mix-${{ hashFiles('backend/mix.lock') }}
+          key: ${{ runner.os }}-nix-mix-${{ hashFiles('flake.lock', 'backend/mix.lock') }}
           restore-keys: ${{ runner.os }}-nix-mix-
 
       - name: Restore Bun cache
         uses: actions/cache@v4
         with:
           path: frontend/node_modules
-          key: ${{ runner.os }}-nix-bun-${{ hashFiles('frontend/bun.lockb') }}
+          key: ${{ runner.os }}-nix-bun-${{ hashFiles('flake.lock', 'frontend/bun.lock') }}
           restore-keys: ${{ runner.os }}-nix-bun-
 
       - name: Build
@@ -185,7 +185,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: frontend/node_modules
-          key: ${{ runner.os }}-nix-bun-${{ hashFiles('frontend/bun.lockb') }}
+          key: ${{ runner.os }}-nix-bun-${{ hashFiles('flake.lock', 'frontend/bun.lock') }}
           restore-keys: ${{ runner.os }}-nix-bun-
 
       - name: Install Playwright browsers

@@ -1,4 +1,5 @@
 import { useLocation } from "@solidjs/router";
+import { eq } from "@tanstack/db";
 import { useLiveQuery } from "@tanstack/solid-db";
 import {
   type CollisionDetector,
@@ -39,16 +40,23 @@ import {
 import { useShortcut } from "~/hooks/useKeyboardShortcuts";
 import { fuzzyMatch } from "~/lib/fuzzySearch";
 import * as sdk from "~/lib/generated/ash";
+import { syncTaskTemplatesCollection } from "~/lib/generated/sync/collections";
 import { TaskRelationProvider } from "~/lib/TaskRelationContext";
 import BoardSettings from "./BoardSettings";
 import ColumnSettingsPopup from "./ColumnSettingsPopup";
-import CreateTaskModal from "./CreateTaskModal";
+import CreateTaskModal, { type TaskTemplate } from "./CreateTaskModal";
 import KanbanColumn from "./KanbanColumn";
 import KeyboardShortcutsHelp from "./KeyboardShortcutsHelp";
 import { TaskCardOverlay } from "./TaskCard";
 
 /** Valid settings tabs */
-type SettingsTab = "general" | "hooks" | "columns" | "scheduled" | "system";
+type SettingsTab =
+  | "general"
+  | "templates"
+  | "hooks"
+  | "columns"
+  | "scheduled"
+  | "system";
 
 /** Represents where a task will be dropped */
 export interface DropTarget {
@@ -361,6 +369,21 @@ export default function KanbanBoard(props: KanbanBoardProps) {
    * with matching types, so this cast is structurally safe.
    */
   const allTasks: Accessor<Task[]> = () => (tasksQuery.data ?? []) as Task[];
+
+  const taskTemplatesQuery = useLiveQuery((q) =>
+    q
+      .from({ templates: syncTaskTemplatesCollection })
+      .where(({ templates }) => eq(templates.board_id, props.boardId))
+      .orderBy(({ templates }) => templates.position, "asc")
+      .select(({ templates }) => ({
+        id: templates.id,
+        name: templates.name,
+        description_template: templates.description_template,
+      })),
+  );
+
+  const taskTemplates = (): TaskTemplate[] =>
+    (taskTemplatesQuery.data ?? []) as TaskTemplate[];
 
   const [isCreateModalOpen, setIsCreateModalOpen] = createSignal(false);
   const [selectedColumnId, setSelectedColumnId] = createSignal<string | null>(
@@ -906,6 +929,7 @@ export default function KanbanBoard(props: KanbanBoardProps) {
           columnId={selectedColumnId()!}
           columnName={selectedColumnName()}
           columns={columns()}
+          templates={taskTemplates()}
         />
       </Show>
 

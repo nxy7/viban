@@ -14,12 +14,7 @@ defmodule Viban.Executors.ExecutorMessage do
 
   use Ash.Resource,
     domain: Viban.Kanban,
-    data_layer: AshPostgres.DataLayer,
-    extensions: [AshTypescript.Resource]
-
-  typescript do
-    type_name("ExecutorMessage")
-  end
+    data_layer: AshPostgres.DataLayer
 
   postgres do
     table "task_events"

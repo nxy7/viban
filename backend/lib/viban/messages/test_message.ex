@@ -8,8 +8,7 @@ defmodule Viban.Messages.TestMessage do
 
   use Ash.Resource,
     domain: Viban.Messages,
-    data_layer: AshPostgres.DataLayer,
-    extensions: [AshTypescript.Resource]
+    data_layer: AshPostgres.DataLayer
 
   alias Viban.Messages.TestMessage.Actions
 

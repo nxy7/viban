@@ -35,7 +35,13 @@ const PATH_INDEX = {
 } as const;
 
 /** Valid settings tabs */
-type SettingsTab = "general" | "hooks" | "columns" | "scheduled" | "system";
+type SettingsTab =
+  | "general"
+  | "templates"
+  | "hooks"
+  | "columns"
+  | "scheduled"
+  | "system";
 
 /** Parsed route information from URL path */
 interface ParsedBoardPath {

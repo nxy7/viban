@@ -11,10 +11,6 @@ on:
         required: false
         default: 'dev'
 
-env:
-  OTP_VERSION: '27.2'
-  ELIXIR_VERSION: '1.17.3'
-
 jobs:
   build:
     name: Build ${{ matrix.target }}
@@ -32,32 +28,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Erlang/OTP and Elixir
-        uses: erlef/setup-beam@v1
-        with:
-          otp-version: ${{ env.OTP_VERSION }}
-          elixir-version: ${{ env.ELIXIR_VERSION }}
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
 
-      - name: Install zig (for Burrito cross-compilation)
-        uses: goto-bus-stop/setup-zig@v2
-        with:
-          version: 0.13.0
-
-      - name: Install xz (Linux)
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y xz-utils
-
-      - name: Install xz (macOS)
-        if: runner.os == 'macOS'
-        run: brew install xz
-
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Install just
-        uses: extractions/setup-just@v2
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@main
 
       - name: Cache Elixir deps
         uses: actions/cache@v4
@@ -65,7 +40,7 @@ jobs:
           path: |
             backend/deps
             backend/_build
-          key: ${{ runner.os }}-mix-${{ hashFiles('backend/mix.lock') }}
+          key: ${{ runner.os }}-mix-${{ hashFiles('flake.lock', 'backend/mix.lock') }}
           restore-keys: |
             ${{ runner.os }}-mix-
 
@@ -79,15 +54,15 @@ jobs:
 
       - name: Setup Elixir
         run: |
-          mix local.hex --force
-          mix local.rebar --force
+          nix develop --command mix local.hex --force
+          nix develop --command mix local.rebar --force
 
       - name: Build release
         env:
           BURRITO_BUILD: "1"
           BURRITO_TARGET: ${{ matrix.target }}
           GH_CLIENT_ID: ${{ secrets.GH_CLIENT_ID }}
-        run: just build burrito=true
+        run: nix develop --command just build burrito=true
 
       - name: Get version
         id: version
