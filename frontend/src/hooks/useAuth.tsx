@@ -41,7 +41,7 @@ export const AuthProvider: ParentComponent = (props) => {
   const [user, setUser] = createSignal<User | null>(null);
   const [isLoading, setIsLoading] = createSignal(true);
   const [deviceFlow, setDeviceFlow] = createSignal<DeviceFlowState | null>(
-    null
+    null,
   );
 
   let pollTimeoutId: number | undefined;

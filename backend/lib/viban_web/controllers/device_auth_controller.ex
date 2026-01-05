@@ -77,7 +77,11 @@ defmodule VibanWeb.DeviceAuthController do
 
     cond do
       is_nil(device_code) ->
-        json_error(conn, :bad_request, "No device flow in progress. Start with /api/auth/device/code")
+        json_error(
+          conn,
+          :bad_request,
+          "No device flow in progress. Start with /api/auth/device/code"
+        )
 
       expires_at && System.system_time(:second) > expires_at ->
         conn

@@ -141,7 +141,8 @@ defmodule Viban.Auth.DeviceFlow do
       {"X-GitHub-Api-Version", "2022-11-28"}
     ]
 
-    with {:ok, %{status: 200, body: user}} <- Req.get("#{@github_api_url}/user", headers: headers),
+    with {:ok, %{status: 200, body: user}} <-
+           Req.get("#{@github_api_url}/user", headers: headers),
          {:ok, email} <- get_primary_email(access_token) do
       {:ok,
        %{

@@ -25,7 +25,6 @@ defmodule VibanWeb.Router do
     plug :fetch_session
   end
 
-
   # Test endpoints (only available when sandbox_enabled)
   scope "/api/test", VibanWeb do
     pipe_through :api
