@@ -28,10 +28,8 @@ defmodule Viban.Kanban.SystemHooks.AutoStartHook do
     "Automatically moves tasks with auto_start: true to In Progress after Todo hooks complete."
   end
 
-  @impl true
   def default_execute_once, do: true
 
-  @impl true
   def default_transparent, do: false
 
   @impl true
