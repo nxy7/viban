@@ -4,14 +4,9 @@ if System.get_env("PHX_SERVER") do
   config :viban, VibanWeb.Endpoint, server: true
 end
 
-# GitHub OAuth credentials
-gh_client_id = System.get_env("GH_CLIENT_ID")
-gh_client_secret = System.get_env("GH_CLIENT_SECRET")
-
-if gh_client_id && gh_client_secret do
-  config :ueberauth, Ueberauth.Strategy.Github.OAuth,
-    client_id: gh_client_id,
-    client_secret: gh_client_secret
+# GitHub Device Flow OAuth (no secret required)
+if gh_client_id = System.get_env("GH_CLIENT_ID") do
+  config :viban, :github_client_id, gh_client_id
 end
 
 # LLM API Keys (available in all environments)

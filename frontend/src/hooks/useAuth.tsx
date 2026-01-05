@@ -1,6 +1,7 @@
 import {
   createContext,
   createSignal,
+  onCleanup,
   onMount,
   type ParentComponent,
   useContext,
@@ -16,11 +17,20 @@ export interface User {
   avatar_url: string | null;
 }
 
+export interface DeviceFlowState {
+  userCode: string;
+  verificationUri: string;
+  expiresAt: Date;
+  interval: number;
+}
+
 interface AuthContextValue {
   user: () => User | null;
   isLoading: () => boolean;
   isAuthenticated: () => boolean;
-  login: (provider?: VCSProvider) => void;
+  deviceFlow: () => DeviceFlowState | null;
+  login: () => Promise<void>;
+  cancelLogin: () => Promise<void>;
   logout: () => Promise<void>;
   refetch: () => Promise<void>;
 }
@@ -30,6 +40,11 @@ const AuthContext = createContext<AuthContextValue>();
 export const AuthProvider: ParentComponent = (props) => {
   const [user, setUser] = createSignal<User | null>(null);
   const [isLoading, setIsLoading] = createSignal(true);
+  const [deviceFlow, setDeviceFlow] = createSignal<DeviceFlowState | null>(
+    null
+  );
+
+  let pollTimeoutId: number | undefined;
 
   const fetchUser = async () => {
     try {
@@ -52,26 +67,94 @@ export const AuthProvider: ParentComponent = (props) => {
 
   onMount(() => {
     fetchUser();
+  });
 
-    // Check URL for auth callback result
-    const params = new URLSearchParams(window.location.search);
-    const authResult = params.get("auth");
-    if (authResult) {
-      // Clean up URL
-      const url = new URL(window.location.href);
-      url.searchParams.delete("auth");
-      window.history.replaceState({}, "", url.pathname);
-
-      if (authResult === "success") {
-        // Refetch user after successful auth
-        fetchUser();
-      }
+  onCleanup(() => {
+    if (pollTimeoutId) {
+      clearTimeout(pollTimeoutId);
     }
   });
 
-  const login = (provider: VCSProvider = "github") => {
-    // Redirect to OAuth provider
-    window.location.href = `/auth/${provider}`;
+  const login = async () => {
+    try {
+      const response = await fetch("/api/auth/device/code", {
+        method: "POST",
+        credentials: "include",
+      });
+      const data = await response.json();
+
+      if (data.ok) {
+        setDeviceFlow({
+          userCode: data.user_code,
+          verificationUri: data.verification_uri,
+          expiresAt: new Date(Date.now() + data.expires_in * 1000),
+          interval: data.interval,
+        });
+
+        pollForToken(data.interval);
+      } else {
+        console.error("Failed to start device flow:", data.error);
+      }
+    } catch (error) {
+      console.error("Failed to start device flow:", error);
+    }
+  };
+
+  const pollForToken = (interval: number) => {
+    const poll = async () => {
+      const flow = deviceFlow();
+      if (!flow) return;
+
+      if (new Date() > flow.expiresAt) {
+        setDeviceFlow(null);
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/auth/device/poll", {
+          method: "POST",
+          credentials: "include",
+        });
+        const data = await response.json();
+
+        if (data.status === "success") {
+          setUser(data.user);
+          setDeviceFlow(null);
+        } else if (data.status === "pending") {
+          pollTimeoutId = window.setTimeout(poll, interval * 1000);
+        } else if (data.status === "slow_down") {
+          pollTimeoutId = window.setTimeout(poll, (interval + 5) * 1000);
+        } else if (data.status === "expired") {
+          setDeviceFlow(null);
+        } else if (data.status === "error") {
+          console.error("Device flow error:", data.message);
+          setDeviceFlow(null);
+        }
+      } catch (error) {
+        console.error("Failed to poll for token:", error);
+        pollTimeoutId = window.setTimeout(poll, interval * 1000);
+      }
+    };
+
+    poll();
+  };
+
+  const cancelLogin = async () => {
+    if (pollTimeoutId) {
+      clearTimeout(pollTimeoutId);
+      pollTimeoutId = undefined;
+    }
+
+    try {
+      await fetch("/api/auth/device/cancel", {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch (error) {
+      console.error("Failed to cancel device flow:", error);
+    }
+
+    setDeviceFlow(null);
   };
 
   const logout = async () => {
@@ -90,7 +173,9 @@ export const AuthProvider: ParentComponent = (props) => {
     user,
     isLoading,
     isAuthenticated: () => user() !== null,
+    deviceFlow,
     login,
+    cancelLogin,
     logout,
     refetch: fetchUser,
   };

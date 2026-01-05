@@ -25,13 +25,6 @@ defmodule VibanWeb.Router do
     plug :fetch_session
   end
 
-  # OAuth routes (browser pipeline for redirects)
-  scope "/auth", VibanWeb do
-    pipe_through :browser
-
-    get "/:provider", AuthController, :request
-    get "/:provider/callback", AuthController, :callback
-  end
 
   # Test endpoints (only available when sandbox_enabled)
   scope "/api/test", VibanWeb do
@@ -53,6 +46,11 @@ defmodule VibanWeb.Router do
     # Auth endpoints
     get "/auth/me", AuthController, :me
     post "/auth/logout", AuthController, :logout
+
+    # Device flow auth (no OAuth credentials required)
+    post "/auth/device/code", DeviceAuthController, :request_code
+    post "/auth/device/poll", DeviceAuthController, :poll
+    post "/auth/device/cancel", DeviceAuthController, :cancel
 
     # VCS API endpoints (provider-agnostic)
     get "/vcs/repos", VCSController, :list_repos

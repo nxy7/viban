@@ -92,12 +92,10 @@ config :phoenix, :json_library, Jason
 # Disable swoosh API client (we don't need email for now)
 config :swoosh, :api_client, false
 
-# Ueberauth GitHub OAuth
-# Credentials are loaded from GH_CLIENT_ID and GH_CLIENT_SECRET env vars in runtime.exs
-config :ueberauth, Ueberauth,
-  providers: [
-    github: {Ueberauth.Strategy.Github, [default_scope: "user:email,repo"]}
-  ]
+# GitHub Device Flow OAuth
+# The client ID is loaded from GH_CLIENT_ID env var in runtime.exs
+# Device Flow doesn't require a client secret - only the public client ID
+config :viban, :github_client_id, nil
 
 # Oban job queue configuration
 config :viban, Oban,
