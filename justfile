@@ -81,8 +81,11 @@ test-backend:
     cd backend && mix test
 
 # Run frontend tests
+[working-directory: 'frontend']
 test-frontend:
-    cd frontend && bun run check:fix && bun run test
+    bun run check:fix
+    bun run typecheck
+    bun run test
 
 # Start services for E2E testing (with E2E_TEST=true)
 dev-e2e:
