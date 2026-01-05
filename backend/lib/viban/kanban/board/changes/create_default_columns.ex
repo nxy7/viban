@@ -3,7 +3,7 @@ defmodule Viban.Kanban.Board.Changes.CreateDefaultColumns do
   Ash change that creates default columns when a board is created.
 
   This creates the standard Kanban workflow columns:
-  - TODO (position 0) - Indigo
+  - TODO (position 0) - Indigo, with non-removable "Auto-Start" hook
   - In Progress (position 1) - Amber, with non-removable "Execute AI" hook
   - To Review (position 2) - Violet
   - Done (position 3) - Emerald
@@ -74,7 +74,7 @@ defmodule Viban.Kanban.Board.Changes.CreateDefaultColumns do
              position: 0,
              execute_once: true,
              transparent: false,
-             removable: true
+             removable: false
            }) do
         {:ok, _} ->
           Logger.debug("Added 'Auto-Start' hook to 'TODO' column #{todo_column.id}")
