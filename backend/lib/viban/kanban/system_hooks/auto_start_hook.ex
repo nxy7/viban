@@ -13,7 +13,7 @@ defmodule Viban.Kanban.SystemHooks.AutoStartHook do
 
   @behaviour Viban.Kanban.SystemHooks.Behaviour
 
-  alias Viban.Kanban.{Column, Task}
+  alias Viban.Kanban.SystemHooks.MoveTaskHook
 
   require Logger
 
@@ -36,30 +36,11 @@ defmodule Viban.Kanban.SystemHooks.AutoStartHook do
 
   @impl true
   def execute(task, column, opts) do
-    board_id = Keyword.get(opts, :board_id)
-
     if task.auto_start && todo_column?(column) do
-      Logger.info("[AutoStartHook] Auto-starting task #{task.id} - moving to In Progress")
+      Logger.info("[AutoStartHook] Auto-starting task #{task.id} - delegating to MoveTaskHook")
 
-      case find_in_progress_column(board_id) do
-        {:ok, in_progress_column} ->
-          case Task.move(task, %{column_id: in_progress_column.id}) do
-            {:ok, _updated_task} ->
-              Logger.info("[AutoStartHook] Task #{task.id} moved to In Progress")
-              :ok
-
-            {:error, reason} ->
-              Logger.error(
-                "[AutoStartHook] Failed to move task #{task.id}: #{inspect(reason)}"
-              )
-
-              {:error, "Failed to auto-start task: #{inspect(reason)}"}
-          end
-
-        {:error, :not_found} ->
-          Logger.warning("[AutoStartHook] No In Progress column found for board #{board_id}")
-          :ok
-      end
+      opts_with_target = Keyword.put(opts, :hook_settings, %{target_column: "In Progress"})
+      MoveTaskHook.execute(task, column, opts_with_target)
     else
       :ok
     end
@@ -67,24 +48,5 @@ defmodule Viban.Kanban.SystemHooks.AutoStartHook do
 
   defp todo_column?(column) do
     String.downcase(column.name) == "todo"
-  end
-
-  defp find_in_progress_column(board_id) do
-    case Column.for_board(board_id) do
-      {:ok, columns} ->
-        in_progress =
-          Enum.find(columns, fn col ->
-            String.downcase(col.name) == "in progress"
-          end)
-
-        if in_progress do
-          {:ok, in_progress}
-        else
-          {:error, :not_found}
-        end
-
-      {:error, _} ->
-        {:error, :not_found}
-    end
   end
 end
