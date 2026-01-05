@@ -40,7 +40,7 @@ config :viban, VibanWeb.Endpoint,
 config :viban, dev_routes: true
 
 config :logger, level: :info
-config :logger, :console, format: "[$level] $message\n"
+config :logger, :console, format: "$metadata[$level] $message\n"
 
 config :phoenix, :stacktrace_depth, 20
 

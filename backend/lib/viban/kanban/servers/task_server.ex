@@ -135,7 +135,7 @@ defmodule Viban.Kanban.Servers.TaskServer do
 
   @impl true
   def init({board_id, task}) do
-    Logger.info("Starting", task_id: task.id)
+    Logger.info("TaskServer starting", task_id: task.id)
 
     state = %__MODULE__{
       board_id: board_id,
@@ -156,7 +156,7 @@ defmodule Viban.Kanban.Servers.TaskServer do
 
   @impl true
   def handle_info(:init_task, state) do
-    Logger.info("Initializing", task_id: state.task_id)
+    Logger.info("TaskServer initializing hooks", task_id: state.task_id)
 
     state = maybe_create_worktree(state)
     self_heal(state)
