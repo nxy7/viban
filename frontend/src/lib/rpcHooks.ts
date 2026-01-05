@@ -1,3 +1,4 @@
+import type { ActionConfig } from "./generated/ash";
 import { showError } from "./notifications";
 
 interface AshRpcError {
@@ -20,7 +21,7 @@ export async function afterActionRequest(
   action: string,
   _response: Response,
   result: RpcResult | null,
-  _config: Record<string, unknown>,
+  _config: ActionConfig,
 ): Promise<void> {
   if (!result) return;
 

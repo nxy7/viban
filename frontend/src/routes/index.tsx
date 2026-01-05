@@ -383,7 +383,7 @@ export default function Home() {
             }
           >
             <Show
-              when={boards().length > 0}
+              when={(boards() ?? []).length > 0}
               fallback={
                 <div class="bg-gray-900/50 border border-gray-800 border-dashed rounded-xl p-12 text-center">
                   <ClipboardListIcon class="w-12 h-12 text-gray-600 mx-auto mb-4" />
@@ -413,7 +413,7 @@ export default function Home() {
               }
             >
               <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <For each={boards()}>
+                <For each={boards() ?? []}>
                   {(board) => (
                     <A
                       href={`/board/${board.id}`}

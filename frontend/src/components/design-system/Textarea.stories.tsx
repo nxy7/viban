@@ -1,5 +1,5 @@
 import { createSignal } from "solid-js";
-import type { Meta, StoryObj } from "storybook-solidjs-vite";
+import type { Meta, StoryFn, StoryObj } from "storybook-solidjs-vite";
 import Textarea from "./Textarea";
 
 const meta = {
@@ -35,7 +35,7 @@ export const Default: Story = {
     rows: 4,
   },
   decorators: [
-    (Story) => (
+    (Story: StoryFn) => (
       <div class="w-80">
         <Story />
       </div>
@@ -50,7 +50,7 @@ export const Mono: Story = {
     rows: 4,
   },
   decorators: [
-    (Story) => (
+    (Story: StoryFn) => (
       <div class="w-80">
         <Story />
       </div>
@@ -65,7 +65,7 @@ export const Dark: Story = {
     rows: 4,
   },
   decorators: [
-    (Story) => (
+    (Story: StoryFn) => (
       <div class="w-80">
         <Story />
       </div>
@@ -80,7 +80,7 @@ export const DarkMono: Story = {
     rows: 4,
   },
   decorators: [
-    (Story) => (
+    (Story: StoryFn) => (
       <div class="w-80">
         <Story />
       </div>
@@ -95,7 +95,7 @@ export const Small: Story = {
     rows: 3,
   },
   decorators: [
-    (Story) => (
+    (Story: StoryFn) => (
       <div class="w-80">
         <Story />
       </div>
@@ -110,7 +110,7 @@ export const Medium: Story = {
     rows: 3,
   },
   decorators: [
-    (Story) => (
+    (Story: StoryFn) => (
       <div class="w-80">
         <Story />
       </div>
@@ -125,7 +125,7 @@ export const Large: Story = {
     rows: 3,
   },
   decorators: [
-    (Story) => (
+    (Story: StoryFn) => (
       <div class="w-80">
         <Story />
       </div>
@@ -140,7 +140,7 @@ export const NotResizable: Story = {
     rows: 4,
   },
   decorators: [
-    (Story) => (
+    (Story: StoryFn) => (
       <div class="w-80">
         <Story />
       </div>
@@ -155,7 +155,7 @@ export const Disabled: Story = {
     rows: 4,
   },
   decorators: [
-    (Story) => (
+    (Story: StoryFn) => (
       <div class="w-80">
         <Story />
       </div>
@@ -170,7 +170,7 @@ export const WithValue: Story = {
     rows: 4,
   },
   decorators: [
-    (Story) => (
+    (Story: StoryFn) => (
       <div class="w-80">
         <Story />
       </div>

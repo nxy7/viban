@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "storybook-solidjs-vite";
+import type { Meta, StoryFn, StoryObj } from "storybook-solidjs-vite";
 import Button from "./Button";
 
 const meta = {
@@ -102,7 +102,7 @@ export const FullWidth: Story = {
     children: "Full Width Button",
   },
   decorators: [
-    (Story) => (
+    (Story: StoryFn) => (
       <div class="w-80">
         <Story />
       </div>

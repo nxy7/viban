@@ -1,5 +1,5 @@
 import { createSignal } from "solid-js";
-import type { Meta, StoryObj } from "storybook-solidjs-vite";
+import type { Meta, StoryFn, StoryObj } from "storybook-solidjs-vite";
 import Select from "./Select";
 
 const meta = {
@@ -119,7 +119,7 @@ export const FullWidth: Story = {
     ),
   },
   decorators: [
-    (Story) => (
+    (Story: StoryFn) => (
       <div class="w-80">
         <Story />
       </div>

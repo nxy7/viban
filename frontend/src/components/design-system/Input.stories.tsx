@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "storybook-solidjs-vite";
+import type { Meta, StoryFn, StoryObj } from "storybook-solidjs-vite";
 import Input from "./Input";
 
 const meta = {
@@ -32,7 +32,7 @@ export const Default: Story = {
     placeholder: "Enter text...",
   },
   decorators: [
-    (Story) => (
+    (Story: StoryFn) => (
       <div class="w-64">
         <Story />
       </div>
@@ -46,7 +46,7 @@ export const Search: Story = {
     placeholder: "Search...",
   },
   decorators: [
-    (Story) => (
+    (Story: StoryFn) => (
       <div class="w-64">
         <Story />
       </div>
@@ -60,7 +60,7 @@ export const Mono: Story = {
     placeholder: "Enter code...",
   },
   decorators: [
-    (Story) => (
+    (Story: StoryFn) => (
       <div class="w-64">
         <Story />
       </div>
@@ -74,7 +74,7 @@ export const Dark: Story = {
     placeholder: "Dark input...",
   },
   decorators: [
-    (Story) => (
+    (Story: StoryFn) => (
       <div class="w-64">
         <Story />
       </div>
@@ -88,7 +88,7 @@ export const DarkMono: Story = {
     placeholder: "Dark mono input...",
   },
   decorators: [
-    (Story) => (
+    (Story: StoryFn) => (
       <div class="w-64">
         <Story />
       </div>
@@ -102,7 +102,7 @@ export const Small: Story = {
     placeholder: "Small input",
   },
   decorators: [
-    (Story) => (
+    (Story: StoryFn) => (
       <div class="w-64">
         <Story />
       </div>
@@ -116,7 +116,7 @@ export const Medium: Story = {
     placeholder: "Medium input",
   },
   decorators: [
-    (Story) => (
+    (Story: StoryFn) => (
       <div class="w-64">
         <Story />
       </div>
@@ -130,7 +130,7 @@ export const Large: Story = {
     placeholder: "Large input",
   },
   decorators: [
-    (Story) => (
+    (Story: StoryFn) => (
       <div class="w-64">
         <Story />
       </div>
@@ -166,7 +166,7 @@ export const Disabled: Story = {
     value: "Cannot edit this",
   },
   decorators: [
-    (Story) => (
+    (Story: StoryFn) => (
       <div class="w-64">
         <Story />
       </div>
@@ -179,7 +179,7 @@ export const WithValue: Story = {
     value: "Hello World",
   },
   decorators: [
-    (Story) => (
+    (Story: StoryFn) => (
       <div class="w-64">
         <Story />
       </div>

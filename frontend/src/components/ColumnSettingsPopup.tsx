@@ -261,7 +261,7 @@ function GeneralSettings(props: GeneralSettingsProps) {
   const [name, setName] = createSignal(props.column.name);
   const [color, setColor] = createSignal(props.column.color);
   const [description, setDescription] = createSignal(
-    props.column.settings?.description || "",
+    props.column.settings?.description ?? "",
   );
   const [isSaving, setIsSaving] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);

@@ -65,10 +65,10 @@ type MutationMethod = "POST" | "PATCH";
  * POST/PATCH helper for mutation operations.
  * Automatically handles JSON serialization and headers.
  */
-async function apiMutate<T>(
+async function apiMutate<T, B extends object = object>(
   url: string,
   method: MutationMethod,
-  body: Record<string, unknown> | undefined,
+  body: B | undefined,
   dataKey: string,
   errorMessage: string,
 ): Promise<T> {

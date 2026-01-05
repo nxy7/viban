@@ -251,7 +251,7 @@ function NotificationCard(props: NotificationCardProps) {
 
 export default function NotificationContainer() {
   const [isHovered, setIsHovered] = createSignal(false);
-  const notifications = getNotifications;
+  const notifications = getNotifications();
 
   return (
     <div

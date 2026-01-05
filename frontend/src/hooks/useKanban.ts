@@ -46,12 +46,15 @@ export type {
 };
 
 export type Board = KanbanBoard;
-export type Column = KanbanColumn;
 export type Task = KanbanTask;
 export type Hook = KanbanHook;
 export type ColumnHook = KanbanColumnHook;
 export type Repository = KanbanRepository;
 export type TaskEvent = KanbanTaskEvent;
+
+export interface Column extends Omit<KanbanColumn, "settings"> {
+  settings: ColumnSettings;
+}
 
 export function unwrap<T>(
   result:
@@ -75,7 +78,6 @@ export interface ColumnSettings {
   auto_move_on_complete?: boolean;
   require_confirmation?: boolean;
   hooks_enabled?: boolean;
-  [key: string]: unknown;
 }
 
 export interface Subtask {
@@ -230,7 +232,7 @@ export function useColumns(boardId: () => string | undefined) {
 
   const result = createQueryResult<KanbanColumn[]>(query, []);
   return {
-    columns: () =>
+    columns: (): Column[] =>
       result.data().map((col) => ({
         ...col,
         settings: parseColumnSettings(col.settings),
