@@ -197,4 +197,4 @@ The frontend uses these generated collections via `useLiveQuery` for reactive, r
 
 ## License
 
-MIT
+Polyform Noncommercial License 1.0.0
