@@ -196,9 +196,6 @@ export default function BoardPage() {
   // Panel is open when cardId is in URL
   const isPanelOpen = () => !!cardId();
 
-  // Settings is open when settingsTab is in URL
-  const isSettingsOpen = () => !!settingsTab();
-
   // Initialize audio system on first user interaction (browser autoplay policy)
   onMount(() => {
     const handleFirstInteraction = () => {

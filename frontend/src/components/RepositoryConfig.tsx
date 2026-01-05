@@ -279,22 +279,6 @@ export default function RepositoryConfig(props: RepositoryConfigProps) {
     }
   };
 
-  const handleDelete = async () => {
-    const repo = repository();
-    if (!repo) return;
-    if (
-      !confirm("Are you sure you want to remove the repository configuration?")
-    )
-      return;
-
-    const result = await sdk
-      .destroy_repository({ identity: repo.id })
-      .then(unwrap);
-    if (result !== null) {
-      resetForm();
-    }
-  };
-
   // Content renderer - shared between both modes
   const renderContent = () => (
     <>

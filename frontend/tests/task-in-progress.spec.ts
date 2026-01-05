@@ -30,9 +30,6 @@ test.describe("Task In Progress E2E Tests", () => {
     // Task should appear in the board
     await expect(page.getByText(taskTitle)).toBeVisible({ timeout: 15000 });
 
-    // The task card should exist (we'll drag it to In Progress)
-    const taskCard = page.getByText(taskTitle).locator("..");
-
     // Find the "In Progress" column
     const inProgressColumn = page
       .locator("[data-column-id]")
@@ -59,10 +56,6 @@ test.describe("Task In Progress E2E Tests", () => {
 
     // Wait for the board to fully load
     await expect(page.getByText("In Progress")).toBeVisible({ timeout: 15000 });
-
-    // Check if there are any tasks with "Working..." badge
-    // This tests that the UI can display the working state
-    const workingBadge = page.getByText("Working...");
 
     // The badge may or may not be visible depending on current task states
     // We're just verifying the selector works and the page loaded correctly

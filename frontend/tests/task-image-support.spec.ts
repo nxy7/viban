@@ -1,6 +1,4 @@
 import { expect, test } from "@playwright/test";
-import * as fs from "fs";
-import * as path from "path";
 
 test.describe("Task Image Support E2E Tests", () => {
   // Helper to create a simple red square PNG as base64
@@ -64,11 +62,6 @@ test.describe("Task Image Support E2E Tests", () => {
       // Convert data URL to blob
       const response = await fetch(dataUrl);
       const blob = await response.blob();
-
-      // Create a ClipboardItem
-      const clipboardItem = new ClipboardItem({
-        [blob.type]: blob,
-      });
 
       // Create a paste event
       const dataTransfer = new DataTransfer();

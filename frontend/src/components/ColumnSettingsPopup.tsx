@@ -450,10 +450,7 @@ interface HooksSettingsProps {
 
 function HooksSettings(props: HooksSettingsProps) {
   // Use fetchAllHooks to get both system hooks and custom hooks
-  const [allHooks, { refetch }] = createResource(
-    () => props.boardId,
-    fetchAllHooks,
-  );
+  const [allHooks] = createResource(() => props.boardId, fetchAllHooks);
   const { columnHooks, isLoading: isColumnHooksLoading } = useColumnHooks(
     () => props.column.id,
   );

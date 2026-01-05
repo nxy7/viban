@@ -11,11 +11,9 @@ import {
 } from "@thisbeyond/solid-dnd";
 import {
   type Accessor,
-  createEffect,
   createMemo,
   createSignal,
   For,
-  on,
   onCleanup,
   onMount,
   Show,
@@ -78,7 +76,7 @@ const createKanbanCollisionDetector = (
   return (
     draggable: Draggable,
     droppables: Droppable[],
-    context: { activeDroppableId: string | number | null },
+    _context: { activeDroppableId: string | number | null },
   ): Droppable | null => {
     // Use actual pointer position for Y, but draggable center for X (column detection)
     const draggableCenter = {

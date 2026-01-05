@@ -38,7 +38,6 @@ function setStoredBoolean(key: string, value: boolean): void {
 import {
   columnsCollection,
   type Task,
-  toDecimal,
   unwrap,
   useHookExecutions,
 } from "~/hooks/useKanban";
@@ -298,8 +297,7 @@ export default function TaskDetailsPanel(props: TaskDetailsPanelProps) {
 
   const taskId = () => props.task?.id;
 
-  const { executors, selectedExecutor, setSelectedExecutor, hasClaudeCode } =
-    useSystem();
+  const { executors, selectedExecutor, setSelectedExecutor } = useSystem();
 
   const {
     output,
@@ -1971,7 +1969,7 @@ function OutputBubble(props: OutputBubbleProps) {
     }
     if (typeof input.command === "string") {
       const cmd = input.command as string;
-      return cmd.length > 60 ? cmd.slice(0, 60) + "..." : cmd;
+      return cmd.length > 60 ? `${cmd.slice(0, 60)}...` : cmd;
     }
     if (typeof input.url === "string") {
       return input.url;
@@ -1982,7 +1980,7 @@ function OutputBubble(props: OutputBubbleProps) {
 
     for (const value of Object.values(input)) {
       if (typeof value === "string" && value.length > 0) {
-        return value.length > 50 ? value.slice(0, 50) + "..." : value;
+        return value.length > 50 ? `${value.slice(0, 50)}...` : value;
       }
     }
     return "";

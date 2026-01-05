@@ -7,7 +7,7 @@ import ImageTextarea, {
   prepareImagesForApi,
 } from "./ImageTextarea";
 import ErrorBanner from "./ui/ErrorBanner";
-import { LightningIcon, LoadingSpinner, PlayIcon } from "./ui/Icons";
+import { LightningIcon, PlayIcon } from "./ui/Icons";
 import Modal from "./ui/Modal";
 
 const MAX_BRANCH_NAME_LENGTH = 200;

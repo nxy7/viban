@@ -138,19 +138,21 @@ function expandCronField(field: string, min: number, max: number): number[] {
       const [range, stepStr] = part.split("/");
       const step = parseInt(stepStr, 10);
       const [start, end] =
-        range === "*" ? [min, max] : range.split("-").map((n) => parseInt(n));
+        range === "*"
+          ? [min, max]
+          : range.split("-").map((n) => parseInt(n, 10));
 
       for (let i = start; i <= (end ?? max); i += step) {
         if (i >= min && i <= max) result.push(i);
       }
     } else if (part.includes("-")) {
-      const [start, end] = part.split("-").map((n) => parseInt(n));
+      const [start, end] = part.split("-").map((n) => parseInt(n, 10));
       for (let i = start; i <= end; i++) {
         if (i >= min && i <= max) result.push(i);
       }
     } else {
-      const num = parseInt(part);
-      if (!isNaN(num) && num >= min && num <= max) {
+      const num = parseInt(part, 10);
+      if (!Number.isNaN(num) && num >= min && num <= max) {
         result.push(num);
       }
     }
@@ -188,11 +190,6 @@ export default function CronInput(props: CronInputProps) {
   const cronParts = createMemo(() => parseCronParts(props.value));
   const humanReadable = createMemo(() => parseCronExpression(props.value));
   const nextRuns = createMemo(() => getNextRuns(props.value));
-
-  const isValid = createMemo(() => {
-    if (!props.value.trim()) return true;
-    return humanReadable() !== null;
-  });
 
   const updateField = (index: number, newValue: string) => {
     const parts = [...cronParts()];

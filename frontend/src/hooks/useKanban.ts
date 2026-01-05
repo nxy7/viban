@@ -4,7 +4,6 @@ import { useLiveQuery } from "@tanstack/solid-db";
 export * from "~/lib/generated/ash";
 
 import type { AshRpcError } from "~/lib/generated/ash";
-import * as sdk from "~/lib/generated/ash";
 
 import {
   syncBoardsCollection as boardsCollection,
