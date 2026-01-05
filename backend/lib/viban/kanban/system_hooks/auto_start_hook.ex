@@ -70,7 +70,7 @@ defmodule Viban.Kanban.SystemHooks.AutoStartHook do
   end
 
   defp find_in_progress_column(board_id) do
-    case Column.by_board(board_id) do
+    case Column.for_board(board_id) do
       {:ok, columns} ->
         in_progress =
           Enum.find(columns, fn col ->
