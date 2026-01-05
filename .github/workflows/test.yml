@@ -54,6 +54,12 @@ jobs:
       - name: Compile (warnings as errors)
         run: nix develop --command bash -c "cd backend && mix compile --warnings-as-errors"
 
+      - name: Setup database
+        run: nix develop --command bash -c "cd backend && mix ash.setup"
+        env:
+          MIX_ENV: test
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/viban_test
+
       - name: Run tests
         run: nix develop --command bash -c "cd backend && mix test"
         env:
