@@ -98,3 +98,127 @@ jobs:
 
       - name: Build
         run: nix develop --command bash -c "cd frontend && bun run build"
+
+  build:
+    name: Build Binary
+    needs: [backend-test, frontend-build]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Restore Mix cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            backend/deps
+            backend/_build
+          key: ${{ runner.os }}-nix-mix-${{ hashFiles('backend/mix.lock') }}
+          restore-keys: ${{ runner.os }}-nix-mix-
+
+      - name: Restore Bun cache
+        uses: actions/cache@v4
+        with:
+          path: frontend/node_modules
+          key: ${{ runner.os }}-nix-bun-${{ hashFiles('frontend/bun.lockb') }}
+          restore-keys: ${{ runner.os }}-nix-bun-
+
+      - name: Build
+        run: nix develop --command just build
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: viban-linux
+          path: backend/_build/prod/rel/viban/
+
+  e2e-prod:
+    name: E2E Tests (Production Build)
+    needs: [build]
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: viban_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          -c wal_level=logical
+          -c max_wal_senders=10
+          -c max_replication_slots=10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: viban-linux
+          path: backend/_build/prod/rel/viban/
+
+      - name: Make release executable
+        run: chmod +x backend/_build/prod/rel/viban/bin/*
+
+      - name: Restore Bun cache
+        uses: actions/cache@v4
+        with:
+          path: frontend/node_modules
+          key: ${{ runner.os }}-nix-bun-${{ hashFiles('frontend/bun.lockb') }}
+          restore-keys: ${{ runner.os }}-nix-bun-
+
+      - name: Install Playwright browsers
+        run: nix develop --command bash -c "cd frontend && bun install && bunx playwright install chromium"
+
+      - name: Start release and run E2E tests
+        run: |
+          # Start the release in background
+          E2E_TEST=true \
+          PHX_SERVER=true \
+          PORT=8000 \
+          DATABASE_URL="postgres://postgres:postgres@localhost:5432/viban_e2e" \
+          SECRET_KEY_BASE="test_secret_key_base_that_is_at_least_64_bytes_long_for_e2e_testing_only" \
+          backend/_build/prod/rel/viban/bin/viban start &
+
+          # Wait for server to be ready
+          echo "Waiting for server to start..."
+          for i in {1..30}; do
+            if curl -s http://localhost:8000 > /dev/null 2>&1; then
+              echo "Server is ready!"
+              break
+            fi
+            echo "Attempt $i/30..."
+            sleep 2
+          done
+
+          # Run E2E tests
+          cd frontend && nix develop --command bun run test:e2e:prod
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-prod
+          path: frontend/playwright-report/
+          retention-days: 7

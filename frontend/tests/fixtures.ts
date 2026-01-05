@@ -5,7 +5,11 @@ import {
   type Page,
 } from "@playwright/test";
 
-const API_BASE = "http://localhost:7771";
+// In prod mode, API is on same host as frontend (port 8000)
+// In dev mode, backend runs on port 7771
+const API_BASE = process.env.PROD_E2E
+  ? "http://localhost:8000"
+  : "http://localhost:7771";
 
 interface TestFixtures {
   testApi: APIRequestContext;

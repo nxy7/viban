@@ -14,6 +14,9 @@ defmodule Viban.Application do
 
   @impl true
   def start(_type, _args) do
+    Viban.CLI.run()
+    setup_deploy_mode()
+    run_migrations()
     configure_phoenix_sync()
 
     children = core_children() ++ optional_children() ++ endpoint_children()
@@ -28,7 +31,37 @@ defmodule Viban.Application do
     :ok
   end
 
-  # Private functions
+  # ============================================================================
+  # Deploy Mode & Migrations
+  # ============================================================================
+
+  defp setup_deploy_mode do
+    if Viban.DeployMode.enabled?() do
+      IO.puts("\n#{IO.ANSI.bright()}📦 Viban Deploy Mode#{IO.ANSI.reset()}\n")
+      Viban.DeployMode.ensure_data_dir!()
+      Viban.DeployMode.ensure_postgres_running!()
+      Viban.DeployMode.ensure_secrets!()
+    end
+  end
+
+  defp run_migrations do
+    if Application.get_env(:viban, :auto_migrate, true) do
+      IO.puts("#{IO.ANSI.cyan()}🔄 Running migrations...#{IO.ANSI.reset()}")
+
+      try do
+        Viban.Release.migrate()
+        IO.puts("#{IO.ANSI.green()}✅ Migrations complete!#{IO.ANSI.reset()}")
+      rescue
+        e in DBConnection.ConnectionError ->
+          IO.puts("#{IO.ANSI.red()}❌ Migration failed: #{Exception.message(e)}#{IO.ANSI.reset()}")
+          reraise e, __STACKTRACE__
+      end
+    end
+  end
+
+  # ============================================================================
+  # Phoenix Configuration
+  # ============================================================================
 
   defp configure_phoenix_sync do
     Application.put_env(

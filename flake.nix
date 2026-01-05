@@ -19,21 +19,26 @@
         let
           pkgs = import nixpkgs { inherit system; };
         in
+        let
+          # Use Erlang 27 for Burrito compatibility (OTP 28 ERTS not yet on BEAM Machine)
+          erlang = pkgs.erlang_27;
+          beamPackages = pkgs.beam.packagesWith erlang;
+          elixir = beamPackages.elixir_1_18;
+        in
         {
           devShells.default = pkgs.mkShell {
-            packages = with pkgs; [
+            packages = [
               # Build tools
-              just
-              overmind
+              pkgs.just
+              pkgs.overmind
 
-              # Elixir/Erlang
-              elixir_1_19
-              erlang_27
+              # Elixir/Erlang (pinned to OTP 27 for Burrito builds)
+              erlang
+              elixir
 
               # Node.js / Bun
-              bun
+              pkgs.bun
             ];
-
           };
         };
     };

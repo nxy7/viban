@@ -48,6 +48,7 @@ defmodule VibanWeb.Router do
 
     # Health check (no auth required)
     get "/health", HealthController, :check
+    get "/ping", HealthController, :ping
 
     # Auth endpoints
     get "/auth/me", AuthController, :me

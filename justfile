@@ -151,3 +151,78 @@ kill:
     -pkill -9 -f "mix phx.server" 2>/dev/null
     @sleep 1
     @echo "Done. Ports should be free now."
+
+# Build single executable for distribution
+# Use burrito=true to attempt Burrito build (requires OTP 25-27, zig installed)
+# Default is standard release which works with any OTP version
+build target="" burrito="false":
+    #!/usr/bin/env bash
+    set -e
+
+    echo "🔨 Building Viban..."
+    echo ""
+
+    echo "📦 Building frontend..."
+    cd frontend && bun install && bun run build
+
+    echo ""
+    echo "📋 Copying frontend assets to backend..."
+    rm -rf ../backend/priv/static/_build ../backend/priv/static/index.html 2>/dev/null || true
+    cp -r .output/public/* ../backend/priv/static/
+
+    echo ""
+    echo "⚙️  Building backend release..."
+    cd ../backend
+    mix deps.get --only prod
+
+    # First compile all deps (pg_query_ex will fail due to wrong arch libpg_query.a)
+    echo "🔧 Compiling dependencies..."
+    MIX_ENV=prod mix deps.compile || true
+
+    # Build libpg_query.a from source for current platform (ships with Linux x86_64 precompiled)
+    echo "🔧 Building libpg_query for current platform..."
+    cd deps/pg_query_ex/c_src/libpg_query && make clean && make libpg_query.a
+    cd ../../../..
+
+    # Recompile pg_query_ex with correct native library
+    echo "🔧 Recompiling pg_query_ex NIF..."
+    MIX_ENV=prod mix deps.compile pg_query_ex --force
+
+    MIX_ENV=prod mix compile
+    MIX_ENV=prod mix assets.deploy
+
+    echo ""
+    if [ "{{burrito}}" = "true" ]; then
+        echo "🌯 Building Burrito single-binary..."
+        echo "   Note: Requires OTP 25-27 and zig installed"
+
+        # Use target param, or BURRITO_TARGET env var, or default to current platform
+        TARGET="{{target}}"
+        if [ -z "$TARGET" ] && [ -n "$BURRITO_TARGET" ]; then
+            TARGET="$BURRITO_TARGET"
+        fi
+
+        if [ -n "$TARGET" ]; then
+            echo "🎯 Target: $TARGET"
+            BURRITO_BUILD=1 BURRITO_TARGET="$TARGET" MIX_ENV=prod mix release --overwrite
+        else
+            echo "🎯 Target: current platform"
+            BURRITO_BUILD=1 MIX_ENV=prod mix release --overwrite
+        fi
+        echo ""
+        echo "✅ Burrito build complete!"
+        echo "📁 Binary at: backend/burrito_out/"
+        ls -la burrito_out/
+    else
+        echo "📦 Building standard release..."
+        MIX_ENV=prod mix release --overwrite
+        echo ""
+        echo "✅ Build complete!"
+        echo "📁 Release at: backend/_build/prod/rel/viban/"
+        echo ""
+        echo "To run: _build/prod/rel/viban/bin/viban start"
+        echo ""
+        echo "Deploy mode ports:"
+        echo "  App:      https://localhost:7777"
+        echo "  Postgres: localhost:17777"
+    fi

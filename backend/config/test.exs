@@ -42,3 +42,6 @@ config :viban, Oban, testing: :inline
 
 # Disable BoardManager during tests - it tries to load boards before sandbox is ready
 config :viban, start_board_manager: false
+
+# Disable auto-migration during tests (mix test runs migrations separately)
+config :viban, auto_migrate: false

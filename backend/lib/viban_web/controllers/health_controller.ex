@@ -16,4 +16,8 @@ defmodule VibanWeb.HealthController do
         |> json(%{status: "error", database: "disconnected"})
     end
   end
+
+  def ping(conn, _params) do
+    json(conn, %{pong: true})
+  end
 end

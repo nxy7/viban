@@ -23,17 +23,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Enabled platforms
           - target: macos_arm
-            os: macos-14  # M1/M2 runner
-
-          # Uncomment to enable additional platforms:
-          # - target: macos_intel
-          #   os: macos-13
-          # - target: linux_intel
-          #   os: ubuntu-latest
-          # - target: linux_arm
-          #   os: ubuntu-24.04-arm  # ARM runner
+            os: macos-14
+          - target: linux_intel
+            os: ubuntu-latest
 
     steps:
       - name: Checkout code
@@ -63,6 +56,9 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Install just
+        uses: extractions/setup-just@v2
+
       - name: Cache Elixir deps
         uses: actions/cache@v4
         with:
@@ -81,40 +77,16 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-bun-
 
-      - name: Build frontend
-        working-directory: frontend
-        run: |
-          bun install
-          bun run build
-
-      - name: Copy frontend to backend
-        run: |
-          rm -rf backend/priv/static/_build backend/priv/static/index.html backend/priv/static/sounds
-          cp -r frontend/.output/public/_build backend/priv/static/_build
-          cp -r frontend/.output/public/sounds backend/priv/static/sounds 2>/dev/null || true
-          cp frontend/.output/public/index.html backend/priv/static/index.html
-          cp frontend/.output/public/favicon.ico backend/priv/static/favicon.ico 2>/dev/null || true
-
-      - name: Install Elixir dependencies
-        working-directory: backend
+      - name: Setup Elixir
         run: |
           mix local.hex --force
           mix local.rebar --force
-          mix deps.get --only prod
 
-      - name: Compile
-        working-directory: backend
+      - name: Build release
         env:
-          MIX_ENV: prod
-        run: mix compile
-
-      - name: Build Burrito release
-        working-directory: backend
-        env:
-          MIX_ENV: prod
           BURRITO_BUILD: "1"
           BURRITO_TARGET: ${{ matrix.target }}
-        run: mix release --overwrite
+        run: just build burrito=true
 
       - name: Get version
         id: version
