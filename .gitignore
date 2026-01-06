@@ -41,3 +41,4 @@ docs/.output/
 *.swp
 *.swo
 .playwright-mcp
+backend/priv/static
