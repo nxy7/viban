@@ -157,13 +157,13 @@ jobs:
           restore-keys: ${{ runner.os }}-nix-bun-
 
       - name: Build
-        run: nix develop --command just build
+        run: nix develop --command just build burrito=true
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: viban-linux
-          path: backend/_build/prod/rel/viban/
+          path: backend/burrito_out/viban_linux
 
   e2e-prod:
     name: E2E Tests (Production Build)
@@ -182,20 +182,13 @@ jobs:
         with:
           use-gha-cache: false
 
-      - name: Start PostgreSQL
-        run: docker compose up db -d --wait
-
       - name: Download build artifact
         uses: actions/download-artifact@v4
         with:
           name: viban-linux
-          path: backend/_build/prod/rel/viban/
 
-      - name: Make release executable
-        run: |
-          chmod +x backend/_build/prod/rel/viban/bin/*
-          chmod +x backend/_build/prod/rel/viban/releases/*/elixir
-          chmod +x backend/_build/prod/rel/viban/erts-*/bin/*
+      - name: Make binary executable
+        run: chmod +x viban_linux
 
       - name: Restore Bun cache
         uses: actions/cache@v4
@@ -209,22 +202,17 @@ jobs:
 
       - name: Start release and run E2E tests
         run: |
-          # Start the release in background
-          E2E_TEST=true \
-          PHX_SERVER=true \
-          PORT=8000 \
-          DATABASE_URL="postgres://postgres:postgres@localhost:5432/viban_dev" \
-          SECRET_KEY_BASE="test_secret_key_base_that_is_at_least_64_bytes_long_for_e2e_testing_only" \
-          backend/_build/prod/rel/viban/bin/viban start &
+          # Start the Burrito binary - auto-starts Docker Postgres on port 17777
+          E2E_TEST=true ./viban_linux &
 
-          # Wait for server to be ready
+          # Wait for server to be ready (deploy mode default port is 7777, HTTPS)
           echo "Waiting for server to start..."
-          for i in {1..30}; do
-            if curl -s http://localhost:8000 > /dev/null 2>&1; then
+          for i in {1..60}; do
+            if curl -sk https://localhost:7777 > /dev/null 2>&1; then
               echo "Server is ready!"
               break
             fi
-            echo "Attempt $i/30..."
+            echo "Attempt $i/60..."
             sleep 2
           done
 
@@ -238,7 +226,3 @@ jobs:
           name: playwright-report-prod
           path: frontend/playwright-report/
           retention-days: 7
-
-      - name: Stop PostgreSQL
-        if: always()
-        run: docker compose down

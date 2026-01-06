@@ -25,13 +25,12 @@ if System.get_env("E2E_TEST") == "true" do
 end
 
 if config_env() == :prod do
-  # Detect deploy mode: explicit env var, running from Burrito, or no DATABASE_URL provided
-  # When no config is given, default to deploy mode so the binary "just works"
+  # Deploy mode: only for Burrito binaries or explicit VIBAN_DEPLOY_MODE=1
+  # This auto-starts Docker Postgres and configures everything for standalone use
   burrito_binary? = String.contains?(__ENV__.file, ".burrito/")
   explicit_deploy_mode? = System.get_env("VIBAN_DEPLOY_MODE") == "1"
-  has_database_url? = System.get_env("DATABASE_URL") != nil
 
-  deploy_mode? = explicit_deploy_mode? or burrito_binary? or not has_database_url?
+  deploy_mode? = explicit_deploy_mode? or burrito_binary?
 
   # In deploy mode, load config from ~/.viban/config.env if it exists
   if deploy_mode? do
@@ -50,23 +49,24 @@ if config_env() == :prod do
     end
   end
 
+  # VB_DATABASE_URL for explicit config, DATABASE_URL as fallback for standard releases
+  # Deploy mode uses localhost:17777 (Docker Postgres started by the binary)
   database_url =
-    System.get_env("DATABASE_URL") || "postgres://viban:viban@localhost:17777/viban_prod"
+    System.get_env("VB_DATABASE_URL") ||
+      System.get_env("DATABASE_URL") ||
+      if(deploy_mode?, do: "postgres://viban:viban@localhost:17777/viban_prod")
+
+  if is_nil(database_url) do
+    raise "DATABASE_URL or VB_DATABASE_URL must be set for non-deploy-mode releases"
+  end
 
   maybe_ipv6 = if System.get_env("ECTO_IPV6") in ~w(true 1), do: [:inet6], else: []
 
-  config :viban, Viban.Repo,
-    url: database_url,
-    pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
-    socket_options: maybe_ipv6
-
   secret_key_base =
-    System.get_env("SECRET_KEY_BASE") || :crypto.strong_rand_bytes(64) |> Base.encode64()
+    System.get_env("SECRET_KEY_BASE") || 64 |> :crypto.strong_rand_bytes() |> Base.encode64()
 
   host = System.get_env("PHX_HOST") || "localhost"
   port = String.to_integer(System.get_env("PORT") || if(deploy_mode?, do: "7777", else: "4000"))
-
-  config :viban, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
   # Check for SSL cert files (enables HTTP/2 for better Electric sync performance)
   cert_path = System.get_env("SSL_CERT_PATH") || "priv/cert/selfsigned.pem"
@@ -93,8 +93,15 @@ if config_env() == :prod do
   # In deploy mode, always start the server (no need for PHX_SERVER env var)
   server_enabled? = deploy_mode? or System.get_env("PHX_SERVER") != nil
 
+  config :viban, Viban.Repo,
+    url: database_url,
+    pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
+    socket_options: maybe_ipv6
+
+  # HTTPS mode - enables HTTP/2 for multiplexed connections (needed for Electric SQL)
+  config :viban, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
+
   if use_https do
-    # HTTPS mode - enables HTTP/2 for multiplexed connections (needed for Electric SQL)
     config :viban, VibanWeb.Endpoint,
       server: server_enabled?,
       url: [host: host, port: port, scheme: "https"],

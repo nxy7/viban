@@ -5,8 +5,6 @@ import {
   type Page,
 } from "@playwright/test";
 
-const API_BASE = "https://localhost:8000";
-
 interface TestFixtures {
   testApi: APIRequestContext;
   authenticatedPage: Page;
@@ -14,9 +12,9 @@ interface TestFixtures {
 }
 
 export const test = base.extend<TestFixtures>({
-  testApi: async ({ playwright }, use) => {
+  testApi: async ({ playwright, baseURL }, use) => {
     const context = await playwright.request.newContext({
-      baseURL: API_BASE,
+      baseURL: baseURL ?? "http://localhost:8000",
       ignoreHTTPSErrors: true,
     });
     await use(context);

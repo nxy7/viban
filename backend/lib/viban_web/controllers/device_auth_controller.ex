@@ -25,8 +25,8 @@ defmodule VibanWeb.DeviceAuthController do
 
   import VibanWeb.ControllerHelpers, only: [json_ok: 2, json_error: 3]
 
-  alias Viban.Auth.DeviceFlow
   alias Viban.Accounts.User
+  alias Viban.Auth.DeviceFlow
 
   require Logger
 
@@ -135,9 +135,7 @@ defmodule VibanWeb.DeviceAuthController do
 
         case find_or_create_user(user_params) do
           {:ok, user} ->
-            Logger.info(
-              "[DeviceAuth] User authenticated: #{user.provider_login} (#{user.provider})"
-            )
+            Logger.info("[DeviceAuth] User authenticated: #{user.provider_login} (#{user.provider})")
 
             conn
             |> clear_device_session()

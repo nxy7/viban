@@ -21,7 +21,8 @@ defmodule Viban.Executors.RunnerSupervisor do
   List all running executor processes.
   """
   def list_running do
-    DynamicSupervisor.which_children(__MODULE__)
+    __MODULE__
+    |> DynamicSupervisor.which_children()
     |> Enum.map(fn {_, pid, _, _} -> pid end)
     |> Enum.filter(&is_pid/1)
   end

@@ -11,16 +11,19 @@ defmodule Viban.Kanban.Actors.HookRunnerTest do
 
   # Create a mock hook struct for testing (without hook_kind - legacy)
   defmodule MockHook do
+    @moduledoc false
     defstruct [:name, :command]
   end
 
   # Create a mock hook struct with hook_kind field (matches real Hook struct)
   defmodule MockHookWithKind do
+    @moduledoc false
     defstruct [:name, :command, :hook_kind, :agent_prompt, :agent_executor, :agent_auto_approve]
   end
 
   # Create a mock task struct for testing
   defmodule MockTask do
+    @moduledoc false
     defstruct [:id, :worktree_path, :title, :description, :column_id]
   end
 

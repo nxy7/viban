@@ -1,5 +1,7 @@
 defmodule VibanWeb.Telemetry do
+  @moduledoc false
   use Supervisor
+
   import Telemetry.Metrics
 
   def start_link(arg) do
@@ -63,8 +65,7 @@ defmodule VibanWeb.Telemetry do
       ),
       summary("viban.repo.query.idle_time",
         unit: {:native, :millisecond},
-        description:
-          "The time the connection spent waiting before being checked out for the query"
+        description: "The time the connection spent waiting before being checked out for the query"
       ),
       summary("vm.memory.total", unit: {:byte, :kilobyte}),
       summary("vm.total_run_queue_lengths.total"),

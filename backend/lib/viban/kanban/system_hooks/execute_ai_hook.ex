@@ -24,10 +24,10 @@ defmodule Viban.Kanban.SystemHooks.ExecuteAIHook do
 
   @behaviour Viban.Kanban.SystemHooks.Behaviour
 
-  require Logger
-
-  alias Viban.Kanban.Task
   alias Viban.Executors.Executor
+  alias Viban.Kanban.Task
+
+  require Logger
 
   @default_executor :claude_code
 
@@ -53,9 +53,7 @@ defmodule Viban.Kanban.SystemHooks.ExecuteAIHook do
     else
       case Viban.Executors.Runner.lookup_by_task(task.id) do
         {:ok, _pid} ->
-          Logger.info(
-            "[ExecuteAIHook] Executor already running for task #{task.id}, awaiting completion"
-          )
+          Logger.info("[ExecuteAIHook] Executor already running for task #{task.id}, awaiting completion")
 
           {:await_executor, task.id}
 
@@ -182,10 +180,10 @@ defmodule Viban.Kanban.SystemHooks.ExecuteAIHook do
       end
 
     parts =
-      if user_prompt != "" do
-        parts ++ [user_prompt]
-      else
+      if user_prompt == "" do
         parts
+      else
+        parts ++ [user_prompt]
       end
 
     Enum.join(parts, "\n\n")

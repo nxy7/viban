@@ -19,18 +19,20 @@ defmodule Viban.StateServer do
     extensions: [AshSync, AshTypescript.Rpc],
     otp_app: :viban
 
+  alias Viban.StateServer.ActorState
+
   sync do
-    resource Viban.StateServer.ActorState do
+    resource ActorState do
       query(:sync_actor_states, :read)
     end
   end
 
   resources do
-    resource Viban.StateServer.ActorState
+    resource ActorState
   end
 
   typescript_rpc do
-    resource Viban.StateServer.ActorState do
+    resource ActorState do
       rpc_action(:set_demo_text, :set_demo_text)
     end
   end

@@ -48,7 +48,10 @@ defmodule Viban.Executors.Runner do
 
   use GenServer
 
-  alias Viban.Executors.{Registry, ExecutorSession, ExecutorMessage, ImageHandler}
+  alias Viban.Executors.ExecutorMessage
+  alias Viban.Executors.ExecutorSession
+  alias Viban.Executors.ImageHandler
+  alias Viban.Executors.Registry
   alias Viban.GitHub.PRDetector
 
   require Logger
@@ -260,9 +263,7 @@ defmodule Viban.Executors.Runner do
 
     enhanced_prompt = ImageHandler.build_prompt_with_images(prompt, image_paths || [])
 
-    executor_opts =
-      executor_module.default_opts()
-      |> Keyword.merge(working_directory: working_directory)
+    executor_opts = Keyword.put(executor_module.default_opts(), :working_directory, working_directory)
 
     {executable, args} = executor_module.build_command(enhanced_prompt, executor_opts)
 
@@ -293,9 +294,7 @@ defmodule Viban.Executors.Runner do
       output_buffer: buffer
     } = state
 
-    Logger.info(
-      "#{@log_prefix} [#{task_id}] Received data (#{byte_size(data)} bytes): #{String.slice(data, 0, 200)}"
-    )
+    Logger.info("#{@log_prefix} [#{task_id}] Received data (#{byte_size(data)} bytes): #{String.slice(data, 0, 200)}")
 
     data
     |> String.split("\n", trim: true)
@@ -370,24 +369,12 @@ defmodule Viban.Executors.Runner do
     {:via, Elixir.Registry, {@runner_registry, task_id}}
   end
 
-  defp init_with_executor(
-         executor_module,
-         task_id,
-         executor_type,
-         prompt,
-         working_directory,
-         images
-       ) do
-    unless executor_module.available?() do
-      {:stop, {:error, :executor_not_available}}
-    else
+  defp init_with_executor(executor_module, task_id, executor_type, prompt, working_directory, images) do
+    if executor_module.available?() do
       image_paths = ImageHandler.save_to_directory(images, working_directory)
 
       case create_session(task_id, executor_type, prompt, working_directory) do
         {:ok, session} ->
-          # Note: User message is already saved by TaskChannel.send_message
-          # We only create the session here, no need to duplicate the message
-
           state = %__MODULE__{
             task_id: task_id,
             session_id: session.id,
@@ -408,6 +395,8 @@ defmodule Viban.Executors.Runner do
           Logger.error("#{@log_prefix} Failed to create session: #{inspect(error)}")
           {:stop, {:error, :failed_to_create_session}}
       end
+    else
+      {:stop, {:error, :executor_not_available}}
     end
   end
 
@@ -448,8 +437,7 @@ defmodule Viban.Executors.Runner do
 
   defp build_environment(executor_module) do
     if function_exported?(executor_module, :env, 0) do
-      executor_module.env()
-      |> Enum.map(fn {k, v} -> {String.to_charlist(k), String.to_charlist(v)} end)
+      Enum.map(executor_module.env(), fn {k, v} -> {String.to_charlist(k), String.to_charlist(v)} end)
     else
       []
     end
@@ -458,7 +446,7 @@ defmodule Viban.Executors.Runner do
   defp find_executable(executable) do
     path =
       if String.starts_with?(executable, "/") do
-        if File.exists?(executable), do: executable, else: nil
+        if File.exists?(executable), do: executable
       else
         System.find_executable(executable)
       end
@@ -498,20 +486,12 @@ defmodule Viban.Executors.Runner do
     end
   end
 
-  defp handle_parsed_output(
-         {:ok, %{type: :assistant_message, content: content}},
-         task_id,
-         session_id
-       ) do
+  defp handle_parsed_output({:ok, %{type: :assistant_message, content: content}}, task_id, session_id) do
     save_message(task_id, session_id, :assistant, content)
     PRDetector.process_output(task_id, content)
   end
 
-  defp handle_parsed_output(
-         {:ok, %{type: :todo_update, todos: todos}},
-         task_id,
-         session_id
-       ) do
+  defp handle_parsed_output({:ok, %{type: :todo_update, todos: todos}}, task_id, session_id) do
     save_message(task_id, session_id, :system, "todos", %{todos: todos})
   end
 
@@ -520,11 +500,7 @@ defmodule Viban.Executors.Runner do
     save_message(task_id, session_id, :tool, "Using tool: #{tool_name}", %{tool: tool_name})
   end
 
-  defp handle_parsed_output(
-         {:ok, %{type: :result, content: content}},
-         task_id,
-         _session_id
-       ) do
+  defp handle_parsed_output({:ok, %{type: :result, content: content}}, task_id, _session_id) do
     # Note: Don't save result as a message - it duplicates content from assistant_message events
     # The result event is mainly used for status updates and PR detection
     PRDetector.process_output(task_id, content)

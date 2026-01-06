@@ -40,8 +40,7 @@ defmodule Viban.StateServer.Serializer do
   defp filter_non_serializable(map) when is_map(map) do
     map
     |> Enum.reject(fn {_key, value} -> non_serializable?(value) end)
-    |> Enum.map(fn {k, v} -> {stringify_key(k), filter_value(v)} end)
-    |> Map.new()
+    |> Map.new(fn {k, v} -> {stringify_key(k), filter_value(v)} end)
   end
 
   defp non_serializable?(value) do
@@ -103,6 +102,10 @@ defmodule Viban.StateServer.Serializer do
   defp safe_to_atom(string) do
     String.to_existing_atom(string)
   rescue
-    ArgumentError -> String.to_atom(string)
+    ArgumentError ->
+      require Logger
+
+      Logger.warning("[Serializer] Unknown atom during deserialization: #{inspect(string)}, keeping as string")
+      string
   end
 end

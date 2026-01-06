@@ -8,16 +8,18 @@ defmodule Viban.Messages.TestMessage.Actions.GetOrCreate do
 
   use Ash.Resource.Actions.Implementation
 
+  alias Viban.Messages.TestMessage
+
   @default_message "Hello from Viban!"
 
   @impl true
   def run(_input, _opts, _context) do
-    case Ash.read(Viban.Messages.TestMessage) do
+    case Ash.read(TestMessage) do
       {:ok, [existing | _]} ->
         {:ok, existing}
 
       {:ok, []} ->
-        Ash.create(Viban.Messages.TestMessage, %{text: @default_message})
+        Ash.create(TestMessage, %{text: @default_message})
 
       {:error, error} ->
         {:error, error}

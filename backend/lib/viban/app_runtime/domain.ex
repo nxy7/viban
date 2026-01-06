@@ -12,12 +12,14 @@ defmodule Viban.AppRuntime do
   use Ash.Domain,
     extensions: [AshTypescript.Domain, AshTypescript.Rpc]
 
+  alias Viban.AppRuntime.SystemTools
+
   resources do
-    resource Viban.AppRuntime.SystemTools
+    resource SystemTools
   end
 
   typescript_rpc do
-    resource Viban.AppRuntime.SystemTools do
+    resource SystemTools do
       rpc_action(:list_tools, :list_tools)
       rpc_action(:tool_available, :tool_available)
       rpc_action(:available_tools, :available_tools)

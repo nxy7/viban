@@ -7,7 +7,8 @@ defmodule Viban.Kanban.Servers.TaskSupervisor do
   """
   use Supervisor
 
-  alias Viban.Kanban.Servers.{TaskServer, HookExecutionServer}
+  alias Viban.Kanban.Servers.HookExecutionServer
+  alias Viban.Kanban.Servers.TaskServer
 
   @registry Viban.Kanban.ActorRegistry
 

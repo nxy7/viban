@@ -75,9 +75,7 @@ defmodule Viban.Kanban.Task.Actions.Refine do
         {:ok, updated}
 
       {:error, reason} ->
-        Logger.error(
-          "Failed to update task #{task.id} with refined description: #{inspect(reason)}"
-        )
+        Logger.error("Failed to update task #{task.id} with refined description: #{inspect(reason)}")
 
         {:error, "Failed to save refined description"}
     end

@@ -24,7 +24,7 @@ defmodule Viban.Kanban.Task.Changes.QueueMessage do
         "prompt" => prompt,
         "executor_type" => to_string(executor_type),
         "images" => images,
-        "queued_at" => DateTime.utc_now() |> DateTime.to_iso8601()
+        "queued_at" => DateTime.to_iso8601(DateTime.utc_now())
       }
 
       updated_queue = current_queue ++ [new_entry]

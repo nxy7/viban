@@ -36,11 +36,14 @@ defmodule Viban.Kanban.Actors.ColumnSemaphore do
   """
 
   use GenServer
-  require Logger
+
   import Ash.Query
 
-  alias Viban.Kanban.{Column, Task}
   alias Phoenix.PubSub
+  alias Viban.Kanban.Column
+  alias Viban.Kanban.Task
+
+  require Logger
 
   # Registry for actor lookups
   @registry Viban.Kanban.ActorRegistry
@@ -330,8 +333,7 @@ defmodule Viban.Kanban.Actors.ColumnSemaphore do
     column_id
     |> list_tasks_in_column()
     |> Enum.filter(& &1.in_progress)
-    |> Enum.map(& &1.id)
-    |> MapSet.new()
+    |> MapSet.new(& &1.id)
   end
 
   defp find_queued_tasks(column_id) do
@@ -344,7 +346,7 @@ defmodule Viban.Kanban.Actors.ColumnSemaphore do
   end
 
   defp list_tasks_in_column(column_id) do
-    Viban.Kanban.Task
+    Task
     |> filter(column_id == ^column_id)
     |> Ash.read!()
   end

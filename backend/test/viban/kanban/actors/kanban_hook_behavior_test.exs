@@ -9,9 +9,13 @@ defmodule Viban.Kanban.Actors.KanbanHookBehaviorTest do
   """
   use Viban.DataCase, async: false
 
-  alias Viban.Kanban.{Board, Column, Task, Hook, ColumnHook}
   alias Viban.Kanban.Actors.BoardSupervisor
   alias Viban.Kanban.Actors.CommandQueue
+  alias Viban.Kanban.Board
+  alias Viban.Kanban.Column
+  alias Viban.Kanban.ColumnHook
+  alias Viban.Kanban.Hook
+  alias Viban.Kanban.Task
 
   # Integration tests require the full actor system to be running.
   # Run them with: mix test --include integration
@@ -51,7 +55,8 @@ defmodule Viban.Kanban.Actors.KanbanHookBehaviorTest do
 
     column_ids = Enum.map(columns, & &1.id)
 
-    from(ch in ColumnHook, where: ch.column_id in ^column_ids)
+    ColumnHook
+    |> where([ch], ch.column_id in ^column_ids)
     |> Viban.Repo.delete_all()
   end
 
@@ -197,6 +202,7 @@ defmodule Viban.Kanban.Actors.KanbanHookBehaviorTest do
       todo_column: todo_column,
       in_progress_column: in_progress_column
     } do
+      alias Viban.Kanban.HookExecution
       # Create a script hook that creates a marker file
       marker_file = Path.join(System.tmp_dir!(), "hook_executed_#{System.unique_integer()}")
 
@@ -242,9 +248,8 @@ defmodule Viban.Kanban.Actors.KanbanHookBehaviorTest do
       Process.sleep(500)
 
       # Check if hook executions were created
-      alias Viban.Kanban.HookExecution
       {:ok, all_executions} = HookExecution.history_for_task(task.id)
-      assert length(all_executions) > 0, "No hook executions created for task"
+      assert all_executions != [], "No hook executions created for task"
 
       # Wait for hook to execute
       Process.sleep(@async_timeout)
@@ -598,7 +603,7 @@ defmodule Viban.Kanban.Actors.KanbanHookBehaviorTest do
       {:ok, updated_task} = Task.get(task.id)
 
       assert updated_task.agent_status == :error
-      assert updated_task.error_message != nil
+      assert updated_task.error_message
       assert String.contains?(updated_task.error_message, "Failing Hook")
 
       # Cleanup
@@ -673,11 +678,11 @@ defmodule Viban.Kanban.Actors.KanbanHookBehaviorTest do
     test "system hooks are registered" do
       hooks = Registry.all()
       assert is_list(hooks)
-      assert length(hooks) > 0
+      assert hooks != []
 
       # Verify Execute AI hook exists
       execute_ai = Enum.find(hooks, &(&1.id == "system:execute-ai"))
-      assert execute_ai != nil
+      assert execute_ai
       assert execute_ai.name == "Execute AI"
       assert execute_ai.is_system == true
     end

@@ -27,8 +27,8 @@ defmodule VibanWeb.ControllerHelpers do
   - Error: `%{ok: false, error: "message"}`
   """
 
-  import Plug.Conn
   import Phoenix.Controller, only: [json: 2]
+  import Plug.Conn
 
   alias Viban.Accounts.User
 
@@ -183,27 +183,22 @@ defmodule VibanWeb.ControllerHelpers do
   def extract_error_message(error) when is_binary(error), do: error
 
   def extract_error_message(%Ash.Error.Invalid{errors: errors}) do
-    errors
-    |> Enum.map(&format_single_ash_error/1)
-    |> Enum.join(", ")
+    Enum.map_join(errors, ", ", &format_single_ash_error/1)
   end
 
   def extract_error_message(%Ecto.Changeset{} = changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
+    changeset
+    |> Ecto.Changeset.traverse_errors(fn {msg, opts} ->
       Regex.replace(~r"%{(\w+)}", msg, fn _, key ->
         opts |> Keyword.get(String.to_existing_atom(key), key) |> to_string()
       end)
     end)
-    |> Enum.map(fn {field, errors} -> "#{field}: #{Enum.join(errors, ", ")}" end)
-    |> Enum.join("; ")
+    |> Enum.map_join("; ", fn {field, errors} -> "#{field}: #{Enum.join(errors, ", ")}" end)
   end
 
   def extract_error_message(error), do: inspect(error)
 
-  defp format_single_ash_error(%Ash.Error.Changes.InvalidAttribute{
-         field: field,
-         message: message
-       }) do
+  defp format_single_ash_error(%Ash.Error.Changes.InvalidAttribute{field: field, message: message}) do
     "#{field}: #{message}"
   end
 

@@ -17,9 +17,11 @@ defmodule Viban.Kanban.Board.Changes.CreateDefaultColumns do
 
   use Ash.Resource.Change
 
-  require Logger
+  alias Viban.Kanban.Board
+  alias Viban.Kanban.Column
+  alias Viban.Kanban.ColumnHook
 
-  alias Viban.Kanban.{Column, ColumnHook}
+  require Logger
 
   @default_columns [
     %{name: "TODO", position: 0, color: "#6366f1"},
@@ -39,8 +41,8 @@ defmodule Viban.Kanban.Board.Changes.CreateDefaultColumns do
     Ash.Changeset.after_action(changeset, &create_default_columns/2)
   end
 
-  @spec create_default_columns(Ash.Changeset.t(), Viban.Kanban.Board.t()) ::
-          {:ok, Viban.Kanban.Board.t()} | {:error, term()}
+  @spec create_default_columns(Ash.Changeset.t(), Board.t()) ::
+          {:ok, Board.t()} | {:error, term()}
   defp create_default_columns(_changeset, board) do
     column_inputs =
       Enum.map(@default_columns, fn attrs ->

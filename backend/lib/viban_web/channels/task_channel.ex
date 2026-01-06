@@ -27,8 +27,9 @@ defmodule VibanWeb.TaskChannel do
 
   use Phoenix.Channel
 
+  alias Viban.Executors.Executor
+  alias Viban.Executors.ExecutorSession
   alias Viban.Kanban.Task
-  alias Viban.Executors.{Executor, ExecutorSession}
 
   require Logger
 
@@ -52,90 +53,19 @@ defmodule VibanWeb.TaskChannel do
     end
   end
 
-  # Queue a message and move task to "In Progress" for AI execution.
-  #
-  # This handler:
-  # 1. Queues the message on the task's message_queue
-  # 2. Moves the task to "In Progress" column (if not already there)
-  # 3. The Execute AI hook will process queued messages
-  #
-  # Params:
-  # - `executor_type` - Atom type of executor (e.g., "claude_code", "gemini_cli")
-  # - `prompt` - The prompt/instruction for the executor
-  # - `images` - Optional list of image attachments (base64 data URLs)
   @impl true
   def handle_in("send_message", params, socket) do
-    alias Viban.Kanban.Column
-    alias Viban.Kanban.Actors.ColumnLookup
-    alias Viban.Kanban.Message
-
     task_id = socket.assigns.task_id
 
     case Task.get(task_id) do
       {:ok, task} ->
-        executor_type =
-          params
-          |> Map.get("executor_type", "claude_code")
-          |> String.to_existing_atom()
-
-        user_prompt = Map.get(params, "prompt", "")
-        images = Map.get(params, "images", [])
-
-        # Allow empty prompt if images are provided
-        if user_prompt == "" and Enum.empty?(images) do
-          {:reply, {:error, %{reason: "prompt_required"}}, socket}
-        else
-          # Save the user message immediately to the Message table (synced via Electric)
-          image_count = length(images)
-
-          display_content =
-            if image_count > 0 do
-              suffix = if image_count > 1, do: "s", else: ""
-
-              "#{user_prompt}#{if user_prompt != "", do: "\n\n", else: ""}[#{image_count} image#{suffix} attached]"
-            else
-              user_prompt
-            end
-
-          case Message.create(%{
-                 task_id: task_id,
-                 role: :user,
-                 content: display_content,
-                 status: :pending,
-                 metadata: %{executor_type: executor_type, images: images}
-               }) do
-            {:ok, _message} ->
-              Logger.info("[TaskChannel] Saved user message for task #{task_id}")
-
-            {:error, error} ->
-              Logger.warning("[TaskChannel] Failed to save message: #{inspect(error)}")
-          end
-
-          # Queue the message on the task for processing
-          case Task.queue_message(task, user_prompt, executor_type, images) do
-            {:ok, updated_task} ->
-              Logger.info(
-                "[TaskChannel] Queued message for task #{task_id}, queue size: #{length(updated_task.message_queue)}"
-              )
-
-              # Move task to "In Progress" if not already there
-              updated_task = maybe_move_to_in_progress(updated_task)
-
-              {:reply, {:ok, %{queued: true, queue_size: length(updated_task.message_queue)}},
-               socket}
-
-            {:error, error} ->
-              Logger.error("[TaskChannel] Failed to queue message: #{inspect(error)}")
-              {:reply, {:error, %{reason: "failed_to_queue", details: inspect(error)}}, socket}
-          end
-        end
+        handle_send_message(task, params, socket)
 
       {:error, _} ->
         {:reply, {:error, %{reason: "task_not_found"}}, socket}
     end
   end
 
-  # List available executors on the system.
   @impl true
   def handle_in("list_executors", _params, socket) do
     Logger.info("[TaskChannel] list_executors called for task #{socket.assigns.task_id}")
@@ -149,14 +79,12 @@ defmodule VibanWeb.TaskChannel do
     end
   end
 
-  # Get current task and executor status.
   @impl true
   def handle_in("get_status", _params, socket) do
     task_id = socket.assigns.task_id
 
     case Task.get(task_id) do
       {:ok, task} ->
-        # Get recent executor sessions
         sessions =
           case ExecutorSession.for_task(task_id) do
             {:ok, sessions} -> Enum.map(sessions, &serialize_session/1)
@@ -180,7 +108,6 @@ defmodule VibanWeb.TaskChannel do
     end
   end
 
-  # Get executor session history for this task.
   @impl true
   def handle_in("get_history", _params, socket) do
     task_id = socket.assigns.task_id
@@ -195,7 +122,6 @@ defmodule VibanWeb.TaskChannel do
     end
   end
 
-  # Stop the currently running executor and cancel pending hooks for this task.
   @impl true
   def handle_in("stop_executor", _params, socket) do
     task_id = socket.assigns.task_id
@@ -211,7 +137,6 @@ defmodule VibanWeb.TaskChannel do
     end
   end
 
-  # Create worktree for this task.
   @impl true
   def handle_in("create_worktree", _params, socket) do
     task_id = socket.assigns.task_id
@@ -233,6 +158,71 @@ defmodule VibanWeb.TaskChannel do
     end
   end
 
+  # ============================================================================
+  # Private Functions
+  # ============================================================================
+
+  defp handle_send_message(task, params, socket) do
+    executor_type =
+      params
+      |> Map.get("executor_type", "claude_code")
+      |> String.to_existing_atom()
+
+    user_prompt = Map.get(params, "prompt", "")
+    images = Map.get(params, "images", [])
+
+    if user_prompt == "" and images == [] do
+      {:reply, {:error, %{reason: "prompt_required"}}, socket}
+    else
+      save_user_message(task.id, user_prompt, images, executor_type)
+      queue_and_move_task(task, user_prompt, executor_type, images, socket)
+    end
+  end
+
+  defp save_user_message(task_id, user_prompt, images, executor_type) do
+    alias Viban.Kanban.Message
+
+    display_content = build_display_content(user_prompt, images)
+
+    case Message.create(%{
+           task_id: task_id,
+           role: :user,
+           content: display_content,
+           status: :pending,
+           metadata: %{executor_type: executor_type, images: images}
+         }) do
+      {:ok, _message} ->
+        Logger.info("[TaskChannel] Saved user message for task #{task_id}")
+
+      {:error, error} ->
+        Logger.warning("[TaskChannel] Failed to save message: #{inspect(error)}")
+    end
+  end
+
+  defp build_display_content(user_prompt, []), do: user_prompt
+
+  defp build_display_content(user_prompt, images) do
+    image_count = length(images)
+    suffix = if image_count > 1, do: "s", else: ""
+    separator = if user_prompt == "", do: "", else: "\n\n"
+    "#{user_prompt}#{separator}[#{image_count} image#{suffix} attached]"
+  end
+
+  defp queue_and_move_task(task, user_prompt, executor_type, images, socket) do
+    case Task.queue_message(task, user_prompt, executor_type, images) do
+      {:ok, updated_task} ->
+        Logger.info("[TaskChannel] Queued message for task #{task.id}, queue size: #{length(updated_task.message_queue)}")
+
+        updated_task = maybe_move_to_in_progress(updated_task)
+
+        {:reply, {:ok, %{queued: true, queue_size: length(updated_task.message_queue)}}, socket}
+
+      {:error, error} ->
+        Logger.error("[TaskChannel] Failed to queue message: #{inspect(error)}")
+        {:reply, {:error, %{reason: "failed_to_queue", details: inspect(error)}}, socket}
+    end
+  end
+
   defp serialize_session(session) do
     %{
       id: session.id,
@@ -249,40 +239,27 @@ defmodule VibanWeb.TaskChannel do
   end
 
   defp maybe_move_to_in_progress(task) do
-    alias Viban.Kanban.Column
     alias Viban.Kanban.Actors.ColumnLookup
+    alias Viban.Kanban.Column
 
-    case Column.get(task.column_id) do
-      {:ok, column} ->
-        if ColumnLookup.in_progress_column?(task.column_id) do
-          task
-        else
-          case ColumnLookup.find_in_progress_column(column.board_id) do
-            nil ->
-              Logger.warning(
-                "[TaskChannel] No 'In Progress' column found for board #{column.board_id}"
-              )
+    with {:ok, column} <- Column.get(task.column_id),
+         false <- ColumnLookup.in_progress_column?(task.column_id),
+         in_progress_column_id when not is_nil(in_progress_column_id) <-
+           ColumnLookup.find_in_progress_column(column.board_id),
+         {:ok, updated_task} <-
+           Task.move(task, %{column_id: in_progress_column_id, position: 0.0}) do
+      Logger.info("[TaskChannel] Moved task #{task.id} to 'In Progress' column")
+      updated_task
+    else
+      true ->
+        task
 
-              task
+      nil ->
+        Logger.warning("[TaskChannel] No 'In Progress' column found")
+        task
 
-            in_progress_column_id ->
-              case Task.move(task, %{column_id: in_progress_column_id, position: 0.0}) do
-                {:ok, updated_task} ->
-                  Logger.info("[TaskChannel] Moved task #{task.id} to 'In Progress' column")
-                  updated_task
-
-                {:error, error} ->
-                  Logger.error(
-                    "[TaskChannel] Failed to move task to 'In Progress': #{inspect(error)}"
-                  )
-
-                  task
-              end
-          end
-        end
-
-      {:error, _} ->
-        Logger.error("[TaskChannel] Could not find column for task #{task.id}")
+      {:error, error} ->
+        Logger.error("[TaskChannel] Failed to move task: #{inspect(error)}")
         task
     end
   end

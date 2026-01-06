@@ -26,11 +26,11 @@ defmodule Viban.Kanban.Services.HookService do
   - `is_system` - boolean indicating if this is a system hook
   """
 
-  require Logger
-
+  alias Viban.Kanban.Actors.HookRunner
   alias Viban.Kanban.Hook
   alias Viban.Kanban.SystemHooks.Registry
-  alias Viban.Kanban.Actors.HookRunner
+
+  require Logger
 
   @typedoc "Hook identifier (UUID for database hooks, prefixed string for system hooks)"
   @type hook_id :: String.t()

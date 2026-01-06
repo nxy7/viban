@@ -40,9 +40,9 @@ defmodule Viban.CLI do
 
     Environment Variables:
       VIBAN_DEPLOY_MODE=1   Force deploy mode (auto-start Postgres, etc.)
-      DATABASE_URL          PostgreSQL connection URL
+      VB_DATABASE_URL       PostgreSQL connection URL (or DATABASE_URL as fallback)
       SECRET_KEY_BASE       Phoenix secret key (auto-generated in deploy mode)
-      PORT                  Server port (default: 8000 in deploy mode, 4000 otherwise)
+      PORT                  Server port (default: 7777 in deploy mode, 4000 otherwise)
       E2E_TEST=true         Enable test endpoints for E2E testing
 
     Deploy Mode:

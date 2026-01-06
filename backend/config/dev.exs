@@ -1,5 +1,15 @@
 import Config
 
+config :logger, :console, format: "$metadata[$level] $message\n"
+config :logger, level: :info
+
+config :phoenix, :plug_init_mode, :runtime
+config :phoenix, :stacktrace_depth, 20
+
+config :phoenix_live_view,
+  debug_heex_annotations: true,
+  enable_expensive_runtime_checks: true
+
 config :viban, Viban.Repo,
   username: "postgres",
   password: "postgres",
@@ -21,8 +31,7 @@ config :viban, VibanWeb.Endpoint,
   check_origin: false,
   code_reloader: true,
   debug_errors: true,
-  secret_key_base:
-    "dev_secret_key_base_that_is_at_least_64_bytes_long_for_development_purposes_only",
+  secret_key_base: "dev_secret_key_base_that_is_at_least_64_bytes_long_for_development_purposes_only",
   watchers: [
     esbuild: {Esbuild, :install_and_run, [:viban, ~w(--sourcemap=inline --watch)]},
     tailwind: {Tailwind, :install_and_run, [:viban, ~w(--watch)]}
@@ -35,26 +44,14 @@ config :viban, VibanWeb.Endpoint,
       ~r"priv/gettext/.*(po)$",
       ~r"lib/viban_web/(controllers|live|components)/.*(ex|heex)$"
     ]
+
+    # Enable test endpoints when E2E_TEST=true
   ]
 
+# Disable Bandit compression for E2E tests to avoid Playwright decompression issues
 config :viban, dev_routes: true
 
-config :logger, level: :info
-config :logger, :console, format: "$metadata[$level] $message\n"
-
-config :phoenix, :stacktrace_depth, 20
-
-config :phoenix, :plug_init_mode, :runtime
-
-config :phoenix_live_view,
-  debug_heex_annotations: true,
-  enable_expensive_runtime_checks: true
-
-# Enable test endpoints when E2E_TEST=true
 if System.get_env("E2E_TEST") == "true" do
-  config :viban, :sandbox_enabled, true
-
-  # Disable Bandit compression for E2E tests to avoid Playwright decompression issues
   config :viban, VibanWeb.Endpoint,
     https: [
       ip: {127, 0, 0, 1},
@@ -64,6 +61,8 @@ if System.get_env("E2E_TEST") == "true" do
       keyfile: "priv/cert/selfsigned_key.pem",
       http_options: [compress: false]
     ]
+
+  config :viban, :sandbox_enabled, true
 end
 
 # Import secrets if they exist (GitHub OAuth credentials)

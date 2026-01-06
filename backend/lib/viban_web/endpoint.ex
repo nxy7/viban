@@ -1,5 +1,6 @@
 defmodule VibanWeb.Endpoint do
   use Phoenix.Endpoint, otp_app: :viban
+
   import Plug.Conn
 
   # Session cookie options

@@ -25,7 +25,8 @@ defmodule VibanWeb.BoardController do
       get_param: 2
     ]
 
-  alias Viban.Kanban.{Board, Repository}
+  alias Viban.Kanban.Board
+  alias Viban.Kanban.Repository
   alias Viban.Workers.RepoCloneWorker
 
   require Logger
@@ -65,9 +66,7 @@ defmodule VibanWeb.BoardController do
       # Enqueue background job to clone the repository
       RepoCloneWorker.enqueue(repository.id, user.id)
 
-      Logger.info(
-        "[BoardController] Created board '#{board.name}' with repository '#{repository.full_name}'"
-      )
+      Logger.info("[BoardController] Created board '#{board.name}' with repository '#{repository.full_name}'")
 
       json_ok(conn, %{
         board: serialize_board(board),
@@ -80,9 +79,7 @@ defmodule VibanWeb.BoardController do
 
       {:error, :repository_creation_failed, reason, board} ->
         # Clean up the board if repository creation fails
-        Logger.warning(
-          "[BoardController] Failed to create repository, cleaning up board: #{format_error(reason)}"
-        )
+        Logger.warning("[BoardController] Failed to create repository, cleaning up board: #{format_error(reason)}")
 
         Board.destroy(board)
 

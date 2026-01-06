@@ -20,10 +20,10 @@ defmodule Viban.LLM.ClaudeRunner do
   - `:clean_output` - Whether to clean ANSI codes from output (default: true)
   """
 
-  require Logger
-
-  alias Viban.LLM.AnsiCleaner
   alias Viban.Executors.Implementations.ClaudeCode
+  alias Viban.LLM.AnsiCleaner
+
+  require Logger
 
   @default_timeout_ms 60_000
   @default_model "sonnet"

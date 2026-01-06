@@ -3,11 +3,14 @@
 #     mix run priv/repo/seeds.exs
 #
 
-require Ash.Query
-
+alias Viban.Kanban.Board
+alias Viban.Kanban.Column
+alias Viban.Kanban.ColumnHook
+alias Viban.Kanban.Hook
 alias Viban.Messages.TestMessage
-alias Viban.Kanban.{Board, Column, Hook, ColumnHook}
 alias Viban.TestSupport
+
+require Ash.Query
 
 # Create the initial test message if it doesn't exist
 action_input = Ash.ActionInput.for_action(TestMessage, :get_or_create, %{})
@@ -38,9 +41,7 @@ board =
 
       IO.puts("Created board: #{board.name}")
 
-      IO.puts(
-        "Default columns (TODO, In Progress, To Review, Done, Cancelled) created automatically"
-      )
+      IO.puts("Default columns (TODO, In Progress, To Review, Done, Cancelled) created automatically")
 
       board
 
@@ -228,9 +229,7 @@ if board do
             hook_id: touch_hook.id
           })
 
-        IO.puts(
-          "Assigned persistent hook '#{touch_hook.name}' to column '#{in_progress_col.name}'"
-        )
+        IO.puts("Assigned persistent hook '#{touch_hook.name}' to column '#{in_progress_col.name}'")
 
         # On entry hook
         {:ok, _} =
@@ -272,13 +271,9 @@ if board do
 
       IO.puts("\nSample hooks created and assigned to columns!")
 
-      IO.puts(
-        "Hook deduplication is set up: 'Touch Test File' hook is on both 'In Progress' and 'To Review'"
-      )
+      IO.puts("Hook deduplication is set up: 'Touch Test File' hook is on both 'In Progress' and 'To Review'")
 
-      IO.puts(
-        "Moving a task between these columns will NOT trigger cleanup/restart of that hook."
-      )
+      IO.puts("Moving a task between these columns will NOT trigger cleanup/restart of that hook.")
 
     {:ok, hooks} ->
       IO.puts("Hooks already exist (#{length(hooks)} hooks found)")

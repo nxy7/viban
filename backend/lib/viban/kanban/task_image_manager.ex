@@ -291,9 +291,7 @@ defmodule Viban.Kanban.TaskImageManager do
         write_image_file(task_dir, id, name, binary, extension)
 
       {:error, reason} ->
-        Logger.error(
-          "#{@log_prefix} Failed to parse data URL for image #{id}: #{inspect(reason)}"
-        )
+        Logger.error("#{@log_prefix} Failed to parse data URL for image #{id}: #{inspect(reason)}")
 
         {:error, {id, reason}}
     end
@@ -337,16 +335,11 @@ defmodule Viban.Kanban.TaskImageManager do
   end
 
   defp build_keep_ids(existing, to_save) do
-    (existing ++ to_save)
-    |> Enum.map(&get_image_field(&1, :id))
-    |> MapSet.new()
+    MapSet.new(existing ++ to_save, &get_image_field(&1, :id))
   end
 
   defp delete_removed_images(task_dir, existing_metadata, keep_ids, _to_save) do
-    existing_ids =
-      (existing_metadata || [])
-      |> Enum.map(&get_image_field(&1, :id))
-      |> MapSet.new()
+    existing_ids = MapSet.new(existing_metadata || [], &get_image_field(&1, :id))
 
     to_delete = MapSet.difference(existing_ids, keep_ids)
 
@@ -356,10 +349,9 @@ defmodule Viban.Kanban.TaskImageManager do
   end
 
   defp filter_kept_metadata(existing_metadata, keep_ids, to_save) do
-    to_save_ids = Enum.map(to_save, &get_image_field(&1, :id)) |> MapSet.new()
+    to_save_ids = MapSet.new(to_save, &get_image_field(&1, :id))
 
-    (existing_metadata || [])
-    |> Enum.filter(fn img ->
+    Enum.filter(existing_metadata || [], fn img ->
       id = get_image_field(img, :id)
       id in keep_ids and id not in to_save_ids
     end)

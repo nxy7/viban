@@ -27,10 +27,11 @@ defmodule Viban.Kanban.Actors.BoardActor do
   a move_task command when the executor completes successfully.
   """
   use GenServer
-  require Logger
 
-  alias Viban.Kanban.Task
   alias Viban.Kanban.Servers.TaskSupervisor
+  alias Viban.Kanban.Task
+
+  require Logger
 
   # PubSub topic for task updates
   @task_updates_topic "task:updates"
@@ -129,9 +130,7 @@ defmodule Viban.Kanban.Actors.BoardActor do
     # Load and cache column information
     state = refresh_column_cache(state)
 
-    Logger.info(
-      "BoardActor: Cached #{MapSet.size(state.column_ids)} columns for board #{board_id}"
-    )
+    Logger.info("BoardActor: Cached #{MapSet.size(state.column_ids)} columns for board #{board_id}")
 
     # Subscribe to PubSub for task changes
     Phoenix.PubSub.subscribe(Viban.PubSub, @task_updates_topic)
@@ -240,11 +239,9 @@ defmodule Viban.Kanban.Actors.BoardActor do
   defp refresh_column_cache(state) do
     case Viban.Kanban.Actors.ColumnLookup.get_board_columns(state.board_id) do
       {:ok, columns} ->
-        column_ids = columns |> Enum.map(& &1.id) |> MapSet.new()
+        column_ids = MapSet.new(columns, & &1.id)
 
-        Logger.debug(
-          "BoardActor #{state.board_id}: Loaded column IDs: #{inspect(MapSet.to_list(column_ids))}"
-        )
+        Logger.debug("BoardActor #{state.board_id}: Loaded column IDs: #{inspect(MapSet.to_list(column_ids))}")
 
         %{state | column_ids: column_ids}
 
@@ -265,9 +262,7 @@ defmodule Viban.Kanban.Actors.BoardActor do
   defp spawn_existing_task_actors(state) do
     case get_board_tasks(state) do
       {:ok, tasks} ->
-        Logger.info(
-          "BoardActor #{state.board_id}: Spawning actors for #{length(tasks)} existing tasks"
-        )
+        Logger.info("BoardActor #{state.board_id}: Spawning actors for #{length(tasks)} existing tasks")
 
         Enum.reduce(tasks, state, &spawn_task_actor(&2, &1))
 

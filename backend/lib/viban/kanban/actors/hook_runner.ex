@@ -16,9 +16,9 @@ defmodule Viban.Kanban.Actors.HookRunner do
   Errors include exit codes and missing working directories.
   """
 
-  require Logger
-
   alias Viban.Executors.HookExecutor
+
+  require Logger
 
   # Default shell for script execution
   @default_shell "/bin/bash"
@@ -97,9 +97,7 @@ defmodule Viban.Kanban.Actors.HookRunner do
 
       {:await_executor, task_id} ->
         # Hook started an async executor - return this so caller can handle appropriately
-        Logger.info(
-          "[HookRunner] System hook '#{hook.name}' started async executor, awaiting completion"
-        )
+        Logger.info("[HookRunner] System hook '#{hook.name}' started async executor, awaiting completion")
 
         {:await_executor, task_id}
 
@@ -119,9 +117,7 @@ defmodule Viban.Kanban.Actors.HookRunner do
     if valid_working_dir?(worktree_path) do
       execute_script(hook, worktree_path)
     else
-      Logger.warning(
-        "Skipping hook '#{hook.name}' - worktree not available: #{inspect(worktree_path)}"
-      )
+      Logger.warning("Skipping hook '#{hook.name}' - worktree not available: #{inspect(worktree_path)}")
 
       {:ok, :skipped}
     end

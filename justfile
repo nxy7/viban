@@ -10,6 +10,9 @@ default:
 dev:
     overmind start -f Procfile.dev
 
+credo:
+    cd backend; mix credo --strict
+
 # Start all services with logging to .logs/ directory
 dev-log:
     @mkdir -p .logs
@@ -66,15 +69,8 @@ frontend:
     cd frontend && bun i && bun dev
 
 # Run all tests (backend + frontend concurrently)
-test:
-    #!/usr/bin/env bash
-    set -e
-    just test-backend & pid1=$!
-    just test-frontend & pid2=$!
-    fail=0
-    wait $pid1 || fail=1
-    wait $pid2 || fail=1
-    exit $fail
+[parallel]
+test: test-backend test-frontend
 
 # Run backend tests
 test-backend:

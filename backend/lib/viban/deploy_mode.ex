@@ -8,19 +8,27 @@ defmodule Viban.DeployMode do
 
   @data_dir Path.expand("~/.viban")
   @postgres_container "viban-postgres"
-  @postgres_port 17777
+  @postgres_port 17_777
   @postgres_user "viban"
   @postgres_password "viban"
   @postgres_db "viban_prod"
   @app_port 7777
 
   def enabled? do
-    System.get_env("VIBAN_DEPLOY_MODE") == "1" or burrito_binary?()
+    explicit = System.get_env("VIBAN_DEPLOY_MODE") == "1"
+    burrito = burrito_binary?()
+
+    result = explicit or burrito
+
+    if System.get_env("VIBAN_DEBUG") == "1" do
+      IO.puts("[DeployMode] explicit=#{explicit} burrito=#{burrito} => enabled=#{result}")
+      IO.puts("[DeployMode] priv_dir=#{inspect(:code.priv_dir(:viban))}")
+    end
+
+    result
   end
 
   defp burrito_binary? do
-    # Burrito extracts to ~/.burrito/ or "Application Support/.burrito/"
-    # Check if we're running from such a directory
     case :code.priv_dir(:viban) do
       {:error, _} ->
         false
@@ -113,7 +121,7 @@ defmodule Viban.DeployMode do
       load_config_env(config_path)
     else
       log_status("🔐", "Generating secrets...")
-      secret_key_base = :crypto.strong_rand_bytes(64) |> Base.encode64()
+      secret_key_base = 64 |> :crypto.strong_rand_bytes() |> Base.encode64()
 
       content = """
       SECRET_KEY_BASE=#{secret_key_base}
@@ -209,9 +217,7 @@ defmodule Viban.DeployMode do
   defp wait_for_postgres(attempts \\ 30) do
     log_waiting("Waiting for database... (#{31 - attempts}s)")
 
-    case System.cmd("docker", ["exec", @postgres_container, "pg_isready", "-U", @postgres_user],
-           stderr_to_stdout: true
-         ) do
+    case System.cmd("docker", ["exec", @postgres_container, "pg_isready", "-U", @postgres_user], stderr_to_stdout: true) do
       {_, 0} ->
         IO.puts("")
         log_success("✅", "PostgreSQL ready!")

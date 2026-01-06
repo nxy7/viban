@@ -27,8 +27,7 @@ defmodule Viban.Kanban.PeriodicalTask.Validations do
               :ok
 
             {:error, _reason} ->
-              {:error,
-               field: :schedule, message: "is not a valid cron expression (e.g., '0 9 * * 1-5')"}
+              {:error, field: :schedule, message: "is not a valid cron expression (e.g., '0 9 * * 1-5')"}
           end
       end
     end

@@ -8,10 +8,10 @@ defmodule Viban.GitHub.PRDetector do
   - Links detected PRs to tasks
   """
 
-  require Logger
-
   alias Viban.GitHub.Client
   alias Viban.Kanban.Task
+
+  require Logger
 
   @doc """
   Extract PR URL from agent output.
@@ -101,18 +101,16 @@ defmodule Viban.GitHub.PRDetector do
       true ->
         case Client.get_pr_status(task.worktree_path, task.pr_number) do
           {:ok, status} ->
-            if status != task.pr_status do
-              Logger.info(
-                "[PRDetector] Updating PR status for task #{task.id}: #{task.pr_status} -> #{status}"
-              )
+            if status == task.pr_status do
+              {:ok, :unchanged}
+            else
+              Logger.info("[PRDetector] Updating PR status for task #{task.id}: #{task.pr_status} -> #{status}")
 
               if status == :closed do
                 Task.clear_pr(task)
               else
                 Task.update_pr_status(task, %{pr_status: status})
               end
-            else
-              {:ok, :unchanged}
             end
 
           {:error, :not_found} ->

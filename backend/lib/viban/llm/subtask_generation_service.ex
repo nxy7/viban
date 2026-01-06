@@ -23,10 +23,10 @@ defmodule Viban.LLM.SubtaskGenerationService do
   - `:timeout_ms` - Timeout for Claude CLI execution (default: 120,000ms)
   """
 
-  require Logger
-
   alias Viban.Kanban.Task, as: KanbanTask
   alias Viban.LLM.ClaudeRunner
+
+  require Logger
 
   # ---------------------------------------------------------------------------
   # Constants
@@ -210,9 +210,7 @@ defmodule Viban.LLM.SubtaskGenerationService do
   # ---------------------------------------------------------------------------
 
   defp create_subtasks(parent_task_id, subtasks_data) do
-    Logger.info(
-      "#{@log_prefix} Creating #{length(subtasks_data)} subtasks for parent #{parent_task_id}"
-    )
+    Logger.info("#{@log_prefix} Creating #{length(subtasks_data)} subtasks for parent #{parent_task_id}")
 
     subtask_ids =
       subtasks_data

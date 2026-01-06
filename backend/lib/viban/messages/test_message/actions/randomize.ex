@@ -8,6 +8,8 @@ defmodule Viban.Messages.TestMessage.Actions.Randomize do
 
   use Ash.Resource.Actions.Implementation
 
+  alias Viban.Messages.TestMessage
+
   @random_messages [
     "Hello from Viban!",
     "Phoenix Sync is working!",
@@ -25,12 +27,12 @@ defmodule Viban.Messages.TestMessage.Actions.Randomize do
   def run(_input, _opts, _context) do
     random_text = Enum.random(@random_messages)
 
-    case Ash.read(Viban.Messages.TestMessage) do
+    case Ash.read(TestMessage) do
       {:ok, [existing | _]} ->
         Ash.update(existing, %{text: random_text})
 
       {:ok, []} ->
-        Ash.create(Viban.Messages.TestMessage, %{text: random_text})
+        Ash.create(TestMessage, %{text: random_text})
 
       {:error, error} ->
         {:error, error}

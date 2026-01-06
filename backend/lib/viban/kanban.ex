@@ -36,12 +36,24 @@ defmodule Viban.Kanban do
   # AshSync Configuration
   # ============================================================================
 
+  alias Viban.Executors.ExecutorSession
+  alias Viban.Kanban.Board
+  alias Viban.Kanban.Column
+  alias Viban.Kanban.ColumnHook
+  alias Viban.Kanban.Hook
+  alias Viban.Kanban.HookExecution
+  alias Viban.Kanban.Message
+  alias Viban.Kanban.PeriodicalTask
+  alias Viban.Kanban.Repository
+  alias Viban.Kanban.TaskEvent
+  alias Viban.Kanban.TaskTemplate
+
   sync do
-    resource Viban.Kanban.Board do
+    resource Board do
       query(:sync_boards, :read)
     end
 
-    resource Viban.Kanban.Column do
+    resource Column do
       query(:sync_columns, :read)
     end
 
@@ -49,27 +61,27 @@ defmodule Viban.Kanban do
       query(:sync_tasks, :read)
     end
 
-    resource Viban.Kanban.Hook do
+    resource Hook do
       query(:sync_hooks, :read)
     end
 
-    resource Viban.Kanban.ColumnHook do
+    resource ColumnHook do
       query(:sync_column_hooks, :read)
     end
 
-    resource Viban.Kanban.Repository do
+    resource Repository do
       query(:sync_repositories, :read)
     end
 
-    resource Viban.Kanban.TaskEvent do
+    resource TaskEvent do
       query(:sync_task_events, :read)
     end
 
-    resource Viban.Kanban.PeriodicalTask do
+    resource PeriodicalTask do
       query(:sync_periodical_tasks, :read)
     end
 
-    resource Viban.Kanban.TaskTemplate do
+    resource TaskTemplate do
       query(:sync_task_templates, :read)
     end
   end
@@ -80,29 +92,29 @@ defmodule Viban.Kanban do
 
   resources do
     # Core Kanban resources
-    resource Viban.Kanban.Board
-    resource Viban.Kanban.Column
+    resource Board
+    resource Column
     resource Viban.Kanban.Task
 
     # Automation resources
-    resource Viban.Kanban.Hook
-    resource Viban.Kanban.ColumnHook
+    resource Hook
+    resource ColumnHook
 
     # Integration resources
-    resource Viban.Kanban.Repository
+    resource Repository
 
     # Task events (all stored in task_events table)
-    resource Viban.Kanban.TaskEvent
-    resource Viban.Kanban.Message
-    resource Viban.Kanban.HookExecution
-    resource Viban.Executors.ExecutorSession
+    resource TaskEvent
+    resource Message
+    resource HookExecution
+    resource ExecutorSession
     resource Viban.Executors.ExecutorMessage
 
     # Scheduled tasks
-    resource Viban.Kanban.PeriodicalTask
+    resource PeriodicalTask
 
     # Task templates
-    resource Viban.Kanban.TaskTemplate
+    resource TaskTemplate
   end
 
   # ============================================================================
@@ -111,7 +123,7 @@ defmodule Viban.Kanban do
 
   tools do
     # Board tools
-    tool :list_boards, Viban.Kanban.Board, :read do
+    tool :list_boards, Board, :read do
       description "List all kanban boards accessible to the current user"
     end
 
@@ -137,21 +149,21 @@ defmodule Viban.Kanban do
     end
 
     # Column tools
-    tool :list_columns, Viban.Kanban.Column, :read do
+    tool :list_columns, Column, :read do
       description "List all columns for a specific board, ordered by position"
     end
 
     # Hook tools
-    tool :list_hooks, Viban.Kanban.Hook, :read do
+    tool :list_hooks, Hook, :read do
       description "List automation hooks configured for a board"
     end
 
-    tool :create_hook, Viban.Kanban.Hook, :create do
+    tool :create_hook, Hook, :create do
       description "Create a new automation hook with shell command or AI agent"
     end
 
     # Repository tools
-    tool :list_repositories, Viban.Kanban.Repository, :read do
+    tool :list_repositories, Repository, :read do
       description "List git repositories associated with boards"
     end
   end
@@ -161,7 +173,7 @@ defmodule Viban.Kanban do
   # ============================================================================
 
   typescript_rpc do
-    resource Viban.Kanban.Board do
+    resource Board do
       rpc_action(:create_board, :create)
       rpc_action(:list_boards, :read)
       rpc_action(:get_board, :read, get?: true)
@@ -169,7 +181,7 @@ defmodule Viban.Kanban do
       rpc_action(:destroy_board, :destroy)
     end
 
-    resource Viban.Kanban.Column do
+    resource Column do
       rpc_action(:create_column, :create)
       rpc_action(:list_columns, :read)
       rpc_action(:get_column, :read, get?: true)
@@ -195,7 +207,7 @@ defmodule Viban.Kanban do
       rpc_action(:clear_task_error, :clear_error)
     end
 
-    resource Viban.Kanban.Hook do
+    resource Hook do
       rpc_action(:create_hook, :create)
       rpc_action(:list_hooks, :read)
       rpc_action(:get_hook, :read, get?: true)
@@ -205,7 +217,7 @@ defmodule Viban.Kanban do
       rpc_action(:create_agent_hook, :create_agent_hook)
     end
 
-    resource Viban.Kanban.ColumnHook do
+    resource ColumnHook do
       rpc_action(:create_column_hook, :create)
       rpc_action(:list_column_hooks, :read)
       rpc_action(:get_column_hook, :read, get?: true)
@@ -213,7 +225,7 @@ defmodule Viban.Kanban do
       rpc_action(:destroy_column_hook, :destroy)
     end
 
-    resource Viban.Kanban.Repository do
+    resource Repository do
       rpc_action(:create_repository, :create)
       rpc_action(:list_repositories, :read)
       rpc_action(:get_repository, :read, get?: true)
@@ -222,7 +234,7 @@ defmodule Viban.Kanban do
       rpc_action(:list_branches, :list_branches)
     end
 
-    resource Viban.Kanban.Message do
+    resource Message do
       rpc_action(:create_message, :create)
       rpc_action(:list_messages, :read)
       rpc_action(:get_message, :read, get?: true)
@@ -231,25 +243,25 @@ defmodule Viban.Kanban do
       rpc_action(:messages_for_task, :for_task)
     end
 
-    resource Viban.Kanban.HookExecution do
+    resource HookExecution do
       rpc_action(:list_hook_executions, :read)
       rpc_action(:get_hook_execution, :read, get?: true)
       rpc_action(:hook_executions_for_task, :history_for_task)
     end
 
-    resource Viban.Kanban.TaskEvent do
+    resource TaskEvent do
       rpc_action(:list_task_events, :read)
       rpc_action(:get_task_event, :read, get?: true)
       rpc_action(:task_events_for_task, :for_task)
     end
 
-    resource Viban.Executors.ExecutorSession do
+    resource ExecutorSession do
       rpc_action(:list_executor_sessions, :read)
       rpc_action(:get_executor_session, :read, get?: true)
       rpc_action(:executor_sessions_for_task, :for_task)
     end
 
-    resource Viban.Kanban.PeriodicalTask do
+    resource PeriodicalTask do
       rpc_action(:create_periodical_task, :create)
       rpc_action(:list_periodical_tasks, :read)
       rpc_action(:get_periodical_task, :read, get?: true)
@@ -257,7 +269,7 @@ defmodule Viban.Kanban do
       rpc_action(:destroy_periodical_task, :destroy)
     end
 
-    resource Viban.Kanban.TaskTemplate do
+    resource TaskTemplate do
       rpc_action(:create_task_template, :create)
       rpc_action(:list_task_templates, :read)
       rpc_action(:get_task_template, :read, get?: true)

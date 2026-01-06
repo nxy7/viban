@@ -1,9 +1,14 @@
 defmodule Viban.Kanban.Board.Changes.CreateDefaultTemplates do
+  @moduledoc """
+  Creates default task templates when a new board is created.
+  """
+
   use Ash.Resource.Change
 
-  require Logger
-
+  alias Viban.Kanban.Board
   alias Viban.Kanban.TaskTemplate
+
+  require Logger
 
   @default_templates [
     %{
@@ -87,8 +92,8 @@ defmodule Viban.Kanban.Board.Changes.CreateDefaultTemplates do
     Ash.Changeset.after_action(changeset, &create_default_templates/2)
   end
 
-  @spec create_default_templates(Ash.Changeset.t(), Viban.Kanban.Board.t()) ::
-          {:ok, Viban.Kanban.Board.t()} | {:error, term()}
+  @spec create_default_templates(Ash.Changeset.t(), Board.t()) ::
+          {:ok, Board.t()} | {:error, term()}
   defp create_default_templates(_changeset, board) do
     template_inputs =
       Enum.map(@default_templates, fn attrs ->
@@ -104,9 +109,7 @@ defmodule Viban.Kanban.Board.Changes.CreateDefaultTemplates do
         {:ok, board}
 
       %Ash.BulkResult{status: :error, errors: errors} ->
-        Logger.error(
-          "Failed to create default templates for board #{board.id}: #{inspect(errors)}"
-        )
+        Logger.error("Failed to create default templates for board #{board.id}: #{inspect(errors)}")
 
         {:ok, board}
     end

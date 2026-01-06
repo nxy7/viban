@@ -10,10 +10,8 @@ backend/erl_crash.dump
 backend/*.ez
 backend/tmp/
 backend/viban-*.tar
-backend/priv/static/assets/
-backend/priv/static/cache_manifest.json
-backend/priv/static/_build/
-backend/priv/static/index.html
+backend/priv/static/*
+!backend/priv/static/.gitkeep
 backend/burrito_out/
 
 # Node.js
@@ -41,4 +39,3 @@ docs/.output/
 *.swp
 *.swo
 .playwright-mcp
-backend/priv/static

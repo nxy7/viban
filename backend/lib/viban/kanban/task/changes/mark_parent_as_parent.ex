@@ -28,9 +28,7 @@ defmodule Viban.Kanban.Task.Changes.MarkParentAsParent do
               {:ok, subtask}
 
             {:error, reason} ->
-              Logger.warning(
-                "Failed to mark parent task #{parent.id} as parent: #{inspect(reason)}"
-              )
+              Logger.warning("Failed to mark parent task #{parent.id} as parent: #{inspect(reason)}")
 
               {:ok, subtask}
           end

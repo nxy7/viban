@@ -25,8 +25,8 @@ defmodule VibanWeb.Plugs.RequireAuth do
   - `:error_message` - Custom error message (default: "Not authenticated. Please sign in.")
   """
 
-  import Plug.Conn
   import Phoenix.Controller, only: [json: 2]
+  import Plug.Conn
 
   @default_message "Not authenticated. Please sign in."
 

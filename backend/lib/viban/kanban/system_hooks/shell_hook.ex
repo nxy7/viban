@@ -43,9 +43,9 @@ defmodule Viban.Kanban.SystemHooks.ShellHook do
       @behaviour Viban.Kanban.SystemHooks.Behaviour
       @behaviour Viban.Kanban.SystemHooks.ShellHook
 
-      require Logger
-
       alias Viban.Kanban.Actors.HookRunner
+
+      require Logger
 
       @impl Viban.Kanban.SystemHooks.Behaviour
       def id, do: unquote(hook_id)

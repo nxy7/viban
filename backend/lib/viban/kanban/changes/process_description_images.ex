@@ -68,9 +68,7 @@ defmodule Viban.Kanban.Changes.ProcessDescriptionImages do
         |> Ash.update()
 
       {:error, reason} ->
-        Logger.error(
-          "Failed to save description images for new task #{record.id}: #{inspect(reason)}"
-        )
+        Logger.error("Failed to save description images for new task #{record.id}: #{inspect(reason)}")
 
         # Return success to not block task creation
         {:ok, record}

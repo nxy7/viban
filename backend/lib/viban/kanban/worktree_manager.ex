@@ -45,9 +45,12 @@ defmodule Viban.Kanban.WorktreeManager do
       :ok = WorktreeManager.cleanup_expired_worktrees()
   """
 
-  require Logger
+  alias Viban.Kanban.Column
+  alias Viban.Kanban.Message
+  alias Viban.Kanban.Repository
+  alias Viban.Kanban.Task
 
-  alias Viban.Kanban.{Task, Repository, Message, Column}
+  require Logger
 
   # ---------------------------------------------------------------------------
   # Constants
@@ -80,7 +83,8 @@ defmodule Viban.Kanban.WorktreeManager do
   @doc false
   @spec worktree_base_path() :: String.t()
   defp worktree_base_path do
-    Application.get_env(:viban, :worktree_base_path, @default_base_path)
+    :viban
+    |> Application.get_env(:worktree_base_path, @default_base_path)
     |> Path.expand()
   end
 
@@ -235,8 +239,7 @@ defmodule Viban.Kanban.WorktreeManager do
     {:error, :repository_not_cloned}
   end
 
-  defp validate_repository_cloned(%{clone_status: status, board_id: board_id})
-       when status != :cloned do
+  defp validate_repository_cloned(%{clone_status: status, board_id: board_id}) when status != :cloned do
     Logger.warning("#{@log_prefix} Repository clone status is #{status} for board #{board_id}")
     {:error, :repository_not_cloned}
   end
@@ -321,9 +324,7 @@ defmodule Viban.Kanban.WorktreeManager do
         remove_git_worktree(repo_path, worktree_path, worktree_branch)
 
       :error ->
-        Logger.warning(
-          "#{@log_prefix} Could not find repo for worktree, removing directory directly"
-        )
+        Logger.warning("#{@log_prefix} Could not find repo for worktree, removing directory directly")
 
         File.rm_rf!(worktree_path)
         :ok
@@ -331,18 +332,14 @@ defmodule Viban.Kanban.WorktreeManager do
   end
 
   defp remove_git_worktree(repo_path, worktree_path, worktree_branch) do
-    case System.cmd("git", ["-C", repo_path, "worktree", "remove", worktree_path, "--force"],
-           stderr_to_stdout: true
-         ) do
+    case System.cmd("git", ["-C", repo_path, "worktree", "remove", worktree_path, "--force"], stderr_to_stdout: true) do
       {_, 0} ->
         Logger.info("#{@log_prefix} Removed git worktree at #{worktree_path}")
         maybe_delete_branch(repo_path, worktree_branch)
         :ok
 
       {output, code} ->
-        Logger.warning(
-          "#{@log_prefix} Git worktree remove failed (code #{code}): #{output}, falling back to rm -rf"
-        )
+        Logger.warning("#{@log_prefix} Git worktree remove failed (code #{code}): #{output}, falling back to rm -rf")
 
         File.rm_rf!(worktree_path)
         :ok
@@ -389,7 +386,7 @@ defmodule Viban.Kanban.WorktreeManager do
   defp expired_worktree?(task, cutoff) do
     task.worktree_path != nil and
       terminal_column?(task.column_id) and
-      DateTime.compare(task.updated_at, cutoff) == :lt
+      DateTime.before?(task.updated_at, cutoff)
   end
 
   defp cleanup_task_worktree(task) do

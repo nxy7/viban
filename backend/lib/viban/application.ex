@@ -141,8 +141,7 @@ defmodule Viban.Application do
       {Registry, keys: :unique, name: Viban.Executors.RunnerRegistry},
 
       # Dynamic supervisor for board actors
-      {DynamicSupervisor,
-       name: Viban.Kanban.Actors.BoardDynamicSupervisor, strategy: :one_for_one},
+      {DynamicSupervisor, name: Viban.Kanban.Actors.BoardDynamicSupervisor, strategy: :one_for_one},
 
       # StateServer monitor for lifecycle tracking
       Viban.StateServer.Monitor,

@@ -7,7 +7,10 @@ defmodule Viban.Kanban.MessageTest do
   """
   use Viban.DataCase, async: false
 
-  alias Viban.Kanban.{Board, Column, Task, Message}
+  alias Viban.Kanban.Board
+  alias Viban.Kanban.Column
+  alias Viban.Kanban.Message
+  alias Viban.Kanban.Task
 
   describe "Message resource" do
     setup do

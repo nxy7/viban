@@ -43,9 +43,7 @@ defmodule Viban.Kanban.SystemHooks.MoveTaskHook do
       {:ok, target_column_id} when target_column_id != task.column_id ->
         case Task.move(task, %{column_id: target_column_id}) do
           {:ok, _} ->
-            Logger.info(
-              "[MoveTaskHook] Successfully moved task #{task.id} to column #{target_column_id}"
-            )
+            Logger.info("[MoveTaskHook] Successfully moved task #{task.id} to column #{target_column_id}")
 
             :ok
 

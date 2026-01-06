@@ -62,8 +62,6 @@ defmodule Viban.Workers.PRSyncWorker do
         {_id, {:error, _}} -> false
       end)
 
-    Logger.info(
-      "[PRSyncWorker] Sync complete: #{length(successes)} succeeded, #{length(failures)} failed"
-    )
+    Logger.info("[PRSyncWorker] Sync complete: #{length(successes)} succeeded, #{length(failures)} failed")
   end
 end

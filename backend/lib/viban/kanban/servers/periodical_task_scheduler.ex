@@ -14,7 +14,7 @@ defmodule Viban.Kanban.Servers.PeriodicalTaskScheduler do
 
   require Logger
 
-  @check_interval :timer.seconds(60)
+  @check_interval to_timeout(minute: 1)
 
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
@@ -45,16 +45,12 @@ defmodule Viban.Kanban.Servers.PeriodicalTaskScheduler do
       {:ok, periodical_tasks} ->
         Enum.each(periodical_tasks, &enqueue_task/1)
 
-        if length(periodical_tasks) > 0 do
-          Logger.info(
-            "[PeriodicalTaskScheduler] Enqueued #{length(periodical_tasks)} periodical tasks"
-          )
+        if periodical_tasks != [] do
+          Logger.info("[PeriodicalTaskScheduler] Enqueued #{length(periodical_tasks)} periodical tasks")
         end
 
       {:error, reason} ->
-        Logger.error(
-          "[PeriodicalTaskScheduler] Failed to query periodical tasks: #{inspect(reason)}"
-        )
+        Logger.error("[PeriodicalTaskScheduler] Failed to query periodical tasks: #{inspect(reason)}")
     end
   end
 
@@ -74,9 +70,7 @@ defmodule Viban.Kanban.Servers.PeriodicalTaskScheduler do
     |> Oban.insert()
     |> case do
       {:ok, _job} ->
-        Logger.debug(
-          "[PeriodicalTaskScheduler] Enqueued job for periodical task #{periodical_task.id}"
-        )
+        Logger.debug("[PeriodicalTaskScheduler] Enqueued job for periodical task #{periodical_task.id}")
 
       {:error, reason} ->
         Logger.error(

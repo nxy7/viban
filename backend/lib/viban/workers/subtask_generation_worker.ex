@@ -40,9 +40,7 @@ defmodule Viban.Workers.SubtaskGenerationWorker do
       Task.mark_as_parent(task)
       Task.update_agent_status(task, %{agent_status: :idle, agent_status_message: nil})
 
-      Logger.info(
-        "[SubtaskGenerationWorker] Successfully generated #{length(subtask_ids)} subtasks for task #{task_id}"
-      )
+      Logger.info("[SubtaskGenerationWorker] Successfully generated #{length(subtask_ids)} subtasks for task #{task_id}")
 
       Phoenix.PubSub.broadcast(
         Viban.PubSub,
@@ -53,9 +51,7 @@ defmodule Viban.Workers.SubtaskGenerationWorker do
       :ok
     else
       {:error, reason} ->
-        Logger.error(
-          "[SubtaskGenerationWorker] Failed to generate subtasks for task #{task_id}: #{inspect(reason)}"
-        )
+        Logger.error("[SubtaskGenerationWorker] Failed to generate subtasks for task #{task_id}: #{inspect(reason)}")
 
         mark_task_failed(task_id, inspect(reason))
         {:error, reason}
@@ -86,8 +82,6 @@ defmodule Viban.Workers.SubtaskGenerationWorker do
              agent_status_message: message
            }) do
       :ok
-    else
-      {:error, reason} -> {:error, reason}
     end
   end
 end

@@ -87,8 +87,7 @@ defmodule Viban.Executors.ImageHandler do
     image_refs =
       image_paths
       |> Enum.with_index(1)
-      |> Enum.map(fn {path, index} -> "Image #{index}: #{path}" end)
-      |> Enum.join("\n")
+      |> Enum.map_join("\n", fn {path, index} -> "Image #{index}: #{path}" end)
 
     image_section = """
     I've attached the following image(s) for you to analyze. Please use the Read tool to view them:

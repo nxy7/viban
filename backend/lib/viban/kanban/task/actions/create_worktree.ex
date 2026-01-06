@@ -26,9 +26,11 @@ defmodule Viban.Kanban.Task.Actions.CreateWorktree do
 
   use Ash.Resource.Actions.Implementation
 
-  require Logger
+  alias Viban.Kanban.Column
+  alias Viban.Kanban.Task
+  alias Viban.Kanban.WorktreeManager
 
-  alias Viban.Kanban.{Task, Column, WorktreeManager}
+  require Logger
 
   @impl true
   @spec run(Ash.ActionInput.t(), keyword(), Ash.Resource.Actions.Implementation.context()) ::

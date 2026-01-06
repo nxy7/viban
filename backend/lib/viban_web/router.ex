@@ -100,8 +100,8 @@ defmodule VibanWeb.Router do
   end
 
   if Application.compile_env(:viban, :dev_routes) do
-    import Phoenix.LiveDashboard.Router
     import Oban.Web.Router
+    import Phoenix.LiveDashboard.Router
 
     scope "/dev" do
       pipe_through :browser

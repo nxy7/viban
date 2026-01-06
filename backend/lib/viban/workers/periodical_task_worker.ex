@@ -30,16 +30,12 @@ defmodule Viban.Workers.PeriodicalTaskWorker do
          {:ok, todo_column_id} <- find_todo_column(periodical_task.board_id),
          {:ok, task} <- create_task(periodical_task, todo_column_id),
          {:ok, _} <- PeriodicalTask.record_execution(periodical_task, task.id) do
-      Logger.info(
-        "[PeriodicalTaskWorker] Created task '#{task.title}' for periodical task #{periodical_task_id}"
-      )
+      Logger.info("[PeriodicalTaskWorker] Created task '#{task.title}' for periodical task #{periodical_task_id}")
 
       :ok
     else
       {:skip, reason} ->
-        Logger.info(
-          "[PeriodicalTaskWorker] Skipping periodical task #{periodical_task_id}: #{reason}"
-        )
+        Logger.info("[PeriodicalTaskWorker] Skipping periodical task #{periodical_task_id}: #{reason}")
 
         :ok
 

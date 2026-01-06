@@ -11,7 +11,9 @@ defmodule Viban.Executors.Actions.Execute do
 
   use Ash.Resource.Actions.Implementation
 
-  alias Viban.Executors.{Registry, Runner}
+  alias Ash.Error.Invalid
+  alias Viban.Executors.Registry
+  alias Viban.Executors.Runner
   alias Viban.Kanban.Task
 
   require Logger
@@ -44,10 +46,7 @@ defmodule Viban.Executors.Actions.Execute do
     if Registry.available?(executor_type) do
       :ok
     else
-      {:error,
-       Ash.Error.Invalid.exception(
-         message: "Executor #{executor_type} is not available on this system"
-       )}
+      {:error, Invalid.exception(message: "Executor #{executor_type} is not available on this system")}
     end
   end
 
@@ -88,8 +87,7 @@ defmodule Viban.Executors.Actions.Execute do
         {:ok, pid}
 
       {:error, reason} ->
-        {:error,
-         Ash.Error.Invalid.exception(message: "Failed to start executor: #{inspect(reason)}")}
+        {:error, Invalid.exception(message: "Failed to start executor: #{inspect(reason)}")}
     end
   end
 end

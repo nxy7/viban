@@ -8,19 +8,18 @@ defmodule Viban.Kanban.Repository.Actions.ListBranches do
 
   use Ash.Resource.Actions.Implementation
 
-  require Logger
-
   alias Viban.GitHub.Client
   alias Viban.Kanban.Task
+
+  require Logger
 
   @impl true
   def run(input, _opts, _context) do
     task_id = input.arguments.task_id
 
     with {:ok, task} <- fetch_task(task_id),
-         {:ok, _} <- validate_worktree(task),
-         {:ok, branches} <- Client.list_branches(task.worktree_path) do
-      {:ok, branches}
+         {:ok, _} <- validate_worktree(task) do
+      Client.list_branches(task.worktree_path)
     end
   end
 

@@ -3,13 +3,16 @@ defmodule Viban.Kanban.PeriodicalTask.Changes do
   Changes for PeriodicalTask resource.
   """
 
+  alias Ash.Resource.Change
+  alias Crontab.CronExpression.Parser
+
   defmodule CalculateNextExecution do
     @moduledoc """
     Calculates the next_execution_at based on the schedule cron expression.
     Only runs when schedule changes or on create.
     """
 
-    use Ash.Resource.Change
+    use Change
 
     @impl true
     def init(opts), do: {:ok, opts}
@@ -38,7 +41,7 @@ defmodule Viban.Kanban.PeriodicalTask.Changes do
     end
 
     defp calculate_next_run(schedule) do
-      with {:ok, cron} <- Crontab.CronExpression.Parser.parse(schedule),
+      with {:ok, cron} <- Parser.parse(schedule),
            {:ok, next_run} <- Crontab.Scheduler.get_next_run_date(cron) do
         {:ok, DateTime.from_naive!(next_run, "Etc/UTC")}
       end
@@ -54,7 +57,7 @@ defmodule Viban.Kanban.PeriodicalTask.Changes do
     - Calculates next_execution_at
     """
 
-    use Ash.Resource.Change
+    use Change
 
     @impl true
     def init(opts), do: {:ok, opts}
@@ -86,7 +89,7 @@ defmodule Viban.Kanban.PeriodicalTask.Changes do
     end
 
     defp calculate_next_run(schedule) do
-      with {:ok, cron} <- Crontab.CronExpression.Parser.parse(schedule),
+      with {:ok, cron} <- Parser.parse(schedule),
            {:ok, next_run} <- Crontab.Scheduler.get_next_run_date(cron) do
         {:ok, DateTime.from_naive!(next_run, "Etc/UTC")}
       end

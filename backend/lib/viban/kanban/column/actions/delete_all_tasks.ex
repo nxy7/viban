@@ -28,9 +28,8 @@ defmodule Viban.Kanban.Column.Actions.DeleteAllTasks do
   def run(input, _opts, _context) do
     column_id = input.arguments.column_id
 
-    with {:ok, tasks} <- fetch_column_tasks(column_id),
-         {:ok, count} <- delete_tasks(tasks) do
-      {:ok, count}
+    with {:ok, tasks} <- fetch_column_tasks(column_id) do
+      delete_tasks(tasks)
     end
   end
 

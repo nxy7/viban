@@ -41,7 +41,8 @@ defmodule Viban.Kanban.Repository do
     data_layer: AshPostgres.DataLayer,
     extensions: [AshTypescript.Resource]
 
-  alias __MODULE__.{Actions, Changes}
+  alias __MODULE__.Actions
+  alias __MODULE__.Changes
 
   typescript do
     type_name("Repository")

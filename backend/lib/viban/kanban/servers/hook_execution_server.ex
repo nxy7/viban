@@ -18,13 +18,17 @@ defmodule Viban.Kanban.Servers.HookExecutionServer do
   hook to complete or be cancelled. This ensures clean state on task moves.
   """
   use Viban.StateServer.Core, restart: :permanent
-  require Logger
 
-  alias Viban.Kanban.{ColumnHook, Hook, HookExecution, Task}
-  alias Viban.Kanban.Actors.HookRunner
-  alias Viban.Kanban.Servers.TaskServer
-  alias Viban.Executors.Runner
   alias Phoenix.PubSub
+  alias Viban.Executors.Runner
+  alias Viban.Kanban.Actors.HookRunner
+  alias Viban.Kanban.ColumnHook
+  alias Viban.Kanban.Hook
+  alias Viban.Kanban.HookExecution
+  alias Viban.Kanban.Servers.TaskServer
+  alias Viban.Kanban.Task
+
+  require Logger
 
   @pubsub Viban.PubSub
   @max_error_output_length 200
@@ -77,12 +81,10 @@ defmodule Viban.Kanban.Servers.HookExecutionServer do
   """
   @spec stop(pid()) :: :ok | {:error, term()}
   def stop(pid) do
-    try do
-      GenServer.call(pid, :stop, 30_000)
-    catch
-      :exit, {:noproc, _} -> :ok
-      :exit, {:normal, _} -> :ok
-    end
+    GenServer.call(pid, :stop, 30_000)
+  catch
+    :exit, {:noproc, _} -> :ok
+    :exit, {:normal, _} -> :ok
   end
 
   @doc """
@@ -91,12 +93,10 @@ defmodule Viban.Kanban.Servers.HookExecutionServer do
   """
   @spec cancel_current(pid()) :: :ok | {:error, term()}
   def cancel_current(pid) do
-    try do
-      GenServer.call(pid, :cancel_current, 30_000)
-    catch
-      :exit, {:noproc, _} -> :ok
-      :exit, {:normal, _} -> :ok
-    end
+    GenServer.call(pid, :cancel_current, 30_000)
+  catch
+    :exit, {:noproc, _} -> :ok
+    :exit, {:normal, _} -> :ok
   end
 
   # ============================================================================
@@ -248,7 +248,7 @@ defmodule Viban.Kanban.Servers.HookExecutionServer do
   defp execute_hook_impl(state, execution, column_hook, hook) do
     case Task.get(state.task_id) do
       {:ok, task} ->
-        unless column_hook.transparent do
+        if !column_hook.transparent do
           set_task_executing(task, hook.name)
         end
 
@@ -344,7 +344,7 @@ defmodule Viban.Kanban.Servers.HookExecutionServer do
       {:error, reason} -> Logger.error("Failed to complete execution: #{inspect(reason)}")
     end
 
-    unless column_hook.transparent do
+    if !column_hook.transparent do
       clear_task_executing(state.task_id)
     end
 
@@ -434,8 +434,7 @@ defmodule Viban.Kanban.Servers.HookExecutionServer do
     end
   end
 
-  defp kill_script_task(%{script_task_pid: pid, script_task_ref: ref, task_id: task_id})
-       when is_pid(pid) do
+  defp kill_script_task(%{script_task_pid: pid, script_task_ref: ref, task_id: task_id}) when is_pid(pid) do
     Logger.info("Killing script task", task_id: task_id)
     Process.demonitor(ref, [:flush])
     Process.exit(pid, :kill)
@@ -571,6 +570,5 @@ defmodule Viban.Kanban.Servers.HookExecutionServer do
 
   defp format_error_message(hook_name, :timeout), do: "Hook '#{hook_name}' timed out"
 
-  defp format_error_message(hook_name, reason),
-    do: "Hook '#{hook_name}' failed: #{inspect(reason)}"
+  defp format_error_message(hook_name, reason), do: "Hook '#{hook_name}' failed: #{inspect(reason)}"
 end

@@ -50,7 +50,9 @@ defmodule Viban.StateServer.Core do
   - `:error` - Actor encountered an error
   """
 
-  alias Viban.StateServer.{Monitor, Persistence, Serializer}
+  alias Viban.StateServer.Monitor
+  alias Viban.StateServer.Persistence
+  alias Viban.StateServer.Serializer
 
   defmacro __using__(opts) do
     restart = Keyword.get(opts, :restart, :permanent)
@@ -192,8 +194,7 @@ defmodule Viban.StateServer.Core do
     old_serialized != new_serialized
   end
 
-  defp merge_persisted_state(%{__struct__: _module} = default, persisted)
-       when is_struct(persisted) do
+  defp merge_persisted_state(%{__struct__: _module} = default, persisted) when is_struct(persisted) do
     default_map = Map.from_struct(default)
     persisted_map = Map.from_struct(persisted)
 

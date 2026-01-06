@@ -111,12 +111,7 @@ defmodule Viban.MixProject do
       {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
       {:tailwind, "~> 0.2", runtime: Mix.env() == :dev},
       {:heroicons,
-       github: "tailwindlabs/heroicons",
-       tag: "v2.1.1",
-       sparse: "optimized",
-       app: false,
-       compile: false,
-       depth: 1},
+       github: "tailwindlabs/heroicons", tag: "v2.1.1", sparse: "optimized", app: false, compile: false, depth: 1},
       {:swoosh, "~> 1.5"},
       {:finch, "~> 0.13"},
       {:telemetry_metrics, "~> 1.0"},
@@ -142,6 +137,8 @@ defmodule Viban.MixProject do
       {:floki, ">= 0.30.0", only: :test},
       {:tidewave, "~> 0.2", only: :dev},
       {:reverse_proxy_plug, "~> 3.0", only: :dev},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:styler, "~> 1.0", only: [:dev, :test], runtime: false},
 
       # Single-binary packaging
       {:burrito, "~> 1.0"}

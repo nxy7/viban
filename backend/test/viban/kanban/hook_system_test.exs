@@ -8,7 +8,12 @@ defmodule Viban.Kanban.HookSystemTest do
   """
   use Viban.DataCase, async: false
 
-  alias Viban.Kanban.{Board, Column, Task, Hook, ColumnHook, Repository}
+  alias Viban.Kanban.Board
+  alias Viban.Kanban.Column
+  alias Viban.Kanban.ColumnHook
+  alias Viban.Kanban.Hook
+  alias Viban.Kanban.Repository
+  alias Viban.Kanban.Task
 
   describe "Hook resource" do
     setup do
@@ -103,12 +108,7 @@ defmodule Viban.Kanban.HookSystemTest do
           board_id: board.id
         })
 
-      {:ok,
-       board: board,
-       todo_column: todo_column,
-       in_progress_column: in_progress_column,
-       hook: hook,
-       user: user}
+      {:ok, board: board, todo_column: todo_column, in_progress_column: in_progress_column, hook: hook, user: user}
     end
 
     test "can assign hook to column (only on_entry type supported)", %{
@@ -353,13 +353,7 @@ defmodule Viban.Kanban.HookSystemTest do
           column_id: todo_column.id
         })
 
-      {:ok,
-       board: board,
-       todo_column: todo_column,
-       hook: hook,
-       column_hook: column_hook,
-       task: task,
-       user: user}
+      {:ok, board: board, todo_column: todo_column, hook: hook, column_hook: column_hook, task: task, user: user}
     end
 
     test "task starts with empty executed_hooks", %{task: task} do

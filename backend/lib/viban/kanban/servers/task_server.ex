@@ -28,12 +28,19 @@ defmodule Viban.Kanban.Servers.TaskServer do
   3. Schedules remaining :pending hooks
   """
   use GenServer, restart: :transient
-  require Logger
 
-  alias Viban.Kanban.{Column, ColumnHook, Hook, HookExecution, Task, WorktreeManager}
-  alias Viban.Kanban.Servers.{HookExecutionServer, TaskSupervisor}
-  alias Viban.Kanban.Actors.ColumnSemaphore
   alias Phoenix.PubSub
+  alias Viban.Kanban.Actors.ColumnSemaphore
+  alias Viban.Kanban.Column
+  alias Viban.Kanban.ColumnHook
+  alias Viban.Kanban.Hook
+  alias Viban.Kanban.HookExecution
+  alias Viban.Kanban.Servers.HookExecutionServer
+  alias Viban.Kanban.Servers.TaskSupervisor
+  alias Viban.Kanban.Task
+  alias Viban.Kanban.WorktreeManager
+
+  require Logger
 
   @registry Viban.Kanban.ActorRegistry
   @pubsub Viban.PubSub
@@ -161,9 +168,7 @@ defmodule Viban.Kanban.Servers.TaskServer do
     state = maybe_create_worktree(state)
     self_heal(state)
     # On restart, only queue hooks that don't already have executions
-    queue_column_hooks(state.task_id, state.current_column_id, state.board_id,
-      restart_recovery: true
-    )
+    queue_column_hooks(state.task_id, state.current_column_id, state.board_id, restart_recovery: true)
 
     schedule_next_hook(state.task_id)
 
@@ -314,13 +319,13 @@ defmodule Viban.Kanban.Servers.TaskServer do
           HookExecution.cancel(exec, %{skip_reason: :server_restart})
         end)
 
-        if length(running) > 0 do
+        if running != [] do
           Logger.info("Cancelled #{length(running)} running hooks (server restart)",
             task_id: task_id
           )
         end
 
-        if length(pending) > 0 do
+        if pending != [] do
           Logger.info("Will resume #{length(pending)} pending hooks", task_id: task_id)
         end
 
@@ -352,7 +357,7 @@ defmodule Viban.Kanban.Servers.TaskServer do
     already_queued_column_hook_ids =
       if restart_recovery do
         case HookExecution.for_task_and_column(task_id, column_id) do
-          {:ok, executions} -> Enum.map(executions, & &1.column_hook_id) |> MapSet.new()
+          {:ok, executions} -> MapSet.new(executions, & &1.column_hook_id)
           _ -> MapSet.new()
         end
       else
@@ -370,11 +375,7 @@ defmodule Viban.Kanban.Servers.TaskServer do
           not MapSet.member?(already_queued_column_hook_ids, column_hook.id)
       end)
 
-    if not hooks_enabled do
-      Enum.each(entry_hooks, fn {column_hook, hook} ->
-        create_hook_execution(task_id, column_hook, hook, column_id, :skipped, :disabled)
-      end)
-    else
+    if hooks_enabled do
       {transparent_hooks, normal_hooks} =
         Enum.split_with(entry_hooks, fn {column_hook, _hook} -> column_hook.transparent end)
 
@@ -394,6 +395,10 @@ defmodule Viban.Kanban.Servers.TaskServer do
       end)
 
       Logger.info("Queued #{length(hooks_to_execute)} hooks", task_id: task_id)
+    else
+      Enum.each(entry_hooks, fn {column_hook, hook} ->
+        create_hook_execution(task_id, column_hook, hook, column_id, :skipped, :disabled)
+      end)
     end
   end
 
@@ -428,7 +433,7 @@ defmodule Viban.Kanban.Servers.TaskServer do
           HookExecution.cancel(exec, %{skip_reason: skip_reason})
         end)
 
-        if length(executions) > 0 do
+        if executions != [] do
           Logger.info("Cancelled #{length(executions)} pending executions", task_id: task_id)
         end
 
@@ -471,7 +476,7 @@ defmodule Viban.Kanban.Servers.TaskServer do
 
     has_more_messages =
       case Task.get(state.task_id) do
-        {:ok, task} -> length(task.message_queue || []) > 0
+        {:ok, task} -> (task.message_queue || []) != []
         _ -> false
       end
 

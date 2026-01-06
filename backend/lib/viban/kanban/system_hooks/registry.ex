@@ -4,13 +4,11 @@ defmodule Viban.Kanban.SystemHooks.Registry do
   System hooks are virtual - they exist in code, not in the database.
   """
 
-  alias Viban.Kanban.SystemHooks.{
-    AutoStartHook,
-    ExecuteAIHook,
-    RefinePromptHook,
-    PlaySoundHook,
-    MoveTaskHook
-  }
+  alias Viban.Kanban.SystemHooks.AutoStartHook
+  alias Viban.Kanban.SystemHooks.ExecuteAIHook
+  alias Viban.Kanban.SystemHooks.MoveTaskHook
+  alias Viban.Kanban.SystemHooks.PlaySoundHook
+  alias Viban.Kanban.SystemHooks.RefinePromptHook
 
   @system_hooks [
     AutoStartHook,

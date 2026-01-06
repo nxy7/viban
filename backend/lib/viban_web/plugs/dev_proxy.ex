@@ -15,6 +15,7 @@ defmodule VibanWeb.Plugs.DevProxy do
 
     def log_error(error) do
       require Logger
+
       Logger.warning("DevProxy error: #{inspect(error)}")
     end
   else

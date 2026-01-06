@@ -37,6 +37,8 @@ defmodule Viban.AppRuntime.SystemTools do
     data_layer: Ash.DataLayer.Simple,
     extensions: [AshTypescript.Resource]
 
+  alias Ash.Error.Invalid.InvalidAttribute
+  alias Ash.Error.Unknown
   alias Viban.Executors.Registry
   alias Viban.Tools.Detector
   alias VibanWeb.PathOpener
@@ -164,20 +166,20 @@ defmodule Viban.AppRuntime.SystemTools do
         else
           {:error, :not_found, path} ->
             {:error,
-             Ash.Error.Invalid.InvalidAttribute.exception(
+             InvalidAttribute.exception(
                field: :path,
                message: "Path does not exist: #{path}"
              )}
 
           {:error, :access_denied, reason} ->
             {:error,
-             Ash.Error.Invalid.InvalidAttribute.exception(
+             InvalidAttribute.exception(
                field: :path,
                message: "Cannot access path: #{reason}"
              )}
 
           {:error, reason} ->
-            {:error, Ash.Error.Unknown.exception(error: reason)}
+            {:error, Unknown.exception(error: reason)}
         end
       end
     end
@@ -199,20 +201,20 @@ defmodule Viban.AppRuntime.SystemTools do
         else
           {:error, :not_found, path} ->
             {:error,
-             Ash.Error.Invalid.InvalidAttribute.exception(
+             InvalidAttribute.exception(
                field: :path,
                message: "Path does not exist: #{path}"
              )}
 
           {:error, :access_denied, reason} ->
             {:error,
-             Ash.Error.Invalid.InvalidAttribute.exception(
+             InvalidAttribute.exception(
                field: :path,
                message: "Cannot access path: #{reason}"
              )}
 
           {:error, reason} ->
-            {:error, Ash.Error.Unknown.exception(error: reason)}
+            {:error, Unknown.exception(error: reason)}
         end
       end
     end

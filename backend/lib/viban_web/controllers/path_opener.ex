@@ -79,8 +79,6 @@ defmodule VibanWeb.PathOpener do
             Logger.warning("[PathOpener] Editor #{cmd} failed: #{output}")
             nil
         end
-      else
-        nil
       end
     end)
   end

@@ -3,8 +3,9 @@ defmodule Viban.GitHub.Client do
   GitHub API client for PR operations using the gh CLI.
   """
 
-  require Logger
   alias Viban.GitHub.PRDetector
+
+  require Logger
 
   @doc """
   Create a pull request.
@@ -106,7 +107,7 @@ defmodule Viban.GitHub.Client do
   @doc """
   Check if a PR is merged.
   """
-  def is_merged?(repo_path, pr_number) do
+  def merged?(repo_path, pr_number) do
     case get_pr_status(repo_path, pr_number) do
       {:ok, :merged} -> true
       _ -> false
@@ -172,9 +173,7 @@ defmodule Viban.GitHub.Client do
         {:ok, output}
 
       {error, exit_code} ->
-        Logger.warning(
-          "[GitHub.Client] gh command failed (exit #{exit_code}): #{String.slice(error, 0, 200)}"
-        )
+        Logger.warning("[GitHub.Client] gh command failed (exit #{exit_code}): #{String.slice(error, 0, 200)}")
 
         {:error, String.trim(error)}
     end

@@ -1,4 +1,8 @@
 defmodule Viban.Kanban.TaskTemplate do
+  @moduledoc """
+  Task templates for quick task creation with predefined titles and descriptions.
+  """
+
   use Ash.Resource,
     domain: Viban.Kanban,
     data_layer: AshPostgres.DataLayer,

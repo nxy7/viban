@@ -6,8 +6,8 @@ defmodule Viban.Kanban.SystemHooks.Behaviour do
   All hooks are executed when a task enters a column (on_entry only).
   """
 
-  alias Viban.Kanban.Task
   alias Viban.Kanban.Column
+  alias Viban.Kanban.Task
 
   @doc "Unique identifier for the hook (format: system:<name>)"
   @callback id() :: String.t()

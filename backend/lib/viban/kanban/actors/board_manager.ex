@@ -32,10 +32,11 @@ defmodule Viban.Kanban.Actors.BoardManager do
   Registered as a named process via `__MODULE__` for easy access.
   """
   use GenServer
-  require Logger
 
-  alias Viban.Kanban.Board
   alias Viban.Kanban.Actors.BoardSupervisor
+  alias Viban.Kanban.Board
+
+  require Logger
 
   # Dynamic supervisor for board supervisors
   @board_dynamic_supervisor Viban.Kanban.Actors.BoardDynamicSupervisor
@@ -173,9 +174,7 @@ defmodule Viban.Kanban.Actors.BoardManager do
           {:ok, %{state | board_ids: MapSet.put(state.board_ids, board_id)}}
 
         {:error, reason} ->
-          Logger.error(
-            "Failed to start BoardSupervisor for board #{board_id}: #{inspect(reason)}"
-          )
+          Logger.error("Failed to start BoardSupervisor for board #{board_id}: #{inspect(reason)}")
 
           {{:error, reason}, state}
       end
@@ -192,9 +191,7 @@ defmodule Viban.Kanban.Actors.BoardManager do
             {:ok, %{state | board_ids: MapSet.delete(state.board_ids, board_id)}}
 
           {:error, reason} ->
-            Logger.warning(
-              "Failed to stop BoardSupervisor for board #{board_id}: #{inspect(reason)}"
-            )
+            Logger.warning("Failed to stop BoardSupervisor for board #{board_id}: #{inspect(reason)}")
 
             {{:error, reason}, %{state | board_ids: MapSet.delete(state.board_ids, board_id)}}
         end

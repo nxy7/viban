@@ -25,6 +25,7 @@ defmodule Viban.Kanban.Notifiers.TaskNotifier do
       Phoenix.PubSub.subscribe(Viban.PubSub, "task:updates")
   """
   use Ash.Notifier
+
   require Logger
 
   @pubsub_name Viban.PubSub
@@ -102,9 +103,7 @@ defmodule Viban.Kanban.Notifiers.TaskNotifier do
         :ok
 
       {:error, reason} ->
-        Logger.error(
-          "TaskNotifier: Failed to broadcast #{inspect(elem(message, 0))}: #{inspect(reason)}"
-        )
+        Logger.error("TaskNotifier: Failed to broadcast #{inspect(elem(message, 0))}: #{inspect(reason)}")
 
         :ok
     end

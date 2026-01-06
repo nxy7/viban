@@ -9,10 +9,10 @@ defmodule Viban.Kanban.Task.Actions.GenerateSubtasks do
 
   use Ash.Resource.Actions.Implementation
 
-  require Logger
-
   alias Viban.Kanban.Task
   alias Viban.Workers.SubtaskGenerationWorker
+
+  require Logger
 
   @impl true
   def run(input, _opts, _context) do

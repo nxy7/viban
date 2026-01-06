@@ -10,9 +10,8 @@ This document defines the coding standards and practices for this project when w
 
 ## Development URLs
 
-- **App URL**: `https://localhost:8000` (Caddy reverse proxy - use this for testing)
-- Backend API: `http://localhost:7771` (Phoenix - don't access directly)
-- Frontend dev server: `http://localhost:3000` (Vite - don't access directly)
+- **Dev**: `https://localhost:8000` (Phoenix with self-signed certs, proxies to Vite for frontend)
+- **Prod/CI**: `http://localhost:7777` (deploy mode, serves bundled frontend)
 
 ## Comment Policy
 

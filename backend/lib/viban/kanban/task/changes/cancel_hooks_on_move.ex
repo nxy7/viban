@@ -10,9 +10,10 @@ defmodule Viban.Kanban.Task.Changes.CancelHooksOnMove do
   """
 
   use Ash.Resource.Change
-  require Logger
 
   alias Viban.Kanban.Servers.TaskServer
+
+  require Logger
 
   @impl true
   @spec change(Ash.Changeset.t(), keyword(), Ash.Resource.Change.context()) :: Ash.Changeset.t()
@@ -30,9 +31,7 @@ defmodule Viban.Kanban.Task.Changes.CancelHooksOnMove do
     new_column_id = Ash.Changeset.get_attribute(changeset, :column_id)
     new_position = Ash.Changeset.get_attribute(changeset, :position) || 0.0
 
-    Logger.info(
-      "CancelHooksOnMove: Task #{task_id} moving from column #{old_column_id} to #{new_column_id}"
-    )
+    Logger.info("CancelHooksOnMove: Task #{task_id} moving from column #{old_column_id} to #{new_column_id}")
 
     spawn(fn ->
       case TaskServer.move(task_id, new_column_id, new_position) do

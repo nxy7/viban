@@ -168,12 +168,10 @@ defmodule Viban.Kanban.ColumnHook do
   """
   @spec valid_hook_id?(term()) :: boolean()
   def valid_hook_id?(hook_id) when is_binary(hook_id) do
-    cond do
-      Registry.system_hook?(hook_id) ->
-        match?({:ok, _}, Registry.get(hook_id))
-
-      true ->
-        match?({:ok, _}, Ecto.UUID.cast(hook_id))
+    if Registry.system_hook?(hook_id) do
+      match?({:ok, _}, Registry.get(hook_id))
+    else
+      match?({:ok, _}, Ecto.UUID.cast(hook_id))
     end
   end
 

@@ -8,8 +8,8 @@ defmodule Viban.Workers.RepoCloneWorker do
     queue: :default,
     max_attempts: 3
 
-  alias Viban.Kanban.Repository
   alias Viban.Accounts.User
+  alias Viban.Kanban.Repository
   alias Viban.VCS
 
   require Logger

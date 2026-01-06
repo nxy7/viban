@@ -204,10 +204,7 @@ defmodule VibanWeb.VCSController do
   - `state` - New state ("open" or "closed")
   """
   @spec update_pull_request(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def update_pull_request(
-        conn,
-        %{"owner" => owner, "repo" => repo_name, "pr_id" => pr_id} = params
-      ) do
+  def update_pull_request(conn, %{"owner" => owner, "repo" => repo_name, "pr_id" => pr_id} = params) do
     {:ok, user} = require_current_user(conn)
 
     pr_params =
@@ -246,12 +243,7 @@ defmodule VibanWeb.VCSController do
   - `body` - Comment text (required)
   """
   @spec create_pr_comment(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def create_pr_comment(conn, %{
-        "owner" => owner,
-        "repo" => repo_name,
-        "pr_id" => pr_id,
-        "body" => body
-      }) do
+  def create_pr_comment(conn, %{"owner" => owner, "repo" => repo_name, "pr_id" => pr_id, "body" => body}) do
     {:ok, user} = require_current_user(conn)
 
     case VCS.create_pr_comment(user.provider, user.access_token, owner, repo_name, pr_id, body) do

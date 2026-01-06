@@ -44,7 +44,7 @@ defmodule VibanWeb.BoardChannel do
   @spec broadcast_client_action(String.t(), String.t(), map()) :: :ok
   def broadcast_client_action(board_id, action_type, payload \\ %{}) do
     topic = "board:#{board_id}"
-    message = Map.merge(payload, %{type: action_type})
+    message = Map.put(payload, :type, action_type)
 
     Logger.info("[BoardChannel] Broadcasting client_action to #{topic}: #{inspect(message)}")
 

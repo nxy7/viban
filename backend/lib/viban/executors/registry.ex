@@ -6,7 +6,8 @@ defmodule Viban.Executors.Registry do
   on the current system.
   """
 
-  alias Viban.Executors.Implementations.{ClaudeCode, GeminiCLI}
+  alias Viban.Executors.Implementations.ClaudeCode
+  alias Viban.Executors.Implementations.GeminiCLI
 
   @executors [
     ClaudeCode,
@@ -37,8 +38,7 @@ defmodule Viban.Executors.Registry do
   List all executors (available or not) with their availability status.
   """
   def list_all do
-    @executors
-    |> Enum.map(&executor_info/1)
+    Enum.map(@executors, &executor_info/1)
   end
 
   @doc """

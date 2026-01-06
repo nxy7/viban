@@ -27,7 +27,8 @@ defmodule Viban.Kanban.Column do
     data_layer: AshPostgres.DataLayer,
     extensions: [AshTypescript.Resource]
 
-  alias Viban.Kanban.Column.{Actions, Changes}
+  alias Viban.Kanban.Column.Actions
+  alias Viban.Kanban.Column.Changes
 
   @type color :: String.t()
   @type settings :: %{optional(atom()) => term()}

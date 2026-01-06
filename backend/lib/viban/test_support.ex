@@ -17,8 +17,10 @@ defmodule Viban.TestSupport do
   3. Call `DELETE /api/test/cleanup` to remove test data (boards matching "E2E Test")
   """
 
-  require Ash.Query
   alias Viban.Accounts.User
+  alias Viban.Kanban.Board
+
+  require Ash.Query
 
   @test_user_uid "e2e-test-user-fixed-uid"
   @test_board_prefix "E2E Test"
@@ -75,13 +77,13 @@ defmodule Viban.TestSupport do
     case find_test_user() do
       {:ok, user} ->
         boards =
-          Viban.Kanban.Board
+          Board
           |> Ash.Query.filter(user_id == ^user.id)
           |> Ash.Query.filter(contains(name, ^@test_board_prefix))
           |> Ash.read!()
 
         Enum.each(boards, fn board ->
-          Viban.Kanban.Board.destroy!(board)
+          Board.destroy!(board)
         end)
 
         {:ok, length(boards)}

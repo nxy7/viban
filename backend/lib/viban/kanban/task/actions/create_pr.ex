@@ -26,10 +26,10 @@ defmodule Viban.Kanban.Task.Actions.CreatePR do
 
   use Ash.Resource.Actions.Implementation
 
-  require Logger
-
   alias Viban.GitHub.Client
   alias Viban.Kanban.Task
+
+  require Logger
 
   @impl true
   @spec run(Ash.ActionInput.t(), keyword(), Ash.Resource.Actions.Implementation.context()) ::

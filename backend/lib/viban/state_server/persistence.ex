@@ -6,10 +6,10 @@ defmodule Viban.StateServer.Persistence do
   Failures are logged but do not affect the calling process.
   """
 
-  require Logger
-
   alias Viban.StateServer.ActorState
   alias Viban.StateServer.Serializer
+
+  require Logger
 
   @spec save_async(module(), String.t(), struct() | map()) :: :ok
   def save_async(actor_module, actor_id, state) do
@@ -32,9 +32,7 @@ defmodule Viban.StateServer.Persistence do
         end
       rescue
         e ->
-          Logger.error(
-            "[StateServer] Exception persisting state for #{actor_type}:#{actor_id}: #{Exception.message(e)}"
-          )
+          Logger.error("[StateServer] Exception persisting state for #{actor_type}:#{actor_id}: #{Exception.message(e)}")
       end
     end)
 
@@ -58,15 +56,11 @@ defmodule Viban.StateServer.Persistence do
             :ok
 
           {:error, reason} ->
-            Logger.warning(
-              "[StateServer] Failed to persist state for #{actor_type}:#{actor_id}: #{inspect(reason)}"
-            )
+            Logger.warning("[StateServer] Failed to persist state for #{actor_type}:#{actor_id}: #{inspect(reason)}")
         end
       rescue
         e ->
-          Logger.error(
-            "[StateServer] Exception persisting state for #{actor_type}:#{actor_id}: #{Exception.message(e)}"
-          )
+          Logger.error("[StateServer] Exception persisting state for #{actor_type}:#{actor_id}: #{Exception.message(e)}")
       end
     end)
 
@@ -94,15 +88,11 @@ defmodule Viban.StateServer.Persistence do
             })
 
           {:error, reason} ->
-            Logger.warning(
-              "[StateServer] Failed to update status for #{actor_type}:#{actor_id}: #{inspect(reason)}"
-            )
+            Logger.warning("[StateServer] Failed to update status for #{actor_type}:#{actor_id}: #{inspect(reason)}")
         end
       rescue
         e ->
-          Logger.error(
-            "[StateServer] Exception updating status for #{actor_type}:#{actor_id}: #{Exception.message(e)}"
-          )
+          Logger.error("[StateServer] Exception updating status for #{actor_type}:#{actor_id}: #{Exception.message(e)}")
       end
     end)
 

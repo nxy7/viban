@@ -215,9 +215,7 @@ defmodule Viban.Executors.Implementations.ClaudeCode do
   end
 
   defp normalize_event(event) do
-    Logger.warning(
-      "[ClaudeCode] Unknown event type, logging for future handling: #{inspect(event)}"
-    )
+    Logger.warning("[ClaudeCode] Unknown event type, logging for future handling: #{inspect(event)}")
 
     %{
       type: :unknown,
@@ -226,13 +224,11 @@ defmodule Viban.Executors.Implementations.ClaudeCode do
   end
 
   defp extract_content(%{"content" => content}) when is_list(content) do
-    content
-    |> Enum.map(fn
+    Enum.map_join(content, "", fn
       %{"type" => "text", "text" => text} -> text
       %{"text" => text} -> text
       other -> inspect(other)
     end)
-    |> Enum.join("")
   end
 
   defp extract_content(%{"content" => content}) when is_binary(content), do: content

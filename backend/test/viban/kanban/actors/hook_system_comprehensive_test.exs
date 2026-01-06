@@ -52,9 +52,14 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
   use Viban.DataCase, async: false
 
   # Ash.Test is imported via DataCase for assert_stripped, assert_has_error, etc.
-
-  alias Viban.Kanban.{Board, Column, Task, Hook, ColumnHook}
-  alias Viban.Kanban.Actors.{BoardActor, BoardSupervisor, HookRunner}
+  alias Viban.Kanban.Actors.BoardActor
+  alias Viban.Kanban.Actors.BoardSupervisor
+  alias Viban.Kanban.Actors.HookRunner
+  alias Viban.Kanban.Board
+  alias Viban.Kanban.Column
+  alias Viban.Kanban.ColumnHook
+  alias Viban.Kanban.Hook
+  alias Viban.Kanban.Task
 
   # ============================================================================
   # Test Configuration
@@ -100,7 +105,8 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
 
     column_ids = Enum.map(columns, & &1.id)
 
-    from(ch in ColumnHook, where: ch.column_id in ^column_ids)
+    ColumnHook
+    |> where([ch], ch.column_id in ^column_ids)
     |> Viban.Repo.delete_all()
   end
 
@@ -201,7 +207,7 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
       assert executing_task.in_progress == true
       # Note: agent_status may be :running or :executing depending on implementation
       assert executing_task.agent_status in [:running, :executing]
-      assert executing_task.agent_status_message != nil
+      assert executing_task.agent_status_message
       assert String.contains?(executing_task.agent_status_message, "Slow Hook")
 
       # Cleanup
@@ -285,7 +291,7 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
       {:ok, failed_task} = Task.get(task.id)
 
       assert failed_task.agent_status == :error
-      assert failed_task.error_message != nil
+      assert failed_task.error_message
       assert String.contains?(failed_task.error_message, "Failing Hook")
       # Note: Auto-move to To Review on failure is not implemented yet
       # assert failed_task.column_id == to_review_column.id
@@ -357,7 +363,7 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
       {:ok, failed_task} = Task.get(task.id)
 
       assert failed_task.agent_status == :error
-      assert failed_task.error_message != nil
+      assert failed_task.error_message
       # Note: Auto-move to To Review on failure is not implemented yet
       # assert failed_task.column_id == to_review_column.id
 
@@ -1139,7 +1145,7 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
 
       assert moved_task.column_id == to_review_column.id
       assert moved_task.agent_status == :error
-      assert moved_task.error_message != nil
+      assert moved_task.error_message
       assert String.contains?(moved_task.error_message, "AI Agent failed")
     end
   end
@@ -1322,11 +1328,11 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
       assert length(active) == 2
 
       running = Enum.find(active, &(&1.status == :running))
-      assert running != nil
+      assert running
       assert running.hook_name == "Hook 2"
 
       pending = Enum.find(active, &(&1.status == :pending))
-      assert pending != nil
+      assert pending
       assert pending.hook_name == "Hook 3"
 
       # Simulate recovery: cancel running hook (as TaskServer.self_heal does)

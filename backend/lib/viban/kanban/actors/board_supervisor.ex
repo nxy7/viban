@@ -76,8 +76,7 @@ defmodule Viban.Kanban.Actors.BoardSupervisor do
   def init(board_id) do
     children = [
       # DynamicSupervisor for TaskActors - started first
-      {DynamicSupervisor,
-       name: task_supervisor_name(board_id), strategy: @task_supervision_strategy},
+      {DynamicSupervisor, name: task_supervisor_name(board_id), strategy: @task_supervision_strategy},
       # BoardActor that manages task actors - depends on DynamicSupervisor
       {BoardActor, board_id}
     ]
