@@ -297,7 +297,6 @@ test.describe("Kanban Board E2E Tests", () => {
     authenticatedPage,
     boardName,
   }) => {
-    await authenticatedPage.goto("/");
     await createBoard(authenticatedPage, boardName);
 
     const taskTitle = `Description Test ${Date.now()}`;
