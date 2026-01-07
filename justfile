@@ -87,6 +87,17 @@ test-e2e:
 test-e2e-ui:
     cd frontend && bun test:e2e:ui
 
+# Run e2e tests against production build (same as CI)
+# Builds the binary first, then runs tests
+test-e2e-prod:
+    just build "" true
+    ./scripts/run-e2e-prod.sh
+
+# Run e2e tests against existing production binary (skip build)
+# Useful for quick re-runs after fixing test code
+test-e2e-prod-quick:
+    ./scripts/run-e2e-prod.sh
+
 # Generate new Ash migration
 migrate name:
     cd backend && mix ash.codegen {{name}}

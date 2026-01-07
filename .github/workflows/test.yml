@@ -209,28 +209,11 @@ jobs:
         run: nix develop --command bash -c "cd frontend && bun install && bunx playwright install chromium"
 
       - name: Start release and run E2E tests
-        run: |
-          # Start the Burrito binary - auto-starts Docker Postgres on port 17777
-          # Redirect server logs to file to avoid mixing with test output
-          E2E_TEST=true ./viban_linux_intel > server.log 2>&1 &
-
-          # Wait for server to be ready (deploy mode default port is 7777, HTTPS)
-          echo "Waiting for server to start..."
-          for i in {1..60}; do
-            if curl -sk https://localhost:7777 > /dev/null 2>&1; then
-              echo "Server is ready!"
-              break
-            fi
-            echo "Attempt $i/60..."
-            sleep 2
-          done
-
-          # Run E2E tests
-          cd frontend && nix develop --command bun run test:e2e:prod
+        run: nix develop --command ./scripts/run-e2e-prod.sh ./viban_linux_intel
 
       - name: Show server logs on failure
         if: failure()
-        run: cat server.log
+        run: cat /tmp/viban-e2e.log
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
