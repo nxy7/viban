@@ -16,6 +16,9 @@ export const test = base.extend<TestFixtures>({
     const context = await playwright.request.newContext({
       baseURL: baseURL ?? "http://localhost:8000",
       ignoreHTTPSErrors: true,
+      extraHTTPHeaders: {
+        "Accept-Encoding": "identity",
+      },
     });
     await use(context);
     await context.dispose();
