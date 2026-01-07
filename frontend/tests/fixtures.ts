@@ -17,7 +17,7 @@ interface TestFixtures {
 export const test = base.extend<TestFixtures>({
   testApi: async ({ playwright, baseURL }, use) => {
     const context = await playwright.request.newContext({
-      baseURL: baseURL ?? "http://localhost:8000",
+      baseURL: baseURL!,
       ignoreHTTPSErrors: true,
       extraHTTPHeaders: {
         "Accept-Encoding": "identity",

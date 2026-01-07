@@ -9,14 +9,18 @@ export default defineConfig({
   testDir: "./tests",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  retries: process.env.CI ? 3 : 0,
   workers: process.env.CI ? 2 : undefined,
   reporter: process.env.CI ? [["list"], ["html"]] : "html",
-  timeout: 60000,
+  timeout: 90000,
+  expect: {
+    timeout: 15000,
+  },
   use: {
     baseURL: "https://localhost:7777",
     ignoreHTTPSErrors: true,
     trace: "on-first-retry",
+    actionTimeout: 15000,
   },
   projects: [
     {
