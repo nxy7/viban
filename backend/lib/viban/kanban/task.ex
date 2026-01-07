@@ -40,9 +40,9 @@ defmodule Viban.Kanban.Task do
     extensions: [AshTypescript.Resource],
     notifiers: [Viban.Kanban.Notifiers.TaskNotifier]
 
-  alias Viban.Kanban.Changes.ProcessDescriptionImages
   alias Viban.Kanban.Task.Actions
   alias Viban.Kanban.Task.Changes, as: TaskChanges
+  alias Viban.Kanban.Task.Changes.ProcessDescriptionImages
 
   # Type definitions for documentation
   @type agent_status :: :idle | :thinking | :executing | :error
@@ -355,7 +355,7 @@ defmodule Viban.Kanban.Task do
       primary? true
       require_atomic? false
 
-      change Viban.Kanban.Changes.CleanupDescriptionImages
+      change TaskChanges.CleanupDescriptionImages
     end
 
     # =========================================================================

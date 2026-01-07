@@ -49,6 +49,9 @@ import KanbanColumn from "./KanbanColumn";
 import KeyboardShortcutsHelp from "./KeyboardShortcutsHelp";
 import { TaskCardOverlay } from "./TaskCard";
 
+const POSITION_INCREMENT = 1000;
+const MIN_POSITION_GAP = 0.001;
+
 /** Valid settings tabs */
 type SettingsTab =
   | "general"
@@ -723,37 +726,34 @@ export default function KanbanBoard(props: KanbanBoardProps) {
     const positions = columnTasks.map((t) => Number(t.position) || 0);
 
     if (beforeTaskId === null) {
-      // Insert at end of column
       if (columnTasks.length === 0) {
-        newPosition = 1000;
+        newPosition = POSITION_INCREMENT;
       } else {
         const maxPos = Math.max(...positions);
-        newPosition = maxPos + 1000;
+        newPosition = maxPos + POSITION_INCREMENT;
       }
     } else {
-      // Insert before the specified task
       const beforeTaskIndex = columnTasks.findIndex(
         (t) => t.id === beforeTaskId,
       );
 
       if (beforeTaskIndex === -1) {
-        // Task not found, insert at end
         newPosition =
-          columnTasks.length > 0 ? Math.max(...positions) + 1000 : 1000;
+          columnTasks.length > 0
+            ? Math.max(...positions) + POSITION_INCREMENT
+            : POSITION_INCREMENT;
       } else if (beforeTaskIndex === 0) {
-        // Insert at the very beginning - use negative position
         const firstPos = positions[0];
-        newPosition = firstPos - 1000;
+        newPosition = firstPos - POSITION_INCREMENT;
       } else {
-        // Insert between two tasks
         const prevPos = positions[beforeTaskIndex - 1];
         const beforePos = positions[beforeTaskIndex];
         const gap = beforePos - prevPos;
 
-        if (gap > 0.001) {
+        if (gap > MIN_POSITION_GAP) {
           newPosition = (prevPos + beforePos) / 2;
         } else {
-          newPosition = beforePos - 0.001;
+          newPosition = beforePos - MIN_POSITION_GAP;
         }
       }
     }
@@ -763,10 +763,9 @@ export default function KanbanBoard(props: KanbanBoardProps) {
       newPosition = 0;
     }
 
-    // Skip if no actual change
     if (isSameColumn) {
       const currentPos = Number(task.position) || 0;
-      if (Math.abs(currentPos - newPosition) < 0.001) {
+      if (Math.abs(currentPos - newPosition) < MIN_POSITION_GAP) {
         return;
       }
     }

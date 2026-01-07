@@ -45,6 +45,7 @@ import { useShortcut } from "~/hooks/useKeyboardShortcuts";
 import { type OutputLine, useTaskChat } from "~/hooks/useTaskChat";
 import { formatDate, formatTime } from "~/lib/dateFormat";
 import { getErrorMessage } from "~/lib/errorUtils";
+import { fileToDataUrl } from "~/lib/fileUtils";
 import * as sdk from "~/lib/generated/ash";
 import { CHAT_PROSE_CLASSES, renderMarkdown } from "~/lib/markdown";
 import { useSystem } from "~/lib/SystemContext";
@@ -122,15 +123,6 @@ interface ImageAttachment {
   file: File;
   dataUrl: string;
   name: string;
-}
-
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
 }
 
 const shouldShowOutput = (

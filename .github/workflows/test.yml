@@ -157,13 +157,21 @@ jobs:
           restore-keys: ${{ runner.os }}-nix-bun-
 
       - name: Build
-        run: nix develop --command just build burrito=true
+        run: nix develop --command just build linux_intel true
+
+      - name: Verify build output
+        run: |
+          echo "Checking burrito_out directory..."
+          ls -la backend/burrito_out/ || echo "Directory not found"
+          echo "Looking for viban_linux_intel..."
+          file backend/burrito_out/viban_linux_intel || echo "Binary not found"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: viban-linux
           path: backend/burrito_out/viban_linux_intel
+          if-no-files-found: error
 
   e2e-prod:
     name: E2E Tests (Production Build)

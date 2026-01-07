@@ -50,6 +50,7 @@ defmodule Viban.Kanban.Hook do
     attribute :name, :string do
       allow_nil? false
       public? true
+      constraints min_length: 1, max_length: 255
       description "Human-readable name for this hook"
     end
 

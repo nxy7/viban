@@ -20,5 +20,5 @@ defmodule Viban.Kanban.SystemHooks.Behaviour do
 
   @doc "Execute the hook when a task enters the column"
   @callback execute(task :: Task.t(), column :: Column.t(), opts :: keyword()) ::
-              :ok | {:error, term()}
+              :ok | {:await_executor, Ecto.UUID.t()} | {:error, term()}
 end

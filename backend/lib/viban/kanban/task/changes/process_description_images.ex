@@ -1,4 +1,4 @@
-defmodule Viban.Kanban.Changes.ProcessDescriptionImages do
+defmodule Viban.Kanban.Task.Changes.ProcessDescriptionImages do
   @moduledoc """
   Ash change that processes description images when a task is created or updated.
 

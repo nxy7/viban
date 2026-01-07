@@ -1,4 +1,4 @@
-defmodule Viban.Kanban.Changes.CleanupDescriptionImages do
+defmodule Viban.Kanban.Task.Changes.CleanupDescriptionImages do
   @moduledoc """
   Ash change that cleans up description images when a task is destroyed.
 

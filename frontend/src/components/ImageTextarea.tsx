@@ -1,4 +1,5 @@
 import { createSignal, For, Show } from "solid-js";
+import { fileToDataUrl } from "~/lib/fileUtils";
 import { CloseIcon } from "./ui/Icons";
 
 /**
@@ -63,16 +64,6 @@ const getNextImageId = (images: InlineImage[]): string => {
 
   const maxNum = existingNums.length > 0 ? Math.max(...existingNums) : 0;
   return `img-${maxNum + 1}`;
-};
-
-/** Convert a File to a data URL */
-const fileToDataUrl = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
 };
 
 /**
