@@ -7,15 +7,18 @@ defmodule Viban.AppRuntime do
   - Available CLI tools
   - System status
   - Runtime configuration
+  - Application updates
   """
 
   use Ash.Domain,
     extensions: [AshTypescript.Domain, AshTypescript.Rpc]
 
+  alias Viban.AppRuntime.AppUpdates
   alias Viban.AppRuntime.SystemTools
 
   resources do
     resource SystemTools
+    resource AppUpdates
   end
 
   typescript_rpc do
@@ -26,6 +29,11 @@ defmodule Viban.AppRuntime do
       rpc_action(:list_executors, :list_executors)
       rpc_action(:open_in_editor, :open_in_editor)
       rpc_action(:open_folder, :open_folder)
+    end
+
+    resource AppUpdates do
+      rpc_action(:get_update_status, :get_status)
+      rpc_action(:get_download_url, :get_download_url)
     end
   end
 end

@@ -122,6 +122,7 @@ defmodule Viban.MixProject do
       # Background Jobs
       {:oban, "~> 2.18"},
       {:oban_web, "~> 2.11"},
+      {:ash_oban, "~> 0.2"},
 
       # Cron Expression Parsing
       {:crontab, "~> 1.1"},

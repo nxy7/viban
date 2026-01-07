@@ -130,8 +130,8 @@ defmodule Viban.Application do
       {Phoenix.PubSub, name: Viban.PubSub},
       {Finch, name: Viban.Finch},
 
-      # Background job processing
-      {Oban, Application.fetch_env!(:viban, Oban)},
+      # Background job processing (AshOban.config adds scheduled actions from domains)
+      {Oban, AshOban.config([Viban.AppRuntime], Application.fetch_env!(:viban, Oban))},
 
       # Periodical task scheduler
       Viban.Kanban.Servers.PeriodicalTaskScheduler,

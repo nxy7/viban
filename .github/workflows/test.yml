@@ -163,7 +163,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: viban-linux
-          path: backend/burrito_out/viban_linux
+          path: backend/burrito_out/viban_linux_intel
 
   e2e-prod:
     name: E2E Tests (Production Build)
@@ -188,7 +188,7 @@ jobs:
           name: viban-linux
 
       - name: Make binary executable
-        run: chmod +x viban_linux
+        run: chmod +x viban_linux_intel
 
       - name: Restore Bun cache
         uses: actions/cache@v4
@@ -203,7 +203,7 @@ jobs:
       - name: Start release and run E2E tests
         run: |
           # Start the Burrito binary - auto-starts Docker Postgres on port 17777
-          E2E_TEST=true ./viban_linux &
+          E2E_TEST=true ./viban_linux_intel &
 
           # Wait for server to be ready (deploy mode default port is 7777, HTTPS)
           echo "Waiting for server to start..."

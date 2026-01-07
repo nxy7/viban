@@ -3,6 +3,7 @@ import { Router } from "@solidjs/router";
 import { FileRoutes } from "@solidjs/start/router";
 import { Suspense } from "solid-js";
 import DeviceLoginModal from "./components/DeviceLoginModal";
+import UpdateBanner from "./components/UpdateBanner";
 import NotificationContainer from "./components/ui/NotificationContainer";
 import { AuthProvider } from "./hooks/useAuth";
 import { EscapeStackProvider } from "./hooks/useEscapeStack";
@@ -16,6 +17,7 @@ export default function App() {
           <Title>Viban</Title>
           <EscapeStackProvider>
             <AuthProvider>
+              <UpdateBanner />
               <Suspense>{props.children}</Suspense>
               <NotificationContainer />
               <DeviceLoginModal />

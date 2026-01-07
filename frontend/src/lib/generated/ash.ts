@@ -290,6 +290,14 @@ export type SystemToolResourceSchema = {
 
 
 
+// AppUpdates Schema
+export type AppUpdatesResourceSchema = {
+  __type: "Resource";
+  __primitiveFields: never;
+};
+
+
+
 // ActorState Schema
 export type ActorStateResourceSchema = {
   __type: "Resource";
@@ -1440,6 +1448,15 @@ export type SystemToolFilterInput = {
     not_eq?: string;
     in?: Array<string>;
   };
+
+
+
+};
+export type AppUpdatesFilterInput = {
+  and?: Array<AppUpdatesFilterInput>;
+  or?: Array<AppUpdatesFilterInput>;
+  not?: Array<AppUpdatesFilterInput>;
+
 
 
 
@@ -5128,6 +5145,64 @@ export async function open_folder(
   };
 
   return executeActionRpcRequest<OpenFolderResult>(
+    payload,
+    config
+  );
+}
+
+
+export type InferGetUpdateStatusResult = Record<string, any>;
+
+export type GetUpdateStatusResult = | { success: true; data: InferGetUpdateStatusResult; }
+| { success: false; errors: AshRpcError[]; }
+
+;
+
+export async function get_update_status(
+  config: {
+  hookCtx?: ActionHookContext;
+  headers?: Record<string, string>;
+  fetchOptions?: RequestInit;
+  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+}
+): Promise<GetUpdateStatusResult> {
+  const payload = {
+    action: "get_update_status"
+  };
+
+  return executeActionRpcRequest<GetUpdateStatusResult>(
+    payload,
+    config
+  );
+}
+
+
+export type GetDownloadUrlInput = {
+  platform?: "macos_arm" | "macos_intel" | "linux_intel" | "linux_arm";
+};
+
+export type InferGetDownloadUrlResult = Record<string, any>;
+
+export type GetDownloadUrlResult = | { success: true; data: InferGetDownloadUrlResult; }
+| { success: false; errors: AshRpcError[]; }
+
+;
+
+export async function get_download_url(
+  config: {
+  input?: GetDownloadUrlInput;
+  hookCtx?: ActionHookContext;
+  headers?: Record<string, string>;
+  fetchOptions?: RequestInit;
+  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+}
+): Promise<GetDownloadUrlResult> {
+  const payload = {
+    action: "get_download_url",
+    input: config.input
+  };
+
+  return executeActionRpcRequest<GetDownloadUrlResult>(
     payload,
     config
   );

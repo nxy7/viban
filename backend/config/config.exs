@@ -69,7 +69,6 @@ config :viban, Oban,
   plugins: [
     Oban.Plugins.Pruner,
     {Oban.Plugins.Lifeline, rescue_after: to_timeout(minute: 30)},
-    # Run worktree cleanup daily at 3 AM
     {Oban.Plugins.Cron,
      crontab: [
        {"0 3 * * *", Viban.Workers.WorktreeCleanupWorker},
