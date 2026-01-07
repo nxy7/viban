@@ -32,6 +32,7 @@ defmodule VibanWeb.Router do
     get "/status", TestController, :status
     post "/login", TestController, :login
     post "/logout", TestController, :logout
+    post "/boards", TestController, :create_board
     delete "/cleanup", TestController, :cleanup
   end
 

@@ -4,6 +4,7 @@ defmodule VibanWeb.TestController do
 
   Provides endpoints for:
   - Logging in as test user (bypasses OAuth)
+  - Creating test boards (without repo requirement)
   - Cleaning up test data
 
   Only available when `config :viban, :sandbox_enabled, true`
@@ -11,6 +12,7 @@ defmodule VibanWeb.TestController do
 
   use VibanWeb, :controller
 
+  alias Viban.Kanban.Board
   alias Viban.TestSupport
 
   plug :check_sandbox_enabled
@@ -93,5 +95,45 @@ defmodule VibanWeb.TestController do
       test_user: user_info,
       test_board_prefix: TestSupport.test_board_prefix()
     })
+  end
+
+  @doc """
+  POST /api/test/boards
+
+  Creates a test board without requiring a repository.
+  Requires an authenticated session (call /api/test/login first).
+
+  Params:
+  - name: Board name (required)
+  - description: Board description (optional)
+  """
+  def create_board(conn, params) do
+    user_id = get_session(conn, :user_id)
+
+    if is_nil(user_id) do
+      conn
+      |> put_status(:unauthorized)
+      |> json(%{ok: false, error: "Not authenticated. Call /api/test/login first."})
+    else
+      name = params["name"] || TestSupport.generate_test_board_name()
+      description = params["description"]
+
+      case Board.create(%{name: name, description: description, user_id: user_id}) do
+        {:ok, board} ->
+          json(conn, %{
+            ok: true,
+            board: %{
+              id: board.id,
+              name: board.name,
+              description: board.description
+            }
+          })
+
+        {:error, reason} ->
+          conn
+          |> put_status(:internal_server_error)
+          |> json(%{ok: false, error: inspect(reason)})
+      end
+    end
   end
 end

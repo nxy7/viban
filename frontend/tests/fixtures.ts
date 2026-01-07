@@ -25,21 +25,17 @@ export const test = base.extend<TestFixtures>({
   },
 
   authenticatedPage: async ({ page, testApi }, use) => {
-    // Login as test user
     const loginResponse = await testApi.post("/api/test/login");
     expect(loginResponse.ok()).toBeTruthy();
 
     const loginData = await loginResponse.json();
     expect(loginData.ok).toBe(true);
 
-    // Get cookies from the API response and set them on the page
     const cookies = await testApi.storageState();
 
-    // Set the cookies on the browser context
     await page.context().addCookies(
       cookies.cookies.map((cookie) => ({
         ...cookie,
-        // Ensure cookies work for the frontend
         domain: "localhost",
       })),
     );
@@ -49,7 +45,6 @@ export const test = base.extend<TestFixtures>({
 
   // biome-ignore lint/correctness/noEmptyPattern: Playwright fixture pattern
   boardName: async ({}, use) => {
-    // Generate unique board name for this test
     const name = `E2E Test ${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     await use(name);
   },
@@ -58,31 +53,34 @@ export const test = base.extend<TestFixtures>({
 export { expect };
 
 /**
- * Creates a board via the UI and returns the board ID from the URL
+ * Creates a board via API and navigates to it.
+ * This bypasses the UI which requires repository selection.
  */
 export async function createBoard(page: Page, name: string): Promise<string> {
-  await page.goto("/");
+  // Create board via test API
+  const response = await page.request.post("/api/test/boards", {
+    data: { name },
+  });
 
-  // Click "New Board" button
-  await page.getByRole("button", { name: /new.*board/i }).click();
-
-  // Fill in board name
-  await page.getByPlaceholder(/board name/i).fill(name);
-
-  // Submit
-  await page.getByRole("button", { name: "Create Board" }).click();
-
-  // Wait for navigation to board page
-  await page.waitForURL(/\/board\/.+/);
-
-  // Extract board ID from URL
-  const url = page.url();
-  const match = url.match(/\/board\/([^/?]+)/);
-  if (!match) {
-    throw new Error(`Could not extract board ID from URL: ${url}`);
+  if (!response.ok()) {
+    const text = await response.text();
+    throw new Error(`Failed to create board: ${response.status()} ${text}`);
   }
 
-  return match[1];
+  const data = await response.json();
+  if (!data.ok) {
+    throw new Error(`Failed to create board: ${data.error}`);
+  }
+
+  const boardId = data.board.id;
+
+  // Navigate to the board
+  await page.goto(`/board/${boardId}`);
+
+  // Wait for board to load
+  await expect(page.getByText("TODO")).toBeVisible({ timeout: 15000 });
+
+  return boardId;
 }
 
 /**
