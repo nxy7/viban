@@ -22,7 +22,6 @@ When ready to pursue "download and run" distribution, here's the researched appr
 |-----------|----------|
 | Elixir app | [Burrito](https://github.com/burrito-elixir/burrito) or [Bakeware](https://github.com/bake-bake-bake/bakeware) |
 | Postgres | Bundle binaries, spawn via Elixir Port |
-| Caddy | Bundle binary, spawn via Port |
 | Data | `~/.viban/` for DB data + config |
 
 ### Embedded Postgres Options
@@ -77,7 +76,7 @@ end
 
 - **Electric SQL requires** `wal_level=logical` - embedded Postgres supports this via startup flags
 - **Platform-specific binaries** - need separate releases for linux-amd64, linux-arm64, darwin-amd64, darwin-arm64, windows
-- **Estimated binary size** - ~50-80MB total (Elixir release + Postgres + Caddy)
+- **Estimated binary size** - ~50-80MB total (Elixir release + Postgres)
 
 ### User Experience Goal
 

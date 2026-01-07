@@ -23,7 +23,6 @@ const DEFAULT_SOCKET_URL = "ws://localhost:8000/socket";
 
 /**
  * Constructs the WebSocket URL based on current location.
- * Uses window.location in browser (through Caddy proxy).
  */
 const getSocketUrl = (): string => {
   if (typeof window === "undefined") return DEFAULT_SOCKET_URL;

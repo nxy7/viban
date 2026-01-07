@@ -3,8 +3,6 @@ defmodule VibanWeb.Endpoint do
 
   import Plug.Conn
 
-  # Session cookie options
-  # In dev, we're behind Caddy HTTPS proxy but backend receives HTTP
   @session_options [
     store: :cookie,
     key: "_viban_key",

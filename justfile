@@ -6,7 +6,7 @@
 default:
     @just --list
 
-# Start all services with overmind (database, backend, frontend, caddy)
+# Start all services with overmind (database, backend, frontend)
 dev:
     overmind start -f Procfile.dev
 
@@ -35,14 +35,6 @@ dev-simple:
     @just backend-setup
     @echo "Starting backend and frontend in parallel..."
     @just backend & just frontend
-
-# [DEPRECATED] Trust Caddy's local CA - no longer needed, using Phoenix HTTPS directly
-# caddy-trust:
-#     caddy trust
-
-# [DEPRECATED] Start Caddy reverse proxy - no longer needed, using Phoenix HTTPS directly
-# caddy:
-#     caddy run --config Caddyfile
 
 # Start only the database
 db:

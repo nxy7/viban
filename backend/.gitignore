@@ -50,3 +50,6 @@ npm-debug.log
 # Secret config files
 config/dev.secret.exs
 config/prod.secret.exs
+
+# Electric SQL runtime data
+/persistent/

@@ -117,14 +117,11 @@ just dev
 
 This uses [overmind](https://github.com/DarthSim/overmind) to run all services:
 - Docker Compose (PostgreSQL)
-- Backend (Elixir/Phoenix on port 7771)
-- Frontend (SolidJS on port 3000)
-- Caddy (HTTPS reverse proxy on port 8000)
+- Backend (Elixir/Phoenix with HTTPS on port 8000)
+- Frontend (SolidJS dev server on port 3000, proxied through Phoenix)
 
 The app will be available at:
-- **Application**: https://localhost:8000 (via Caddy)
-- Backend API: http://localhost:7771 (direct)
-- Frontend Dev: http://localhost:3000 (direct)
+- **Application**: https://localhost:8000
 
 #### Manual Setup (without Nix)
 

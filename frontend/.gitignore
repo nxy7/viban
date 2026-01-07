@@ -7,6 +7,7 @@ dist/
 *.log
 test-results/
 playwright-report/
+app.config.timestamp*
 
 *storybook.log
 storybook-static
