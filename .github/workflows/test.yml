@@ -211,7 +211,8 @@ jobs:
       - name: Start release and run E2E tests
         run: |
           # Start the Burrito binary - auto-starts Docker Postgres on port 17777
-          E2E_TEST=true ./viban_linux_intel &
+          # Redirect server logs to file to avoid mixing with test output
+          E2E_TEST=true ./viban_linux_intel > server.log 2>&1 &
 
           # Wait for server to be ready (deploy mode default port is 7777, HTTPS)
           echo "Waiting for server to start..."
@@ -226,6 +227,10 @@ jobs:
 
           # Run E2E tests
           cd frontend && nix develop --command bun run test:e2e:prod
+
+      - name: Show server logs on failure
+        if: failure()
+        run: cat server.log
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
