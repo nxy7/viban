@@ -10,6 +10,9 @@ async function globalTeardown() {
   const context = await request.newContext({
     baseURL: API_BASE,
     ignoreHTTPSErrors: true,
+    extraHTTPHeaders: {
+      "Accept-Encoding": "identity",
+    },
   });
 
   try {

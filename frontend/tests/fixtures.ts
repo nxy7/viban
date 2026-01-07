@@ -70,7 +70,7 @@ export async function createBoard(page: Page, name: string): Promise<string> {
   await page.getByPlaceholder(/board name/i).fill(name);
 
   // Submit
-  await page.getByRole("button", { name: /create/i }).click();
+  await page.getByRole("button", { name: "Create Board" }).click();
 
   // Wait for navigation to board page
   await page.waitForURL(/\/board\/.+/);
