@@ -12,10 +12,8 @@ Viban uses a column-based hook system that automates your workflow. When tasks e
 Think of hooks as **actions attached to columns**. When a task enters a column, its hooks run. This creates a simple yet powerful model:
 
 ```
-Task moves to column → onEntry hooks run in sequence
+Task moves to column → Hooks run in sequence
 ```
-
-All hooks in Viban are `on_entry` hooks - they trigger when a task enters the column.
 
 ## Hook Kinds
 
@@ -160,21 +158,25 @@ Agent hooks run AI agents:
 
 ### Column Design
 
-Design your columns around your workflow stages:
+Design your columns around your workflow stages. Hooks run in sequence, so you can chain them to create automation pipelines:
 
 ```
 [Todo]
-  └─ No hooks (just planning)
+  ├─ Auto-Refine (improve task description)
+  └─ Move Task → In Progress
 
 [In Progress]
-  └─ Execute AI hook
+  ├─ Execute AI (run the agent)
+  └─ Move Task → To Review
 
 [To Review]
   └─ Play Sound (notify of completion)
 
 [Done]
-  └─ No hooks
+  └─ Script: Send Slack notification
 ```
+
+This creates a fully automated pipeline: drop a task in Todo, and it gets refined, executed by AI, lands in To Review with a notification sound, and sends a Slack message when marked done.
 
 ### Hook Ordering
 

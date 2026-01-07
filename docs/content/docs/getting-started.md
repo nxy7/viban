@@ -61,10 +61,12 @@ chmod +x viban
 1. Drag your task from "Todo" to "In Progress"
 2. Watch as Viban:
    - Creates an isolated git worktree
-   - Launches Claude Code
+   - Launches Claude Code (if Execute AI hook is configured)
    - Streams real-time output
-3. Once complete, the task moves to "In Review"
+3. Configure a "Move Task" hook on In Progress to automatically move completed tasks to "In Review"
 4. Review the changes and merge when ready
+
+> **Tip**: Set up hooks on your columns to automate the workflow. See [Hooks System](/docs/hooks) for details.
 
 ## Optional Tools
 

@@ -12,18 +12,19 @@ Viban is an AI-powered Kanban board that enables autonomous task execution throu
 Viban combines the familiar Kanban workflow with cutting-edge AI capabilities:
 
 - **Visual Task Management**: Organize work in columns (Todo, In Progress, In Review, Done)
-- **AI Execution**: Tasks are automatically worked on by Claude Code when moved to "In Progress"
+- **Hooks System**: Configure hooks on columns to automate your workflow - run AI agents, scripts, move tasks, and more
 - **Real-time Streaming**: Watch AI work in real-time with live output streaming
 - **Git Integration**: Each task gets its own isolated git worktree for clean development
 
 ## Key Features
 
 ### Autonomous Development
-When you drag a task to the "In Progress" column, Viban automatically:
-1. Creates an isolated git worktree
-2. Launches Claude Code with your task description
-3. Streams output in real-time so you can monitor progress
-4. Creates a branch ready for review when complete
+Configure your columns with hooks to create automated pipelines. A typical setup:
+1. **Todo**: Auto-Refine hook improves task descriptions, then Move hook sends to In Progress
+2. **In Progress**: Execute AI hook runs Claude Code, then Move hook sends to To Review
+3. **To Review**: Play Sound hook notifies you the task is ready
+
+Each task gets an isolated git worktree, and you can watch AI work in real-time with live output streaming.
 
 ### Task Refinement
 Use the "Refine" button on any task to transform a simple description into a high-quality, actionable prompt. The AI will add:
