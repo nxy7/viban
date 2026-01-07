@@ -118,9 +118,6 @@ if config_env() == :prod do
   # In deploy mode, always start the server (no need for PHX_SERVER env var)
   server_enabled? = deploy_mode? or System.get_env("PHX_SERVER") != nil
 
-  # Disable compression for E2E tests (Playwright has issues with Bandit's deflate)
-  e2e_test? = System.get_env("E2E_TEST") == "true"
-
   config :viban, Viban.Repo,
     url: database_url,
     pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
@@ -130,23 +127,16 @@ if config_env() == :prod do
   config :viban, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
   if use_https do
-    https_opts = [
-      ip: {0, 0, 0, 0, 0, 0, 0, 0},
-      port: port,
-      cipher_suite: :strong,
-      certfile: full_cert_path,
-      keyfile: full_key_path
-    ]
-
-    https_opts =
-      if e2e_test?,
-        do: Keyword.put(https_opts, :http_options, compress: false),
-        else: https_opts
-
     config :viban, VibanWeb.Endpoint,
       server: server_enabled?,
       url: [host: host, port: port, scheme: "https"],
-      https: https_opts,
+      https: [
+        ip: {0, 0, 0, 0, 0, 0, 0, 0},
+        port: port,
+        cipher_suite: :strong,
+        certfile: full_cert_path,
+        keyfile: full_key_path
+      ],
       secret_key_base: secret_key_base
   else
     # HTTP mode - fallback if no certs
