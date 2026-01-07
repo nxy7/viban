@@ -22,6 +22,7 @@ end
 # Enable test endpoints when E2E_TEST=true (works in all environments)
 if System.get_env("E2E_TEST") == "true" do
   config :viban, :sandbox_enabled, true
+  config :logger, level: :warning
 end
 
 if config_env() == :prod do
