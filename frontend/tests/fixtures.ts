@@ -5,6 +5,9 @@ import {
   type Page,
 } from "@playwright/test";
 
+// Store testApi on the page for use by createBoard
+const pageApiMap = new WeakMap<Page, APIRequestContext>();
+
 interface TestFixtures {
   testApi: APIRequestContext;
   authenticatedPage: Page;
@@ -20,17 +23,22 @@ export const test = base.extend<TestFixtures>({
         "Accept-Encoding": "identity",
       },
     });
+
+    // Login immediately so all subsequent requests are authenticated
+    const loginResponse = await context.post("/api/test/login");
+    expect(loginResponse.ok()).toBeTruthy();
+    const loginData = await loginResponse.json();
+    expect(loginData.ok).toBe(true);
+
     await use(context);
     await context.dispose();
   },
 
   authenticatedPage: async ({ page, testApi }, use) => {
-    const loginResponse = await testApi.post("/api/test/login");
-    expect(loginResponse.ok()).toBeTruthy();
+    // Store testApi reference for createBoard to use
+    pageApiMap.set(page, testApi);
 
-    const loginData = await loginResponse.json();
-    expect(loginData.ok).toBe(true);
-
+    // Copy cookies from testApi to the page's browser context
     const cookies = await testApi.storageState();
 
     await page.context().addCookies(
@@ -41,6 +49,9 @@ export const test = base.extend<TestFixtures>({
     );
 
     await use(page);
+
+    // Cleanup
+    pageApiMap.delete(page);
   },
 
   // biome-ignore lint/correctness/noEmptyPattern: Playwright fixture pattern
@@ -57,8 +68,15 @@ export { expect };
  * This bypasses the UI which requires repository selection.
  */
 export async function createBoard(page: Page, name: string): Promise<string> {
-  // Create board via test API
-  const response = await page.request.post("/api/test/boards", {
+  // Get the authenticated API context associated with this page
+  const testApi = pageApiMap.get(page);
+  if (!testApi) {
+    throw new Error(
+      "createBoard requires authenticatedPage fixture. No testApi found for this page.",
+    );
+  }
+
+  const response = await testApi.post("/api/test/boards", {
     data: { name },
   });
 
