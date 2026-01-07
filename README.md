@@ -50,6 +50,7 @@ chmod +x viban
 |------|----------|---------|
 | Docker | **Yes** | PostgreSQL database (auto-managed) |
 | Git | **Yes** | Version control, worktree management |
+| OpenSSL | **Yes** | SSL certificate generation for HTTPS |
 
 ### Optional Tools
 

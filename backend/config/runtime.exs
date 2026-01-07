@@ -68,25 +68,50 @@ if config_env() == :prod do
   host = System.get_env("PHX_HOST") || "localhost"
   port = String.to_integer(System.get_env("PORT") || if(deploy_mode?, do: "7777", else: "4000"))
 
-  # Check for SSL cert files (enables HTTP/2 for better Electric sync performance)
-  cert_path = System.get_env("SSL_CERT_PATH") || "priv/cert/selfsigned.pem"
-  key_path = System.get_env("SSL_KEY_PATH") || "priv/cert/selfsigned_key.pem"
-
-  priv_dir =
-    case :code.priv_dir(:viban) do
-      {:error, _} -> "priv"
-      path -> to_string(path)
+  # SSL certificates for HTTPS (enables HTTP/2 for Electric SQL sync)
+  # In deploy mode, certs are stored in ~/.viban/cert and generated if missing
+  cert_dir =
+    if deploy_mode? do
+      Path.expand("~/.viban/cert")
+    else
+      case :code.priv_dir(:viban) do
+        {:error, _} -> "priv/cert"
+        path -> Path.join(to_string(path), "cert")
+      end
     end
 
-  full_cert_path =
-    if String.starts_with?(cert_path, "/"),
-      do: cert_path,
-      else: Path.join(priv_dir, String.replace_prefix(cert_path, "priv/", ""))
+  full_cert_path = System.get_env("SSL_CERT_PATH") || Path.join(cert_dir, "selfsigned.pem")
+  full_key_path = System.get_env("SSL_KEY_PATH") || Path.join(cert_dir, "selfsigned_key.pem")
 
-  full_key_path =
-    if String.starts_with?(key_path, "/"),
-      do: key_path,
-      else: Path.join(priv_dir, String.replace_prefix(key_path, "priv/", ""))
+  # Generate self-signed certs in deploy mode if they don't exist
+  if deploy_mode? and not (File.exists?(full_cert_path) and File.exists?(full_key_path)) do
+    File.mkdir_p!(cert_dir)
+
+    if System.find_executable("openssl") do
+      System.cmd(
+        "openssl",
+        [
+          "req",
+          "-x509",
+          "-newkey",
+          "rsa:2048",
+          "-keyout",
+          full_key_path,
+          "-out",
+          full_cert_path,
+          "-sha256",
+          "-days",
+          "365",
+          "-nodes",
+          "-subj",
+          "/CN=localhost",
+          "-addext",
+          "subjectAltName=DNS:localhost,IP:127.0.0.1"
+        ],
+        stderr_to_stdout: true
+      )
+    end
+  end
 
   use_https = File.exists?(full_cert_path) && File.exists?(full_key_path)
 

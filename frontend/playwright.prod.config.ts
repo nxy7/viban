@@ -13,8 +13,6 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: "html",
   use: {
-    // Production release serves frontend from the backend on same port
-    // Deploy mode default port is 7777, HTTPS with self-signed certs
     baseURL: "https://localhost:7777",
     ignoreHTTPSErrors: true,
     trace: "on-first-retry",

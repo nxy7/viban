@@ -69,10 +69,14 @@ defmodule Viban.Release do
       )
   end
 
-  defp cert_directory do
-    case :code.priv_dir(@app) do
-      {:error, _} -> "priv/cert"
-      path -> Path.join(to_string(path), "cert")
+  def cert_directory do
+    if Viban.DeployMode.enabled?() do
+      Path.expand("~/.viban/cert")
+    else
+      case :code.priv_dir(@app) do
+        {:error, _} -> "priv/cert"
+        path -> Path.join(to_string(path), "cert")
+      end
     end
   end
 
