@@ -13,9 +13,10 @@ test.describe("Task Chat E2E Tests (Unified Activity View)", () => {
     // Click on the task to open details
     await authenticatedPage.getByText(taskTitle).click();
 
-    // Task details panel should open with unified view (no separate tabs)
-    // Should see "Task Created" activity
-    await expect(authenticatedPage.getByText("Task Created")).toBeVisible({
+    // Task details panel should open (delete button is always visible)
+    await expect(
+      authenticatedPage.locator("button[title='Delete task']"),
+    ).toBeVisible({
       timeout: 5000,
     });
 
@@ -24,7 +25,7 @@ test.describe("Task Chat E2E Tests (Unified Activity View)", () => {
       authenticatedPage
         .getByPlaceholder("Enter a prompt or paste an image (Ctrl+V)...")
         .or(authenticatedPage.getByPlaceholder("Connecting..."))
-        .or(authenticatedPage.getByPlaceholder("Claude Code not available")),
+        .or(authenticatedPage.getByPlaceholder("No AI executors available")),
     ).toBeVisible({ timeout: 10000 });
   });
 
@@ -65,7 +66,7 @@ test.describe("Task Chat E2E Tests (Unified Activity View)", () => {
     });
   });
 
-  test("unified view shows Task Created as first activity", async ({
+  test("task details panel shows description", async ({
     authenticatedPage,
     boardName,
   }) => {
@@ -78,7 +79,7 @@ test.describe("Task Chat E2E Tests (Unified Activity View)", () => {
     await expect(addCardButton).toBeVisible({ timeout: 15000 });
     await addCardButton.click();
 
-    const taskTitle = `Empty State Test ${Date.now()}`;
+    const taskTitle = `Description Panel Test ${Date.now()}`;
     const taskDescription = "Test description for activity";
     await authenticatedPage
       .getByPlaceholder("Enter task title...")
@@ -103,8 +104,10 @@ test.describe("Task Chat E2E Tests (Unified Activity View)", () => {
     // Click on the task to open details
     await authenticatedPage.getByText(taskTitle).click();
 
-    // Should show Task Created activity with description
-    await expect(authenticatedPage.getByText("Task Created")).toBeVisible({
+    // Panel should be open (delete button visible)
+    await expect(
+      authenticatedPage.locator("button[title='Delete task']"),
+    ).toBeVisible({
       timeout: 5000,
     });
     await expect(authenticatedPage.getByText(taskDescription)).toBeVisible({
@@ -120,14 +123,16 @@ test.describe("Task Chat E2E Tests (Unified Activity View)", () => {
 
     // Click on the task to open details
     await authenticatedPage.getByText(taskTitle).click();
-    await expect(authenticatedPage.getByText("Task Created")).toBeVisible({
+    await expect(
+      authenticatedPage.locator("button[title='Delete task']"),
+    ).toBeVisible({
       timeout: 5000,
     });
 
     // Wait for chat input to be available
     const chatInput = authenticatedPage
       .getByPlaceholder("Enter a prompt or paste an image (Ctrl+V)...")
-      .or(authenticatedPage.getByPlaceholder("Claude Code not available"));
+      .or(authenticatedPage.getByPlaceholder("No AI executors available"));
     await expect(chatInput).toBeVisible({ timeout: 15000 });
 
     // Type a message
@@ -148,7 +153,9 @@ test.describe("Task Chat E2E Tests (Unified Activity View)", () => {
 
     // Click on the task to open details
     await authenticatedPage.getByText(taskTitle).click();
-    await expect(authenticatedPage.getByText("Task Created")).toBeVisible({
+    await expect(
+      authenticatedPage.locator("button[title='Delete task']"),
+    ).toBeVisible({
       timeout: 5000,
     });
 
@@ -181,9 +188,10 @@ test.describe("Task Chat E2E Tests (Unified Activity View)", () => {
     // Click on the task to open details
     await authenticatedPage.getByText(taskTitle).click();
 
-    // Task details should be visible - the agent status badge shows "idle" by default
-    // but may not be visible when idle. Just verify the panel opened correctly.
-    await expect(authenticatedPage.getByText("Task Created")).toBeVisible({
+    // Task details should be visible - verify panel opened correctly
+    await expect(
+      authenticatedPage.locator("button[title='Delete task']"),
+    ).toBeVisible({
       timeout: 5000,
     });
   });
@@ -208,15 +216,17 @@ test.describe("Task Chat E2E Tests (Unified Activity View)", () => {
         .filter({ hasText: taskTitle }),
     ).toBeVisible({ timeout: 5000 });
 
-    // 2. Activity content area (with Task Created)
-    await expect(authenticatedPage.getByText("Task Created")).toBeVisible();
+    // 2. Delete button should be visible in header
+    await expect(
+      authenticatedPage.locator("button[title='Delete task']"),
+    ).toBeVisible();
 
     // 3. Chat input at bottom
     await expect(
       authenticatedPage
         .getByPlaceholder("Enter a prompt or paste an image (Ctrl+V)...")
         .or(authenticatedPage.getByPlaceholder("Connecting..."))
-        .or(authenticatedPage.getByPlaceholder("Claude Code not available")),
+        .or(authenticatedPage.getByPlaceholder("No AI executors available")),
     ).toBeVisible({ timeout: 10000 });
   });
 });

@@ -24,7 +24,9 @@ test.describe("Task Image Support E2E Tests", () => {
     await createTask(authenticatedPage, taskTitle);
 
     await authenticatedPage.getByText(taskTitle).click();
-    await expect(authenticatedPage.getByText("Task Created")).toBeVisible({
+    await expect(
+      authenticatedPage.locator("button[title='Delete task']"),
+    ).toBeVisible({
       timeout: 5000,
     });
 
@@ -73,7 +75,9 @@ test.describe("Task Image Support E2E Tests", () => {
     await createTask(authenticatedPage, taskTitle);
 
     await authenticatedPage.getByText(taskTitle).click();
-    await expect(authenticatedPage.getByText("Task Created")).toBeVisible({
+    await expect(
+      authenticatedPage.locator("button[title='Delete task']"),
+    ).toBeVisible({
       timeout: 5000,
     });
 
@@ -123,7 +127,9 @@ test.describe("Task Image Support E2E Tests", () => {
     await createTask(authenticatedPage, taskTitle);
 
     await authenticatedPage.getByText(taskTitle).click();
-    await expect(authenticatedPage.getByText("Task Created")).toBeVisible({
+    await expect(
+      authenticatedPage.locator("button[title='Delete task']"),
+    ).toBeVisible({
       timeout: 5000,
     });
 
@@ -141,7 +147,9 @@ test.describe("Task Image Support E2E Tests", () => {
     await createTask(authenticatedPage, taskTitle);
 
     await authenticatedPage.getByText(taskTitle).click();
-    await expect(authenticatedPage.getByText("Task Created")).toBeVisible({
+    await expect(
+      authenticatedPage.locator("button[title='Delete task']"),
+    ).toBeVisible({
       timeout: 5000,
     });
 

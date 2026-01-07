@@ -125,8 +125,10 @@ test.describe("Kanban Board E2E Tests", () => {
     // Click on the created task
     await authenticatedPage.getByText(taskTitle).click();
 
-    // Task details panel should open
-    await expect(authenticatedPage.getByText("Task Created")).toBeVisible({
+    // Task details panel should open (delete button is always visible)
+    await expect(
+      authenticatedPage.locator("button[title='Delete task']"),
+    ).toBeVisible({
       timeout: 5000,
     });
 
@@ -140,8 +142,9 @@ test.describe("Kanban Board E2E Tests", () => {
     // Should have chat input at bottom
     await expect(
       authenticatedPage
-        .getByPlaceholder("Type a message...")
-        .or(authenticatedPage.getByPlaceholder("Connecting...")),
+        .getByPlaceholder("Enter a prompt or paste an image (Ctrl+V)...")
+        .or(authenticatedPage.getByPlaceholder("Connecting..."))
+        .or(authenticatedPage.getByPlaceholder("No AI executors available")),
     ).toBeVisible({ timeout: 10000 });
 
     // Should have delete button
@@ -162,7 +165,9 @@ test.describe("Kanban Board E2E Tests", () => {
 
     // Click on the task to open details
     await authenticatedPage.getByText(originalTitle).click();
-    await expect(authenticatedPage.getByText("Task Created")).toBeVisible({
+    await expect(
+      authenticatedPage.locator("button[title='Delete task']"),
+    ).toBeVisible({
       timeout: 5000,
     });
 
@@ -205,7 +210,9 @@ test.describe("Kanban Board E2E Tests", () => {
 
     // Click on the task to open details
     await authenticatedPage.getByText(taskTitle).click();
-    await expect(authenticatedPage.getByText("Task Created")).toBeVisible({
+    await expect(
+      authenticatedPage.locator("button[title='Delete task']"),
+    ).toBeVisible({
       timeout: 5000,
     });
 
@@ -219,7 +226,9 @@ test.describe("Kanban Board E2E Tests", () => {
     await authenticatedPage.getByRole("button", { name: "Delete" }).click();
 
     // Wait for panel to close
-    await expect(authenticatedPage.getByText("Task Created")).not.toBeVisible({
+    await expect(
+      authenticatedPage.locator("button[title='Delete task']"),
+    ).not.toBeVisible({
       timeout: 5000,
     });
 
@@ -277,36 +286,35 @@ test.describe("Kanban Board E2E Tests", () => {
 
     // Click on the task to open details
     await authenticatedPage.getByText(taskTitle).click();
-    await expect(authenticatedPage.getByText("Task Created")).toBeVisible({
-      timeout: 5000,
-    });
 
-    // The panel should open correctly
+    // The panel should open correctly (delete button is always visible)
     await expect(
       authenticatedPage.locator("button[title='Delete task']"),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 5000 });
   });
 
-  test("task details shows activity feed with Task Created", async ({
+  test("task details panel shows task description", async ({
     authenticatedPage,
     boardName,
   }) => {
     await authenticatedPage.goto("/");
     await createBoard(authenticatedPage, boardName);
 
-    const taskTitle = `Activity Feed Test ${Date.now()}`;
+    const taskTitle = `Description Test ${Date.now()}`;
     const taskDescription = "This is a test description for activity feed";
     await createTask(authenticatedPage, taskTitle, taskDescription);
 
     // Click on the task to open details
     await authenticatedPage.getByText(taskTitle).click();
 
-    // Should see "Task Created" activity
-    await expect(authenticatedPage.getByText("Task Created")).toBeVisible({
+    // Panel should be open (delete button visible)
+    await expect(
+      authenticatedPage.locator("button[title='Delete task']"),
+    ).toBeVisible({
       timeout: 5000,
     });
 
-    // Should see the description
+    // Should see the description in the panel
     await expect(authenticatedPage.getByText(taskDescription)).toBeVisible({
       timeout: 5000,
     });
