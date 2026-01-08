@@ -224,7 +224,9 @@ test.describe("Kanban Board E2E Tests", () => {
     await expect(
       authenticatedPage.getByText("Delete this task?"),
     ).toBeVisible();
-    await authenticatedPage.getByRole("button", { name: "Delete" }).click();
+    await authenticatedPage
+      .getByRole("button", { name: "Delete", exact: true })
+      .click();
 
     // Wait for panel to close
     await expect(
@@ -305,17 +307,16 @@ test.describe("Kanban Board E2E Tests", () => {
     await createTask(authenticatedPage, taskTitle, taskDescription);
 
     // Click on the task to open details
-    await authenticatedPage.getByText(taskTitle).click();
+    await authenticatedPage.getByText(taskTitle).first().click();
 
     // Panel should be open
-    await expect(
-      authenticatedPage.locator('[role="dialog"][aria-modal="true"]'),
-    ).toBeVisible({
-      timeout: 10000,
-    });
+    const panel = authenticatedPage.locator(
+      '[role="dialog"][aria-modal="true"]',
+    );
+    await expect(panel).toBeVisible({ timeout: 10000 });
 
-    // Should see the description in the panel
-    await expect(authenticatedPage.getByText(taskDescription)).toBeVisible({
+    // Should see the description in the panel (scoped to avoid matching task card)
+    await expect(panel.getByText(taskDescription)).toBeVisible({
       timeout: 5000,
     });
   });

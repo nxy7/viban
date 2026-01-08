@@ -137,6 +137,7 @@ export default function TaskCard(props: TaskCardProps) {
   return (
     <div
       ref={setRefs}
+      data-task-id={props.task.id}
       class={`
         relative border rounded-md p-3 cursor-pointer
         transition-transform duration-150

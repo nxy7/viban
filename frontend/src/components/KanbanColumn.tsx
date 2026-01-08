@@ -64,6 +64,7 @@ export default function KanbanColumn(props: KanbanColumnProps) {
 
   return (
     <div
+      data-column-id={props.column.id}
       class={`
         flex flex-col h-full bg-gray-900/50 border border-gray-800 rounded-xl min-w-[280px] max-w-[320px]
         ${droppable.isActiveDroppable ? "ring-2 ring-brand-500/50" : ""}
