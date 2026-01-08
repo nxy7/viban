@@ -165,31 +165,32 @@ test.describe("Kanban Board E2E Tests", () => {
 
     // Click on the task to open details
     await authenticatedPage.getByText(originalTitle).click();
-    await expect(
-      authenticatedPage.locator('[role="dialog"][aria-modal="true"]'),
-    ).toBeVisible({
-      timeout: 10000,
-    });
+    const panel = authenticatedPage.locator(
+      '[role="dialog"][aria-modal="true"]',
+    );
+    await expect(panel).toBeVisible({ timeout: 10000 });
 
     // Click on the title to edit it
-    await authenticatedPage
+    await panel
       .getByRole("heading", { level: 2 })
       .filter({ hasText: originalTitle })
       .click();
 
+    // Wait for the input field to appear (editing mode)
+    const titleInput = panel.locator("input[type='text']").first();
+    await expect(titleInput).toBeVisible({ timeout: 5000 });
+
     // Change the title
     const newTitle = `Updated ${originalTitle}`;
-    await authenticatedPage.locator("input").first().clear();
-    await authenticatedPage.locator("input").first().fill(newTitle);
+    await titleInput.clear();
+    await titleInput.fill(newTitle);
 
     // Save changes
-    await authenticatedPage.getByRole("button", { name: "Save" }).click();
+    await panel.getByRole("button", { name: "Save" }).click();
 
-    // Wait for save to complete
+    // Wait for save to complete - heading should reappear with new title
     await expect(
-      authenticatedPage
-        .getByRole("heading", { level: 2 })
-        .filter({ hasText: newTitle }),
+      panel.getByRole("heading", { level: 2 }).filter({ hasText: newTitle }),
     ).toBeVisible({ timeout: 5000 });
 
     // Close the panel

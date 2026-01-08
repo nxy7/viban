@@ -36,9 +36,9 @@ test.describe("Hook Execution E2E Tests", () => {
     await expect(inProgressColumn).toBeVisible({ timeout: 15000 });
 
     const taskInProgress = inProgressColumn.locator("[data-task-id]").first();
-    const hasTask = await taskInProgress.isVisible().catch(() => false);
+    const taskCount = await inProgressColumn.locator("[data-task-id]").count();
 
-    if (hasTask) {
+    if (taskCount > 0) {
       const workingIndicator = taskInProgress.getByText("Working...");
       const executingIndicator = taskInProgress.getByText(/Executing/);
       const idleTask = taskInProgress;
@@ -64,9 +64,9 @@ test.describe("Hook Execution E2E Tests", () => {
     await expect(todoColumn).toBeVisible({ timeout: 15000 });
 
     const taskInTodo = todoColumn.locator("[data-task-id]").first();
-    const hasTask = await taskInTodo.isVisible().catch(() => false);
+    const taskCount = await todoColumn.locator("[data-task-id]").count();
 
-    if (hasTask) {
+    if (taskCount > 0) {
       const workingBadge = taskInTodo.getByText("Working...");
       const executingBadge = taskInTodo.getByText(/Executing/);
 
@@ -106,10 +106,10 @@ test.describe("Hook Execution E2E Tests", () => {
       .filter({ hasText: "In Progress" });
     await expect(inProgressColumn).toBeVisible({ timeout: 15000 });
 
-    const runningTask = inProgressColumn.locator("[data-task-id]").first();
-    const hasRunningTask = await runningTask.isVisible().catch(() => false);
+    const taskCount = await inProgressColumn.locator("[data-task-id]").count();
 
-    if (hasRunningTask) {
+    if (taskCount > 0) {
+      const runningTask = inProgressColumn.locator("[data-task-id]").first();
       await runningTask.click();
 
       const stopButton = authenticatedPage.locator(
