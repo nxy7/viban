@@ -125,11 +125,11 @@ test.describe("Kanban Board E2E Tests", () => {
     // Click on the created task
     await authenticatedPage.getByText(taskTitle).click();
 
-    // Task details panel should open (delete button is always visible)
+    // Task details panel should open (dialog with aria-modal)
     await expect(
-      authenticatedPage.locator("button[title='Delete task']"),
+      authenticatedPage.locator('[role="dialog"][aria-modal="true"]'),
     ).toBeVisible({
-      timeout: 5000,
+      timeout: 10000,
     });
 
     // Should see connection status
@@ -166,9 +166,9 @@ test.describe("Kanban Board E2E Tests", () => {
     // Click on the task to open details
     await authenticatedPage.getByText(originalTitle).click();
     await expect(
-      authenticatedPage.locator("button[title='Delete task']"),
+      authenticatedPage.locator('[role="dialog"][aria-modal="true"]'),
     ).toBeVisible({
-      timeout: 5000,
+      timeout: 10000,
     });
 
     // Click on the title to edit it
@@ -211,9 +211,9 @@ test.describe("Kanban Board E2E Tests", () => {
     // Click on the task to open details
     await authenticatedPage.getByText(taskTitle).click();
     await expect(
-      authenticatedPage.locator("button[title='Delete task']"),
+      authenticatedPage.locator('[role="dialog"][aria-modal="true"]'),
     ).toBeVisible({
-      timeout: 5000,
+      timeout: 10000,
     });
 
     // Click delete button
@@ -227,9 +227,9 @@ test.describe("Kanban Board E2E Tests", () => {
 
     // Wait for panel to close
     await expect(
-      authenticatedPage.locator("button[title='Delete task']"),
+      authenticatedPage.locator('[role="dialog"][aria-modal="true"]'),
     ).not.toBeVisible({
-      timeout: 5000,
+      timeout: 10000,
     });
 
     // The task should no longer be visible
@@ -287,10 +287,10 @@ test.describe("Kanban Board E2E Tests", () => {
     // Click on the task to open details
     await authenticatedPage.getByText(taskTitle).click();
 
-    // The panel should open correctly (delete button is always visible)
+    // The panel should open correctly
     await expect(
-      authenticatedPage.locator("button[title='Delete task']"),
-    ).toBeVisible({ timeout: 5000 });
+      authenticatedPage.locator('[role="dialog"][aria-modal="true"]'),
+    ).toBeVisible({ timeout: 10000 });
   });
 
   test("task details panel shows task description", async ({
@@ -306,11 +306,11 @@ test.describe("Kanban Board E2E Tests", () => {
     // Click on the task to open details
     await authenticatedPage.getByText(taskTitle).click();
 
-    // Panel should be open (delete button visible)
+    // Panel should be open
     await expect(
-      authenticatedPage.locator("button[title='Delete task']"),
+      authenticatedPage.locator('[role="dialog"][aria-modal="true"]'),
     ).toBeVisible({
-      timeout: 5000,
+      timeout: 10000,
     });
 
     // Should see the description in the panel

@@ -75,7 +75,7 @@ test.describe("Hook Execution E2E Tests", () => {
     }
   });
 
-  test("task details panel opens and shows delete button", async ({
+  test("task details panel opens correctly", async ({
     authenticatedPage,
     boardName,
   }) => {
@@ -87,8 +87,12 @@ test.describe("Hook Execution E2E Tests", () => {
     await authenticatedPage.getByText(taskTitle).click();
 
     await expect(
-      authenticatedPage.locator("button[title='Delete task']"),
+      authenticatedPage.locator('[role="dialog"][aria-modal="true"]'),
     ).toBeVisible({ timeout: 10000 });
+
+    await expect(
+      authenticatedPage.locator("button[title='Delete task']"),
+    ).toBeVisible();
   });
 
   test("stop button is available when executor is running", async ({

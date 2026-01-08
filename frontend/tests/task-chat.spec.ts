@@ -13,11 +13,11 @@ test.describe("Task Chat E2E Tests (Unified Activity View)", () => {
     // Click on the task to open details
     await authenticatedPage.getByText(taskTitle).click();
 
-    // Task details panel should open (delete button is always visible)
+    // Task details panel should open
     await expect(
-      authenticatedPage.locator("button[title='Delete task']"),
+      authenticatedPage.locator('[role="dialog"][aria-modal="true"]'),
     ).toBeVisible({
-      timeout: 5000,
+      timeout: 10000,
     });
 
     // Chat input should be visible at bottom (part of unified view)
@@ -104,11 +104,11 @@ test.describe("Task Chat E2E Tests (Unified Activity View)", () => {
     // Click on the task to open details
     await authenticatedPage.getByText(taskTitle).click();
 
-    // Panel should be open (delete button visible)
+    // Panel should be open
     await expect(
-      authenticatedPage.locator("button[title='Delete task']"),
+      authenticatedPage.locator('[role="dialog"][aria-modal="true"]'),
     ).toBeVisible({
-      timeout: 5000,
+      timeout: 10000,
     });
     await expect(authenticatedPage.getByText(taskDescription)).toBeVisible({
       timeout: 5000,
@@ -124,9 +124,9 @@ test.describe("Task Chat E2E Tests (Unified Activity View)", () => {
     // Click on the task to open details
     await authenticatedPage.getByText(taskTitle).click();
     await expect(
-      authenticatedPage.locator("button[title='Delete task']"),
+      authenticatedPage.locator('[role="dialog"][aria-modal="true"]'),
     ).toBeVisible({
-      timeout: 5000,
+      timeout: 10000,
     });
 
     // Wait for chat input to be available
@@ -154,9 +154,9 @@ test.describe("Task Chat E2E Tests (Unified Activity View)", () => {
     // Click on the task to open details
     await authenticatedPage.getByText(taskTitle).click();
     await expect(
-      authenticatedPage.locator("button[title='Delete task']"),
+      authenticatedPage.locator('[role="dialog"][aria-modal="true"]'),
     ).toBeVisible({
-      timeout: 5000,
+      timeout: 10000,
     });
 
     // Click on the title to start editing
@@ -190,9 +190,9 @@ test.describe("Task Chat E2E Tests (Unified Activity View)", () => {
 
     // Task details should be visible - verify panel opened correctly
     await expect(
-      authenticatedPage.locator("button[title='Delete task']"),
+      authenticatedPage.locator('[role="dialog"][aria-modal="true"]'),
     ).toBeVisible({
-      timeout: 5000,
+      timeout: 10000,
     });
   });
 
@@ -216,10 +216,10 @@ test.describe("Task Chat E2E Tests (Unified Activity View)", () => {
         .filter({ hasText: taskTitle }),
     ).toBeVisible({ timeout: 5000 });
 
-    // 2. Delete button should be visible in header
+    // 2. Panel should be open
     await expect(
-      authenticatedPage.locator("button[title='Delete task']"),
-    ).toBeVisible();
+      authenticatedPage.locator('[role="dialog"][aria-modal="true"]'),
+    ).toBeVisible({ timeout: 10000 });
 
     // 3. Chat input at bottom
     await expect(

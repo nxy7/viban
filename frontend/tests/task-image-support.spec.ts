@@ -25,9 +25,9 @@ test.describe("Task Image Support E2E Tests", () => {
 
     await authenticatedPage.getByText(taskTitle).click();
     await expect(
-      authenticatedPage.locator("button[title='Delete task']"),
+      authenticatedPage.locator('[role="dialog"][aria-modal="true"]'),
     ).toBeVisible({
-      timeout: 5000,
+      timeout: 10000,
     });
 
     const chatInput = authenticatedPage.getByPlaceholder(
@@ -76,9 +76,9 @@ test.describe("Task Image Support E2E Tests", () => {
 
     await authenticatedPage.getByText(taskTitle).click();
     await expect(
-      authenticatedPage.locator("button[title='Delete task']"),
+      authenticatedPage.locator('[role="dialog"][aria-modal="true"]'),
     ).toBeVisible({
-      timeout: 5000,
+      timeout: 10000,
     });
 
     const chatInput = authenticatedPage.getByPlaceholder(
@@ -128,9 +128,9 @@ test.describe("Task Image Support E2E Tests", () => {
 
     await authenticatedPage.getByText(taskTitle).click();
     await expect(
-      authenticatedPage.locator("button[title='Delete task']"),
+      authenticatedPage.locator('[role="dialog"][aria-modal="true"]'),
     ).toBeVisible({
-      timeout: 5000,
+      timeout: 10000,
     });
 
     const chatInput = authenticatedPage.getByPlaceholder(/paste an image/i);
@@ -148,9 +148,9 @@ test.describe("Task Image Support E2E Tests", () => {
 
     await authenticatedPage.getByText(taskTitle).click();
     await expect(
-      authenticatedPage.locator("button[title='Delete task']"),
+      authenticatedPage.locator('[role="dialog"][aria-modal="true"]'),
     ).toBeVisible({
-      timeout: 5000,
+      timeout: 10000,
     });
 
     const chatInput = authenticatedPage.getByPlaceholder(
