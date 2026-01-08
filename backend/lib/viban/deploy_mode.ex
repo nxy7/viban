@@ -54,22 +54,36 @@ defmodule Viban.DeployMode do
     File.mkdir_p!(Path.join(@data_dir, "logs"))
   end
 
+  def using_external_database? do
+    Application.get_env(:viban, :using_external_database, false)
+  end
+
+  def configured_database_url do
+    Application.get_env(:viban, :database_url)
+  end
+
   def ensure_postgres_running! do
-    ensure_docker_available!()
+    if using_external_database?() do
+      log_status("🔗", "Using external database: #{configured_database_url()}")
+      log_status("ℹ️ ", "Skipping Docker PostgreSQL container (external database provided)")
+      :ok
+    else
+      ensure_docker_available!()
 
-    case container_status() do
-      :running ->
-        log_success("✅", "PostgreSQL already running")
+      case container_status() do
+        :running ->
+          log_success("✅", "PostgreSQL already running on port #{@postgres_port}")
 
-      :stopped ->
-        log_status("🐘", "Starting PostgreSQL container...")
-        start_container()
-        wait_for_postgres()
+        :stopped ->
+          log_status("🐘", "Starting PostgreSQL container on port #{@postgres_port}...")
+          start_container()
+          wait_for_postgres()
 
-      :not_found ->
-        log_status("🐘", "Creating PostgreSQL container...")
-        create_container()
-        wait_for_postgres()
+        :not_found ->
+          log_status("🐘", "Creating PostgreSQL container on port #{@postgres_port}...")
+          create_container()
+          wait_for_postgres()
+      end
     end
   end
 
@@ -201,7 +215,7 @@ defmodule Viban.DeployMode do
   end
 
   def stop_postgres do
-    if enabled?() do
+    if enabled?() and not using_external_database?() do
       case container_status() do
         :running ->
           log_status("🐘", "Stopping PostgreSQL container...")
