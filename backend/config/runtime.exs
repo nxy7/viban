@@ -120,8 +120,17 @@ if config_env() == :prod do
   # In deploy mode, always start the server (no need for PHX_SERVER env var)
   server_enabled? = deploy_mode? or System.get_env("PHX_SERVER") != nil
 
+  db_uri = URI.parse(database_url)
+  [db_username, db_password] = String.split(db_uri.userinfo || "postgres:postgres", ":")
+  db_name = String.trim_leading(db_uri.path || "/postgres", "/")
+
   config :viban, Viban.Repo,
     url: database_url,
+    hostname: db_uri.host,
+    port: db_uri.port,
+    database: db_name,
+    username: db_username,
+    password: db_password,
     pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
     socket_options: maybe_ipv6
 
