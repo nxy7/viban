@@ -11,34 +11,8 @@ on:
         required: false
 
 jobs:
-  nix-setup:
-    name: Setup Nix (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: macos-14
-          - os: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
-
-      - name: Setup Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@main
-        with:
-          use-gha-cache: false
-
-      - name: Build devShell
-        run: nix develop --command true
-
   build:
     name: Build ${{ matrix.target }}
-    needs: [nix-setup]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -46,8 +20,10 @@ jobs:
         include:
           - target: macos_arm
             os: macos-14
+            system: aarch64-darwin
           - target: linux_intel
             os: ubuntu-latest
+            system: x86_64-linux
 
     steps:
       - name: Checkout code
@@ -58,38 +34,9 @@ jobs:
 
       - name: Setup Nix cache
         uses: DeterminateSystems/magic-nix-cache-action@main
-        with:
-          use-gha-cache: false
 
-      - name: Cache Elixir deps
-        uses: actions/cache@v4
-        with:
-          path: |
-            backend/deps
-            backend/_build
-          key: ${{ runner.os }}-mix-${{ hashFiles('flake.lock', 'backend/mix.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-mix-
-
-      - name: Cache frontend deps
-        uses: actions/cache@v4
-        with:
-          path: frontend/node_modules
-          key: ${{ runner.os }}-bun-${{ hashFiles('flake.lock', 'frontend/bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
-
-      - name: Setup Elixir
-        run: |
-          nix develop --command mix local.hex --force
-          nix develop --command mix local.rebar --force
-
-      - name: Build release
-        env:
-          BURRITO_BUILD: "1"
-          BURRITO_TARGET: ${{ matrix.target }}
-          GH_CLIENT_ID: ${{ secrets.GH_CLIENT_ID }}
-        run: nix develop --command just build burrito=true
+      - name: Build
+        run: nix build --option sandbox false
 
       - name: Get version
         id: version
@@ -104,16 +51,14 @@ jobs:
 
       - name: Rename binary
         run: |
-          cd backend/burrito_out
-          for f in viban_*; do
-            mv "$f" "viban-${{ steps.version.outputs.version }}-${{ matrix.target }}"
-          done
+          mkdir -p release
+          cp result/bin/viban release/viban-${{ steps.version.outputs.version }}-${{ matrix.target }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: viban-${{ matrix.target }}
-          path: backend/burrito_out/viban-*
+          path: release/viban-*
           retention-days: 30
 
   release:

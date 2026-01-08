@@ -7,27 +7,8 @@ on:
     branches: [master, main]
 
 jobs:
-  nix-setup:
-    name: Setup Nix
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
-
-      - name: Setup Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@main
-        with:
-          use-gha-cache: false
-
-      - name: Build devShell
-        run: nix develop --command true
-
   backend-test:
     name: Backend Tests
-    needs: [nix-setup]
     runs-on: ubuntu-latest
 
     services:
@@ -54,17 +35,6 @@ jobs:
 
       - name: Setup Nix cache
         uses: DeterminateSystems/magic-nix-cache-action@main
-        with:
-          use-gha-cache: false
-
-      - name: Restore Mix cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            backend/deps
-            backend/_build
-          key: ${{ runner.os }}-nix-mix-${{ hashFiles('flake.lock', 'backend/mix.lock') }}
-          restore-keys: ${{ runner.os }}-nix-mix-
 
       - name: Install dependencies
         run: nix develop --command bash -c "cd backend && mix deps.get"
@@ -87,9 +57,8 @@ jobs:
           MIX_ENV: test
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/viban_test
 
-  frontend-build:
-    name: Frontend Build
-    needs: [nix-setup]
+  frontend-check:
+    name: Frontend Checks
     runs-on: ubuntu-latest
 
     steps:
@@ -101,15 +70,6 @@ jobs:
 
       - name: Setup Nix cache
         uses: DeterminateSystems/magic-nix-cache-action@main
-        with:
-          use-gha-cache: false
-
-      - name: Restore Bun cache
-        uses: actions/cache@v4
-        with:
-          path: frontend/node_modules
-          key: ${{ runner.os }}-nix-bun-${{ hashFiles('flake.lock', 'frontend/bun.lock') }}
-          restore-keys: ${{ runner.os }}-nix-bun-
 
       - name: Install dependencies
         run: nix develop --command bash -c "cd frontend && bun install --frozen-lockfile"
@@ -120,12 +80,9 @@ jobs:
       - name: Type check
         run: nix develop --command bash -c "cd frontend && bun run typecheck"
 
-      - name: Build
-        run: nix develop --command bash -c "cd frontend && bun run build"
-
   build:
     name: Build Binary
-    needs: [backend-test, frontend-build]
+    needs: [backend-test, frontend-check]
     runs-on: ubuntu-latest
 
     steps:
@@ -137,40 +94,15 @@ jobs:
 
       - name: Setup Nix cache
         uses: DeterminateSystems/magic-nix-cache-action@main
-        with:
-          use-gha-cache: false
-
-      - name: Restore Mix cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            backend/deps
-            backend/_build
-          key: ${{ runner.os }}-nix-mix-${{ hashFiles('flake.lock', 'backend/mix.lock') }}
-          restore-keys: ${{ runner.os }}-nix-mix-
-
-      - name: Restore Bun cache
-        uses: actions/cache@v4
-        with:
-          path: frontend/node_modules
-          key: ${{ runner.os }}-nix-bun-${{ hashFiles('flake.lock', 'frontend/bun.lock') }}
-          restore-keys: ${{ runner.os }}-nix-bun-
 
       - name: Build
-        run: nix develop --command just build linux_intel true
-
-      - name: Verify build output
-        run: |
-          echo "Checking burrito_out directory..."
-          ls -la backend/burrito_out/ || echo "Directory not found"
-          echo "Looking for viban_linux_intel..."
-          file backend/burrito_out/viban_linux_intel || echo "Binary not found"
+        run: nix build --option sandbox false
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: viban-linux
-          path: backend/burrito_out/viban_linux_intel
+          path: result/bin/viban
           if-no-files-found: error
 
   e2e-prod:
@@ -187,8 +119,6 @@ jobs:
 
       - name: Setup Nix cache
         uses: DeterminateSystems/magic-nix-cache-action@main
-        with:
-          use-gha-cache: false
 
       - name: Download build artifact
         uses: actions/download-artifact@v4
@@ -196,20 +126,13 @@ jobs:
           name: viban-linux
 
       - name: Make binary executable
-        run: chmod +x viban_linux_intel
-
-      - name: Restore Bun cache
-        uses: actions/cache@v4
-        with:
-          path: frontend/node_modules
-          key: ${{ runner.os }}-nix-bun-${{ hashFiles('flake.lock', 'frontend/bun.lock') }}
-          restore-keys: ${{ runner.os }}-nix-bun-
+        run: chmod +x viban
 
       - name: Install Playwright browsers
         run: nix develop --command bash -c "cd frontend && bun install && bunx playwright install chromium"
 
       - name: Start release and run E2E tests
-        run: nix develop --command just _run-e2e-prod ./viban_linux_intel
+        run: nix develop --command just _run-e2e-prod ./viban
 
       - name: Show server logs on failure
         if: failure()
