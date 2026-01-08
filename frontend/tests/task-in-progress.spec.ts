@@ -7,7 +7,7 @@ test.describe("Task In Progress E2E Tests", () => {
   }) => {
     await createBoard(authenticatedPage, boardName);
 
-    const taskTitle = `In Progress Test ${Date.now()}`;
+    const taskTitle = `Loading Spinner Test ${Date.now()}`;
     await createTask(authenticatedPage, taskTitle);
 
     // Task should appear in the board
