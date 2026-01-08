@@ -42,8 +42,7 @@ config :phoenix, :json_library, Jason
 
 config :phoenix_sync,
   env: Mix.env(),
-  mode: :embedded,
-  repo: Viban.Repo
+  mode: :embedded
 
 # Disable swoosh API client (we don't need email for now)
 config :swoosh, :api_client, false

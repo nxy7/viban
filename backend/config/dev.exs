@@ -10,6 +10,8 @@ config :phoenix_live_view,
   debug_heex_annotations: true,
   enable_expensive_runtime_checks: true
 
+config :phoenix_sync, repo: Viban.Repo
+
 config :viban, Viban.Repo,
   username: "postgres",
   password: "postgres",

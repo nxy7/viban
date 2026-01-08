@@ -27,9 +27,14 @@ if System.get_env("E2E_TEST") == "true" do
 end
 
 if config_env() == :prod do
-  # Deploy mode: only for Burrito binaries or explicit VIBAN_DEPLOY_MODE=1
-  # This auto-starts Docker Postgres and configures everything for standalone use
-  burrito_binary? = String.contains?(__ENV__.file, ".burrito/")
+  # Deploy mode detection - Burrito binaries extract to a path containing ".burrito/"
+  env_file = __ENV__.file
+  release_root = System.get_env("RELEASE_ROOT") || ""
+
+  burrito_binary? =
+    String.contains?(env_file, ".burrito/") or
+      String.contains?(release_root, ".burrito/")
+
   explicit_deploy_mode? = System.get_env("VIBAN_DEPLOY_MODE") == "1"
 
   deploy_mode? = explicit_deploy_mode? or burrito_binary?
@@ -51,11 +56,11 @@ if config_env() == :prod do
     end
   end
 
-  # VB_DATABASE_URL for explicit config, DATABASE_URL as fallback for standard releases
-  # Deploy mode uses localhost:17777 (Docker Postgres started by the binary)
+  external_database_url = System.get_env("VB_DATABASE_URL") || System.get_env("DATABASE_URL")
+  using_external_database? = external_database_url != nil
+
   database_url =
-    System.get_env("VB_DATABASE_URL") ||
-      System.get_env("DATABASE_URL") ||
+    external_database_url ||
       if(deploy_mode?, do: "postgres://viban:viban@localhost:17777/viban_prod")
 
   if is_nil(database_url) do
@@ -86,6 +91,9 @@ if config_env() == :prod do
   full_key_path = System.get_env("SSL_KEY_PATH") || Path.join(cert_dir, "selfsigned_key.pem")
 
   # Generate self-signed certs in deploy mode if they don't exist
+  config :viban, :database_url, database_url
+  config :viban, :using_external_database, using_external_database?
+
   if deploy_mode? and not (File.exists?(full_cert_path) and File.exists?(full_key_path)) do
     File.mkdir_p!(cert_dir)
 
@@ -123,11 +131,17 @@ if config_env() == :prod do
   db_uri = URI.parse(database_url)
   [db_username, db_password] = String.split(db_uri.userinfo || "postgres:postgres", ":")
   db_name = String.trim_leading(db_uri.path || "/postgres", "/")
+  db_port = db_uri.port || 5432
+
+  config :phoenix_sync,
+    env: :prod,
+    mode: :embedded,
+    repo: Viban.Repo
 
   config :viban, Viban.Repo,
     url: database_url,
     hostname: db_uri.host,
-    port: db_uri.port,
+    port: db_port,
     database: db_name,
     username: db_username,
     password: db_password,

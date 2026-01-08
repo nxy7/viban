@@ -115,6 +115,16 @@ All communication between backend and frontend MUST use one of these two methods
 - `@moduledoc` and `@doc` for public APIs
 - Clear module organization
 
+## Versioning
+
+This project uses **CalVer** (Calendar Versioning) with the format: `YYYY.MM.PATCH`
+
+- `YYYY` - Full year (e.g., 2026)
+- `MM` - Month (01-12)
+- `PATCH` - Incremental patch number within the month, starting at 0
+
+Examples: `2026.01.0`, `2026.01.1`, `2026.02.0`
+
 ## When Working with Claude
 
 1. Always examine existing codebase patterns before implementing
