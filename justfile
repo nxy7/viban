@@ -91,12 +91,75 @@ test-e2e-ui:
 # Builds the binary first, then runs tests
 test-e2e-prod:
     just build "" true
-    ./scripts/run-e2e-prod.sh
+    just _run-e2e-prod
 
 # Run e2e tests against existing production binary (skip build)
 # Useful for quick re-runs after fixing test code
 test-e2e-prod-quick:
-    ./scripts/run-e2e-prod.sh
+    just _run-e2e-prod
+
+# Internal: run e2e tests against production binary
+_run-e2e-prod binary_path="":
+    #!/usr/bin/env bash
+    set -e
+
+    BINARY_PATH="{{binary_path}}"
+
+    if [ -z "$BINARY_PATH" ]; then
+        OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+        ARCH=$(uname -m)
+
+        [ "$OS" = "darwin" ] && OS="macos"
+        [ "$ARCH" = "x86_64" ] && ARCH="intel"
+        [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ] && ARCH="arm"
+
+        PLATFORM="${OS}_${ARCH}"
+
+        if [ -f "backend/burrito_out/viban_${PLATFORM}" ]; then
+            BINARY_PATH="backend/burrito_out/viban_${PLATFORM}"
+        elif [ -f "./viban_${PLATFORM}" ]; then
+            BINARY_PATH="./viban_${PLATFORM}"
+        elif ls ./viban_* 1>/dev/null 2>&1; then
+            BINARY_PATH=$(ls ./viban_* | head -1)
+        else
+            echo "❌ No binary found for platform: $PLATFORM"
+            echo "   Run 'just build \"\" true' first"
+            exit 1
+        fi
+    fi
+
+    echo "📦 Using binary: $BINARY_PATH"
+    [ ! -x "$BINARY_PATH" ] && chmod +x "$BINARY_PATH"
+
+    echo "🚀 Starting production server..."
+    E2E_TEST=true "$BINARY_PATH" > /tmp/viban-e2e.log 2>&1 &
+    SERVER_PID=$!
+
+    cleanup() {
+        echo "🛑 Stopping server (PID: $SERVER_PID)..."
+        kill $SERVER_PID 2>/dev/null || true
+        docker stop viban-postgres 2>/dev/null || true
+    }
+    trap cleanup EXIT
+
+    echo "⏳ Waiting for server to start..."
+    for i in {1..60}; do
+        if curl -sk https://localhost:7777 > /dev/null 2>&1; then
+            echo "✅ Server is ready!"
+            break
+        fi
+        echo "   Attempt $i/60..."
+        sleep 2
+    done
+
+    if ! curl -sk https://localhost:7777 > /dev/null 2>&1; then
+        echo "❌ Server failed to start. Logs:"
+        cat /tmp/viban-e2e.log
+        exit 1
+    fi
+
+    echo "🧪 Running E2E tests..."
+    cd frontend && bun run test:e2e:prod
 
 # Generate new Ash migration
 migrate name:

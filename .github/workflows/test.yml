@@ -209,7 +209,7 @@ jobs:
         run: nix develop --command bash -c "cd frontend && bun install && bunx playwright install chromium"
 
       - name: Start release and run E2E tests
-        run: nix develop --command ./scripts/run-e2e-prod.sh ./viban_linux_intel
+        run: nix develop --command just _run-e2e-prod ./viban_linux_intel
 
       - name: Show server logs on failure
         if: failure()
