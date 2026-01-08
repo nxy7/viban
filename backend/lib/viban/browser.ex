@@ -2,7 +2,7 @@ defmodule Viban.Browser do
   @moduledoc """
   Handles automatic browser opening on application startup in deploy mode.
 
-  Opens the backend URL (http://localhost:7777) when running as a Burrito binary.
+  Opens the backend URL (https://localhost:7777) when running as a Burrito binary.
   Can be disabled with VIBAN_NO_BROWSER=1 environment variable.
   """
 
@@ -24,7 +24,7 @@ defmodule Viban.Browser do
 
   defp get_url do
     port = Viban.DeployMode.app_port()
-    "http://localhost:#{port}"
+    "https://localhost:#{port}"
   end
 
   defp do_open(url) do

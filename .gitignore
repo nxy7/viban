@@ -39,3 +39,4 @@ docs/.output/
 *.swp
 *.swo
 .playwright-mcp
+persistent
