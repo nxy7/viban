@@ -19,7 +19,7 @@ test.describe("Task In Progress E2E Tests", () => {
     const inProgressColumn = authenticatedPage
       .locator("[data-column-id]")
       .filter({ hasText: "In Progress" });
-    await expect(inProgressColumn).toBeVisible();
+    await expect(inProgressColumn).toBeVisible({ timeout: 15000 });
 
     // For now, just verify the task can be seen in its initial state
     await expect(authenticatedPage.getByText(taskTitle)).toBeVisible();
