@@ -32,7 +32,6 @@ import {
   type Column,
   type Task,
   tasksCollection,
-  toDecimal,
   unwrap,
   useBoard,
   useColumns,
@@ -49,8 +48,6 @@ import KanbanColumn from "./KanbanColumn";
 import KeyboardShortcutsHelp from "./KeyboardShortcutsHelp";
 import { TaskCardOverlay } from "./TaskCard";
 
-const POSITION_INCREMENT = 1000;
-const MIN_POSITION_GAP = 0.001;
 
 /** Valid settings tabs */
 type SettingsTab =
@@ -460,7 +457,7 @@ export default function KanbanBoard(props: KanbanBoardProps) {
     for (const col of cols) {
       const colTasks = tasks
         .filter((t) => t.column_id === col.id)
-        .sort((a, b) => Number(a.position) - Number(b.position));
+        .sort((a, b) => a.position.localeCompare(b.position));
       result.push(...colTasks);
     }
     return result;
@@ -584,9 +581,8 @@ export default function KanbanBoard(props: KanbanBoardProps) {
     const columnTasks = getTasksForColumn(targetTask.column_id)
       .filter((t) => t.id !== draggedTaskId)
       .sort((a, b) => {
-        const posA = Number(a.position) || 0;
-        const posB = Number(b.position) || 0;
-        if (posA !== posB) return posA - posB;
+        const cmp = a.position.localeCompare(b.position);
+        if (cmp !== 0) return cmp;
         return a.id.localeCompare(b.id);
       });
 
@@ -671,16 +667,21 @@ export default function KanbanBoard(props: KanbanBoardProps) {
 
     const droppableId = droppable.id as string;
 
-    // Recalculate the exact drop position using current pointer position
-    // This is more accurate than using cached dropTarget since onDragOver
-    // only fires when droppable changes, not when pointer moves within same droppable
+    // Calculate insertion point - the backend handles position calculation
     let columnId: string;
-    let beforeTaskId: string | null;
+    let beforeTaskId: string | null = null;
+    let afterTaskId: string | null = null;
 
     if (columnIdSet().has(droppableId)) {
       // Dropped on a column - insert at end
       columnId = droppableId;
-      beforeTaskId = null;
+      // Get the last task in the column to insert after it
+      const columnTasks = getTasksForColumn(columnId)
+        .filter((t) => t.id !== task.id)
+        .sort((a, b) => a.position.localeCompare(b.position));
+      if (columnTasks.length > 0) {
+        afterTaskId = columnTasks[columnTasks.length - 1].id;
+      }
     } else {
       // Dropped on a task - calculate insertion point using pointer position
       const targetTask = allTasks().find((t) => t.id === droppableId);
@@ -689,12 +690,7 @@ export default function KanbanBoard(props: KanbanBoardProps) {
       columnId = targetTask.column_id;
       const columnTasks = getTasksForColumn(columnId)
         .filter((t) => t.id !== task.id)
-        .sort((a, b) => {
-          const posA = Number(a.position) || 0;
-          const posB = Number(b.position) || 0;
-          if (posA !== posB) return posA - posB;
-          return a.id.localeCompare(b.id);
-        });
+        .sort((a, b) => a.position.localeCompare(b.position));
 
       const targetIndex = columnTasks.findIndex((t) => t.id === targetTask.id);
       const pointerY = globalPointerY;
@@ -704,88 +700,42 @@ export default function KanbanBoard(props: KanbanBoardProps) {
 
       if (insertBefore) {
         beforeTaskId = targetTask.id;
+        // Get the task before the target for after_task_id
+        if (targetIndex > 0) {
+          afterTaskId = columnTasks[targetIndex - 1].id;
+        }
       } else {
+        afterTaskId = targetTask.id;
+        // Get the task after the target for before_task_id
         const nextTask = columnTasks[targetIndex + 1];
-        beforeTaskId = nextTask?.id ?? null;
-      }
-    }
-
-    const isSameColumn = task.column_id === columnId;
-
-    // Get tasks in target column (excluding the dragged task)
-    const columnTasks = getTasksForColumn(columnId)
-      .filter((t) => t.id !== task.id)
-      .sort((a, b) => {
-        const posA = Number(a.position) || 0;
-        const posB = Number(b.position) || 0;
-        if (posA !== posB) return posA - posB;
-        return a.id.localeCompare(b.id);
-      });
-
-    let newPosition: number;
-    const positions = columnTasks.map((t) => Number(t.position) || 0);
-
-    if (beforeTaskId === null) {
-      if (columnTasks.length === 0) {
-        newPosition = POSITION_INCREMENT;
-      } else {
-        const maxPos = Math.max(...positions);
-        newPosition = maxPos + POSITION_INCREMENT;
-      }
-    } else {
-      const beforeTaskIndex = columnTasks.findIndex(
-        (t) => t.id === beforeTaskId,
-      );
-
-      if (beforeTaskIndex === -1) {
-        newPosition =
-          columnTasks.length > 0
-            ? Math.max(...positions) + POSITION_INCREMENT
-            : POSITION_INCREMENT;
-      } else if (beforeTaskIndex === 0) {
-        const firstPos = positions[0];
-        newPosition = firstPos - POSITION_INCREMENT;
-      } else {
-        const prevPos = positions[beforeTaskIndex - 1];
-        const beforePos = positions[beforeTaskIndex];
-        const gap = beforePos - prevPos;
-
-        if (gap > MIN_POSITION_GAP) {
-          newPosition = (prevPos + beforePos) / 2;
-        } else {
-          newPosition = beforePos - MIN_POSITION_GAP;
+        if (nextTask) {
+          beforeTaskId = nextTask.id;
         }
       }
     }
 
-    // Ensure position is valid
-    if (!Number.isFinite(newPosition)) {
-      newPosition = 0;
+    // Build the input - only include column_id if moving to a different column
+    const input: { column_id?: string; before_task_id?: string; after_task_id?: string } = {};
+
+    if (task.column_id !== columnId) {
+      input.column_id = columnId;
     }
 
-    if (isSameColumn) {
-      const currentPos = Number(task.position) || 0;
-      if (Math.abs(currentPos - newPosition) < MIN_POSITION_GAP) {
-        return;
-      }
+    if (beforeTaskId) {
+      input.before_task_id = beforeTaskId;
+    }
+
+    if (afterTaskId) {
+      input.after_task_id = afterTaskId;
     }
 
     // Execute the move
-    if (isSameColumn) {
-      await sdk
-        .move_task({
-          identity: taskId,
-          input: { position: toDecimal(newPosition) },
-        })
-        .then(unwrap);
-    } else {
-      await sdk
-        .move_task({
-          identity: taskId,
-          input: { column_id: columnId, position: toDecimal(newPosition) },
-        })
-        .then(unwrap);
-    }
+    await sdk
+      .move_task({
+        identity: taskId,
+        input,
+      })
+      .then(unwrap);
   };
 
   const isLoading = () => isBoardLoading() || isColumnsLoading();

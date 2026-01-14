@@ -127,6 +127,9 @@ defmodule Viban.MixProject do
       # Cron Expression Parsing
       {:crontab, "~> 1.1"},
 
+      # Fractional Indexing for task ordering
+      {:fractional_index, "~> 0.1.0"},
+
       # GitHub OAuth
       {:ueberauth, "~> 0.10"},
       {:ueberauth_github, "~> 0.8"},

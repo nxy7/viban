@@ -90,12 +90,12 @@ defmodule Viban.Kanban.Task do
       description "Task description (supports markdown)"
     end
 
-    attribute :position, :float do
+    attribute :position, :string do
       allow_nil? false
       public? true
-      default 0.0
+      default "a0"
 
-      description "Order position within the column (supports fractional and negative values for reordering)"
+      description "Lexicographic position key for ordering within column (fractional indexing)"
     end
 
     attribute :priority, :atom do
@@ -317,7 +317,6 @@ defmodule Viban.Kanban.Task do
       accept [
         :title,
         :description,
-        :position,
         :priority,
         :column_id,
         :custom_branch_name,
@@ -328,6 +327,7 @@ defmodule Viban.Kanban.Task do
 
       primary? true
 
+      change TaskChanges.SetInitialPosition
       change ProcessDescriptionImages
     end
 
@@ -337,7 +337,6 @@ defmodule Viban.Kanban.Task do
       accept [
         :title,
         :description,
-        :position,
         :priority,
         :custom_branch_name,
         :description_images
@@ -365,9 +364,20 @@ defmodule Viban.Kanban.Task do
     update :move do
       description "Move task to different column or position (for drag & drop)"
 
-      accept [:column_id, :position]
+      accept [:column_id]
       require_atomic? false
 
+      argument :before_task_id, :uuid do
+        allow_nil? true
+        description "ID of task to insert before (nil = insert at end)"
+      end
+
+      argument :after_task_id, :uuid do
+        allow_nil? true
+        description "ID of task to insert after (nil = insert at start)"
+      end
+
+      change TaskChanges.CalculatePosition
       change TaskChanges.CancelHooksOnMove
     end
 

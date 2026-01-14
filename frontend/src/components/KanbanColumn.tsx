@@ -46,12 +46,11 @@ export default function KanbanColumn(props: KanbanColumnProps) {
     isDropTarget() ? props.dropTarget?.beforeTaskId : undefined,
   );
 
-  // Sort tasks by position, with ID as tiebreaker for stable ordering
+  // Sort tasks by position (string comparison), with ID as tiebreaker for stable ordering
   const sortedTasks = createMemo(() => {
     const tasks = [...props.tasks].sort((a, b) => {
-      const posA = Number(a.position) || 0;
-      const posB = Number(b.position) || 0;
-      if (posA !== posB) return posA - posB;
+      const cmp = a.position.localeCompare(b.position);
+      if (cmp !== 0) return cmp;
       return a.id.localeCompare(b.id);
     });
     return tasks;

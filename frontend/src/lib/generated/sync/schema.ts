@@ -35,7 +35,7 @@ export const kanbanTaskSchema = z.object({
   id: z.string().uuid(),
   title: z.string(),
   description: z.string().nullable(),
-  position: z.number(),
+  position: z.string(),
   priority: z.enum(["low", "medium", "high"]).nullable(),
   description_images: z.array(z.record(z.string(), z.unknown())).nullable(),
   worktree_path: z.string().nullable(),

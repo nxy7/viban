@@ -29,7 +29,7 @@ defmodule Viban.Kanban.Task.Changes.CancelHooksOnMove do
     task_id = Ash.Changeset.get_data(changeset, :id)
     old_column_id = Ash.Changeset.get_data(changeset, :column_id)
     new_column_id = Ash.Changeset.get_attribute(changeset, :column_id)
-    new_position = Ash.Changeset.get_attribute(changeset, :position) || 0.0
+    new_position = Ash.Changeset.get_attribute(changeset, :position) || "a0"
 
     Logger.info("CancelHooksOnMove: Task #{task_id} moving from column #{old_column_id} to #{new_column_id}")
 

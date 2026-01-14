@@ -51,7 +51,7 @@ export type TaskResourceSchema = {
   id: UUID;
   title: string;
   description: string | null;
-  position: number;
+  position: string;
   priority: "low" | "medium" | "high" | null;
   description_images: Array<Record<string, any>> | null;
   worktree_path: string | null;
@@ -453,13 +453,9 @@ export type TaskFilterInput = {
   };
 
   position?: {
-    eq?: number;
-    not_eq?: number;
-    greater_than?: number;
-    greater_than_or_equal?: number;
-    less_than?: number;
-    less_than_or_equal?: number;
-    in?: Array<number>;
+    eq?: string;
+    not_eq?: string;
+    in?: Array<string>;
   };
 
   priority?: {
@@ -2609,7 +2605,6 @@ export async function delete_all_column_tasks(
 export type CreateTaskInput = {
   title: string;
   description?: string | null;
-  position?: number;
   priority?: "low" | "medium" | "high" | null;
   column_id: UUID;
   custom_branch_name?: string | null;
@@ -2755,7 +2750,6 @@ export async function get_task<Fields extends GetTaskFields>(
 export type UpdateTaskInput = {
   title?: string;
   description?: string | null;
-  position?: number;
   priority?: "low" | "medium" | "high" | null;
   custom_branch_name?: string | null;
   description_images?: Array<Record<string, any>> | null;
@@ -2826,7 +2820,8 @@ export async function destroy_task(
 
 export type MoveTaskInput = {
   column_id?: UUID;
-  position?: number;
+  before_task_id?: UUID;
+  after_task_id?: UUID;
 };
 
 export type MoveTaskFields = UnifiedFieldSelection<TaskResourceSchema>[];

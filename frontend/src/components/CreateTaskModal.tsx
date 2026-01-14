@@ -1,6 +1,6 @@
 import { createEffect, createSignal, For, on, Show } from "solid-js";
 import { Button, Checkbox, Input, Select } from "~/components/design-system";
-import { type Column, toDecimal, unwrap } from "~/hooks/useKanban";
+import { type Column, unwrap } from "~/hooks/useKanban";
 import * as sdk from "~/lib/generated/ash";
 import ImageTextarea, {
   type InlineImage,
@@ -199,7 +199,6 @@ export default function CreateTaskModal(props: CreateTaskModalProps) {
           title: title().trim(),
           description: description().trim() || undefined,
           column_id: props.columnId,
-          position: toDecimal(Date.now()),
           custom_branch_name: customBranchName().trim() || undefined,
           description_images:
             images.length > 0 ? prepareImagesForApi(images) : undefined,
@@ -221,7 +220,6 @@ export default function CreateTaskModal(props: CreateTaskModalProps) {
           identity: task.id,
           input: {
             column_id: targetColumn.id,
-            position: toDecimal(Date.now()),
           },
         })
         .then(unwrap);
