@@ -132,13 +132,13 @@ nix develop
 just dev
 ```
 
-This uses [overmind](https://github.com/DarthSim/overmind) to run all services:
+This runs all services in parallel:
 - Docker Compose (PostgreSQL)
-- Backend (Elixir/Phoenix with HTTPS on port 8000)
-- Frontend (SolidJS dev server on port 3000, proxied through Phoenix)
+- Backend (Elixir/Phoenix with HTTPS on port 7777)
+- Frontend (SolidJS dev server on port 7778, proxied through Phoenix)
 
 The app will be available at:
-- **Application**: https://localhost:8000
+- **Application**: https://localhost:7777
 
 ### Manual Setup (without Nix)
 
@@ -157,9 +157,7 @@ cd frontend && bun i && bun dev
 
 ```bash
 just              # Show all available commands
-just dev          # Start all services with overmind
-just stop         # Stop all overmind processes
-just restart db   # Restart a specific process
+just dev          # Start all services (db, backend, frontend)
 
 just backend      # Start only backend
 just frontend     # Start only frontend
@@ -172,4 +170,5 @@ just migrate name # Generate a new Ash migration
 just db-reset     # Reset database
 just clean        # Clean all build artifacts
 just fmt          # Format all code
+just kill         # Kill dangling processes (if port is blocked)
 ```

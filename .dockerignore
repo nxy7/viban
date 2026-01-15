@@ -33,15 +33,11 @@ backend/test/support/fixtures
 # Local development
 *.local
 .env*
-Procfile.dev
 
 # Documentation site
 docs/node_modules
 docs/.next
 docs/out
-
-# Overmind
-.overmind.sock
 
 # Misc
 *.log

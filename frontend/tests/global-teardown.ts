@@ -1,8 +1,6 @@
 import { request } from "@playwright/test";
 
-const API_BASE = process.env.PROD_E2E
-  ? "https://localhost:7777"
-  : "https://localhost:8000";
+const API_BASE = "https://localhost:7777";
 
 async function globalTeardown() {
   console.log("Cleaning up E2E test data...");

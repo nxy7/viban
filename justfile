@@ -1,40 +1,24 @@
 # Viban Justfile - Development commands
 #
-# App runs at: https://localhost:8000 (Phoenix with self-signed HTTPS)
+# App runs at: https://localhost:7777 (Phoenix with self-signed HTTPS)
 
 # Default recipe - show available commands
 default:
     @just --list
 
-# Start all services with overmind (database, backend, frontend)
+# Start all services (database, backend, frontend)
 dev:
-    overmind start -f Procfile.dev
+    #!/usr/bin/env bash
+    set -a && source .env && set +a
+    trap 'kill 0' EXIT
+    docker compose up db &
+    sleep 3
+    (cd backend && mix deps.get && mix ash.setup && elixir --sname viban --cookie viban -S mix phx.server) &
+    (cd frontend && bun i && bun dev) &
+    wait
 
 credo:
     cd backend; mix credo --strict
-
-# Start all services with logging to .logs/ directory
-dev-log:
-    @mkdir -p .logs
-    overmind start -f Procfile.dev 2>&1 | tee .logs/overmind-$(date +%Y%m%d-%H%M%S).log
-
-# View latest overmind log
-logs:
-    @ls -t .logs/overmind-*.log 2>/dev/null | head -1 | xargs cat 2>/dev/null || echo "No logs found. Run 'just dev-log' to capture logs."
-
-# Tail latest overmind log
-logs-tail:
-    @ls -t .logs/overmind-*.log 2>/dev/null | head -1 | xargs tail -f 2>/dev/null || echo "No logs found."
-
-# Start all services in foreground (alternative without overmind)
-dev-simple:
-    @echo "Starting all services..."
-    docker compose up -d db
-    @echo "Waiting for database..."
-    @sleep 3
-    @just backend-setup
-    @echo "Starting backend and frontend in parallel..."
-    @just backend & just frontend
 
 # Start only the database
 db:
@@ -77,7 +61,14 @@ test-frontend:
 
 # Start services for E2E testing (with E2E_TEST=true)
 dev-e2e:
-    overmind start -f Procfile.e2e
+    #!/usr/bin/env bash
+    set -a && source .env && set +a
+    trap 'kill 0' EXIT
+    docker compose up db &
+    sleep 3
+    (cd backend && E2E_TEST=true mix phx.server) &
+    (cd frontend && bun dev) &
+    wait
 
 # Run e2e tests (requires dev-e2e or servers with E2E_TEST=true)
 test-e2e:
@@ -192,25 +183,13 @@ format:
 # Alias for format
 fmt: format
 
-# Stop overmind processes
-stop:
-    overmind stop
-
-# Restart a specific overmind process
-restart process:
-    overmind restart {{process}}
-
-# Connect to overmind process
-connect process:
-    overmind connect {{process}}
-
 # Kill all dangling backend processes (use when port is blocked)
 kill:
     @echo "Killing dangling Elixir/Phoenix processes..."
-    -lsof -ti:7771 | xargs kill -9 2>/dev/null
-    -lsof -ti:4000 | xargs kill -9 2>/dev/null
-    -pkill -9 -f "beam.smp" 2>/dev/null
-    -pkill -9 -f "mix phx.server" 2>/dev/null
+    -lsof -ti:7777 | xargs kill -9 2>/dev/null
+    -lsof -ti:7778 | xargs kill -9 2>/dev/null
+    -pkill -9 -f "viban.*phx.server" 2>/dev/null
+    -pkill -9 -f "vinxi" 2>/dev/null
     @sleep 1
     @echo "Done. Ports should be free now."
 

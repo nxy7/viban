@@ -112,8 +112,9 @@ defmodule VibanWeb.Router do
     end
 
     forward "/_build", ReverseProxyPlug,
-      upstream: "http://127.0.0.1:3000/_build",
-      client: ReverseProxyPlug.HTTPClient.Adapters.Req
+      upstream: "http://127.0.0.1:7778/_build",
+      client: ReverseProxyPlug.HTTPClient.Adapters.Req,
+      client_options: [receive_timeout: 30_000, retry: :transient]
   end
 
   if Application.compile_env(:viban, :dev_routes) do

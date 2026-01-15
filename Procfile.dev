@@ -1,3 +1,0 @@
-db: docker compose up db
-backend: cd backend && mix deps.get && mix ash.setup && elixir --sname viban --cookie viban -S mix phx.server
-frontend: cd frontend && bun i && bun dev

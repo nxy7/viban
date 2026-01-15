@@ -1,3 +1,0 @@
-db: docker compose up db
-backend: cd backend && E2E_TEST=true mix phx.server
-frontend: cd frontend && bun dev

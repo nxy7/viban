@@ -9,8 +9,9 @@ defmodule VibanWeb.Plugs.DevProxy do
 
   if Mix.env() == :dev do
     plug ReverseProxyPlug,
-      upstream: "http://127.0.0.1:3000",
+      upstream: "http://127.0.0.1:7778",
       client: ReverseProxyPlug.HTTPClient.Adapters.Req,
+      client_options: [receive_timeout: 30_000, retry: :transient],
       error_callback: &__MODULE__.log_error/1
 
     def log_error(error) do

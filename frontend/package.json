@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vinxi dev --port 3000 --host 0.0.0.0",
+    "dev": "vinxi dev --port 7778 --host 0.0.0.0",
     "build": "vinxi build",
     "start": "vinxi start",
     "typecheck": "tsc --noEmit",

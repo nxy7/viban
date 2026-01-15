@@ -15,7 +15,7 @@ const RECONNECT_MAX_MS = 30000;
 const SOCKET_TIMEOUT_MS = 10000;
 
 /** Default WebSocket URL for SSR/server context */
-const DEFAULT_SOCKET_URL = "ws://localhost:8000/socket";
+const DEFAULT_SOCKET_URL = "ws://localhost:7777/socket";
 
 // ============================================================================
 // URL Utilities

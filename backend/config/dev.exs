@@ -25,7 +25,7 @@ config :viban, Viban.Repo,
 config :viban, VibanWeb.Endpoint,
   https: [
     ip: {127, 0, 0, 1},
-    port: 8000,
+    port: 7777,
     cipher_suite: :strong,
     certfile: "priv/cert/selfsigned.pem",
     keyfile: "priv/cert/selfsigned_key.pem"
@@ -57,7 +57,7 @@ if System.get_env("E2E_TEST") == "true" do
   config :viban, VibanWeb.Endpoint,
     https: [
       ip: {127, 0, 0, 1},
-      port: 8000,
+      port: 7777,
       cipher_suite: :strong,
       certfile: "priv/cert/selfsigned.pem",
       keyfile: "priv/cert/selfsigned_key.pem",

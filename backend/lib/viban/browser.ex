@@ -16,9 +16,7 @@ defmodule Viban.Browser do
   end
 
   defp should_open? do
-    # Only open browser in deploy mode (Burrito binary)
-    # In dev, the user runs overmind which doesn't need auto-open
-    # Can be disabled with VIBAN_NO_BROWSER=1
+    # Only open browser in deploy mode (Burrito binary), can be disabled with VIBAN_NO_BROWSER=1
     Viban.DeployMode.enabled?() and System.get_env("VIBAN_NO_BROWSER") != "1"
   end
 

@@ -81,7 +81,6 @@
             packages = [
               # Build tools
               pkgs.just
-              pkgs.overmind
               pkgs.zig
               pkgs.xz
 
