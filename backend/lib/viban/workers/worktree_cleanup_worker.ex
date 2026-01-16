@@ -10,7 +10,7 @@ defmodule Viban.Workers.WorktreeCleanupWorker do
     queue: :default,
     max_attempts: 1
 
-  alias Viban.Kanban.WorktreeManager
+  alias Viban.Kanban.Task.WorktreeManager
 
   require Logger
 

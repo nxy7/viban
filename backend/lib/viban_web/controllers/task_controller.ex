@@ -10,7 +10,7 @@ defmodule VibanWeb.TaskController do
 
   import VibanWeb.ControllerHelpers, only: [json_error: 3]
 
-  alias Viban.Kanban.TaskImageManager
+  alias Viban.Kanban.Task.ImageManager
 
   require Logger
 
@@ -31,7 +31,7 @@ defmodule VibanWeb.TaskController do
   """
   @spec get_image(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def get_image(conn, %{"task_id" => task_id, "image_id" => image_id}) do
-    case TaskImageManager.get_image_path(task_id, image_id) do
+    case ImageManager.get_image_path(task_id, image_id) do
       {:ok, filepath} ->
         content_type = MIME.from_path(filepath)
 

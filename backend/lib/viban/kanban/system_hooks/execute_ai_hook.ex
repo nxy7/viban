@@ -25,6 +25,7 @@ defmodule Viban.Kanban.SystemHooks.ExecuteAIHook do
   @behaviour Viban.Kanban.SystemHooks.Behaviour
 
   alias Viban.Executors.Executor
+  alias Viban.Executors.ExecutorSession
   alias Viban.Kanban.Task
 
   require Logger
@@ -87,57 +88,68 @@ defmodule Viban.Kanban.SystemHooks.ExecuteAIHook do
 
   defp process_next_message(task, worktree_path) do
     message_queue = task.message_queue || []
+    previous_session = get_last_session(task.id)
 
     case message_queue do
       [] ->
-        # No messages queued - check if this is initial entry (use title/description)
-        if first_session?(task) do
-          start_with_task_content(task, worktree_path)
-        else
-          Logger.info("[ExecuteAIHook] No messages in queue for task #{task.id}")
-          :ok
-        end
+        start_without_message(task, previous_session, worktree_path)
 
       [first_message | _rest] ->
-        start_with_queued_message(task, first_message, worktree_path)
+        start_with_queued_message(task, first_message, previous_session, worktree_path)
     end
   end
 
-  defp first_session?(task) do
-    case Viban.Executors.ExecutorSession.for_task(task.id) do
-      {:ok, sessions} -> Enum.empty?(sessions)
-      _ -> true
+  defp get_last_session(task_id) do
+    case ExecutorSession.for_task(task_id) do
+      {:ok, sessions} when sessions != [] ->
+        sessions
+        |> Enum.filter(&(&1.status in [:completed, :failed, :stopped]))
+        |> Enum.sort_by(& &1.completed_at, {:desc, DateTime})
+        |> List.first()
+
+      _ ->
+        nil
     end
   end
 
-  defp start_with_task_content(task, worktree_path) do
-    prompt = build_prompt_from_task(task)
-    Logger.info("[ExecuteAIHook] Starting AI with task content for task #{task.id}")
-    start_executor(task, prompt, @default_executor, worktree_path, [])
+  defp start_without_message(task, nil, worktree_path) do
+    prompt = build_initial_prompt(task)
+    Logger.info("[ExecuteAIHook] First session - starting with task content for #{task.id}")
+    start_executor(task, prompt, @default_executor, worktree_path, [], nil)
   end
 
-  defp start_with_queued_message(task, message, worktree_path) do
-    prompt = message.prompt || ""
+  defp start_without_message(task, previous_session, worktree_path) do
+    prompt = "Continue working on this task."
+
+    Logger.info(
+      "[ExecuteAIHook] Resuming session #{previous_session.id} for task #{task.id}"
+    )
+
+    start_executor(task, prompt, @default_executor, worktree_path, [], previous_session.id)
+  end
+
+  defp start_with_queued_message(task, message, previous_session, worktree_path) do
+    user_prompt = message.prompt || ""
     executor_type = parse_executor_type(message.executor_type)
     images = message.images || []
+    resume_session_id = if previous_session, do: previous_session.id, else: nil
 
-    # For first session, prepend title and description
-    full_prompt =
-      if first_session?(task) do
-        build_full_prompt(task, prompt)
+    prompt =
+      if previous_session do
+        user_prompt
       else
-        prompt
+        build_initial_prompt(task, user_prompt)
       end
 
     Logger.info(
-      "[ExecuteAIHook] Processing queued message for task #{task.id}, " <>
-        "executor: #{executor_type}, images: #{length(images)}"
+      "[ExecuteAIHook] Processing message for task #{task.id}, " <>
+        "executor: #{executor_type}, images: #{length(images)}, " <>
+        "resume: #{resume_session_id != nil}"
     )
 
-    # Pop the message from the queue before starting
     case Task.pop_message(task) do
       {:ok, _updated_task} ->
-        start_executor(task, full_prompt, executor_type, worktree_path, images)
+        start_executor(task, prompt, executor_type, worktree_path, images, resume_session_id)
 
       {:error, error} ->
         Logger.error("[ExecuteAIHook] Failed to pop message: #{inspect(error)}")
@@ -145,12 +157,18 @@ defmodule Viban.Kanban.SystemHooks.ExecuteAIHook do
     end
   end
 
-  defp start_executor(task, prompt, executor_type, worktree_path, images) do
+  defp start_executor(task, prompt, executor_type, worktree_path, images, resume_session_id) do
     Task.set_in_progress(task, %{in_progress: true})
 
-    case Executor.execute(task.id, prompt, executor_type, worktree_path, images) do
+    opts = %{
+      working_directory: worktree_path,
+      images: images,
+      resume_session_id: resume_session_id
+    }
+
+    case Executor.execute(task.id, prompt, executor_type, opts) do
       {:ok, _session} ->
-        Viban.Kanban.Servers.TaskServer.notify_executor_started(task.id)
+        Viban.Kanban.Task.TaskServer.notify_executor_started(task.id)
         Logger.info("[ExecuteAIHook] Executor started for task #{task.id}")
         {:await_executor, task.id}
 
@@ -161,29 +179,21 @@ defmodule Viban.Kanban.SystemHooks.ExecuteAIHook do
     end
   end
 
-  defp build_prompt_from_task(task) do
-    case task.description do
-      nil -> task.title
-      "" -> task.title
-      desc -> "#{task.title}\n\n#{desc}"
-    end
-  end
-
-  defp build_full_prompt(task, user_prompt) do
-    parts = [task.title]
+  defp build_initial_prompt(task, user_prompt \\ nil) do
+    parts = ["# Task: #{task.title}"]
 
     parts =
       case task.description do
         nil -> parts
         "" -> parts
-        desc -> parts ++ [desc]
+        desc -> parts ++ ["## Description\n#{desc}"]
       end
 
     parts =
-      if user_prompt == "" do
-        parts
-      else
-        parts ++ [user_prompt]
+      case user_prompt do
+        nil -> parts
+        "" -> parts
+        prompt -> parts ++ ["## Instructions\n#{prompt}"]
       end
 
     Enum.join(parts, "\n\n")

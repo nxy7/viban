@@ -5,6 +5,7 @@ import { Suspense } from "solid-js";
 import DeviceLoginModal from "./components/DeviceLoginModal";
 import UpdateBanner from "./components/UpdateBanner";
 import NotificationContainer from "./components/ui/NotificationContainer";
+import SyncErrorBoundary from "./components/ui/SyncErrorBoundary";
 import { AuthProvider } from "./hooks/useAuth";
 import { EscapeStackProvider } from "./hooks/useEscapeStack";
 import "./app.css";
@@ -15,14 +16,16 @@ export default function App() {
       root={(props) => (
         <MetaProvider>
           <Title>Viban</Title>
-          <EscapeStackProvider>
-            <AuthProvider>
-              <UpdateBanner />
-              <Suspense>{props.children}</Suspense>
-              <NotificationContainer />
-              <DeviceLoginModal />
-            </AuthProvider>
-          </EscapeStackProvider>
+          <SyncErrorBoundary>
+            <EscapeStackProvider>
+              <AuthProvider>
+                <UpdateBanner />
+                <Suspense>{props.children}</Suspense>
+                <NotificationContainer />
+                <DeviceLoginModal />
+              </AuthProvider>
+            </EscapeStackProvider>
+          </SyncErrorBoundary>
         </MetaProvider>
       )}
     >

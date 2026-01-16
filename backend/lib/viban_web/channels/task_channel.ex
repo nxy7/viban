@@ -126,7 +126,7 @@ defmodule VibanWeb.TaskChannel do
   def handle_in("stop_executor", _params, socket) do
     task_id = socket.assigns.task_id
 
-    Viban.Kanban.Servers.TaskServer.stop_execution(task_id)
+    Viban.Kanban.Task.TaskServer.stop_execution(task_id)
 
     case Viban.Executors.Runner.stop_by_task(task_id, :user_cancelled) do
       :ok ->

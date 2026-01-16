@@ -82,9 +82,12 @@ defmodule Viban.Kanban.Task.Changes.CalculatePosition do
   defp get_last_task_position(column_id, exclude_task_id) do
     import Ecto.Query
 
+    column_uuid = if is_binary(column_id), do: Ecto.UUID.dump!(column_id), else: column_id
+    exclude_uuid = if is_binary(exclude_task_id), do: Ecto.UUID.dump!(exclude_task_id), else: exclude_task_id
+
     Viban.Repo.one(
       from(t in "tasks",
-        where: t.column_id == ^column_id and t.id != ^exclude_task_id,
+        where: t.column_id == ^column_uuid and t.id != ^exclude_uuid,
         order_by: [desc: t.position],
         limit: 1,
         select: t.position

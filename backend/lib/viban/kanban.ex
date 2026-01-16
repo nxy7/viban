@@ -173,6 +173,8 @@ defmodule Viban.Kanban do
   # ============================================================================
 
   typescript_rpc do
+    show_raised_errors? true
+
     resource Board do
       rpc_action(:create_board, :create)
       rpc_action(:list_boards, :read)

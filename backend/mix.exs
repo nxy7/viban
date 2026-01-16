@@ -100,7 +100,7 @@ defmodule Viban.MixProject do
 
       # Phoenix Sync (Electric)
       {:electric, "~> 1.0"},
-      {:phoenix_sync, "== 0.6.0"},
+      {:phoenix_sync, "~> 0.6.0"},
 
       # Ash Sync (Electric integration for Ash read queries)
       {:ash_sync, github: "nxy7/ash_sync"},

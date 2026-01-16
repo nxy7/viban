@@ -1,4 +1,4 @@
-defmodule Viban.Kanban.Servers.PeriodicalTaskScheduler do
+defmodule Viban.Kanban.PeriodicalTask.PeriodicalTaskScheduler do
   @moduledoc """
   GenServer that periodically checks for due periodical tasks and enqueues
   Oban jobs to create the actual tasks.

@@ -6,7 +6,10 @@ import {
   type ParentComponent,
   useContext,
 } from "solid-js";
+import { createLogger } from "~/lib/logger";
 import type { VCSProvider } from "~/lib/types/vcs";
+
+const log = createLogger("Auth");
 
 export interface User {
   id: string;
@@ -58,7 +61,7 @@ export const AuthProvider: ParentComponent = (props) => {
         setUser(null);
       }
     } catch (error) {
-      console.error("Failed to fetch user:", error);
+      log.error("Failed to fetch user", { error });
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -93,10 +96,10 @@ export const AuthProvider: ParentComponent = (props) => {
 
         pollForToken(data.interval);
       } else {
-        console.error("Failed to start device flow:", data.error);
+        log.error("Failed to start device flow", { error: data.error });
       }
     } catch (error) {
-      console.error("Failed to start device flow:", error);
+      log.error("Failed to start device flow", { error });
     }
   };
 
@@ -127,11 +130,11 @@ export const AuthProvider: ParentComponent = (props) => {
         } else if (data.status === "expired") {
           setDeviceFlow(null);
         } else if (data.status === "error") {
-          console.error("Device flow error:", data.message);
+          log.error("Device flow error", { message: data.message });
           setDeviceFlow(null);
         }
       } catch (error) {
-        console.error("Failed to poll for token:", error);
+        log.error("Failed to poll for token", { error });
         pollTimeoutId = window.setTimeout(poll, interval * 1000);
       }
     };
@@ -151,7 +154,7 @@ export const AuthProvider: ParentComponent = (props) => {
         credentials: "include",
       });
     } catch (error) {
-      console.error("Failed to cancel device flow:", error);
+      log.error("Failed to cancel device flow", { error });
     }
 
     setDeviceFlow(null);
@@ -165,7 +168,7 @@ export const AuthProvider: ParentComponent = (props) => {
       });
       setUser(null);
     } catch (error) {
-      console.error("Failed to logout:", error);
+      log.error("Failed to logout", { error });
     }
   };
 

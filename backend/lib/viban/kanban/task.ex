@@ -38,7 +38,7 @@ defmodule Viban.Kanban.Task do
     domain: Viban.Kanban,
     data_layer: AshPostgres.DataLayer,
     extensions: [AshTypescript.Resource],
-    notifiers: [Viban.Kanban.Notifiers.TaskNotifier]
+    notifiers: [Viban.Kanban.Task.TaskNotifier]
 
   alias Viban.Kanban.Task.Actions
   alias Viban.Kanban.Task.Changes, as: TaskChanges

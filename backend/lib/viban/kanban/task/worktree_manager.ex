@@ -1,4 +1,4 @@
-defmodule Viban.Kanban.WorktreeManager do
+defmodule Viban.Kanban.Task.WorktreeManager do
   @moduledoc """
   Manages git worktrees for tasks.
 
@@ -56,7 +56,7 @@ defmodule Viban.Kanban.WorktreeManager do
   # Constants
   # ---------------------------------------------------------------------------
 
-  @log_prefix "[WorktreeManager]"
+  @log_prefix "[Task.WorktreeManager]"
 
   @default_base_path "~/.local/share/viban/worktrees"
   @default_ttl_days 7

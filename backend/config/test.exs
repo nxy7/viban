@@ -46,3 +46,4 @@ config :viban, auto_migrate: false
 
 # Disable BoardManager during tests - it tries to load boards before sandbox is ready
 config :viban, start_board_manager: false
+config :viban, :env, :test

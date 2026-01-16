@@ -21,7 +21,7 @@ defmodule VibanWeb.HookController do
 
   import VibanWeb.ControllerHelpers, only: [json_ok: 2]
 
-  alias Viban.Kanban.Services.HookService
+  alias Viban.Kanban.Hook.HookService
 
   @doc """
   Lists all available hooks (system + custom) for a board.

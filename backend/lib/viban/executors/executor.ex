@@ -171,6 +171,10 @@ defmodule Viban.Executors.Executor do
         description "List of image attachments with name, data (base64), and mimeType"
       end
 
+      argument :resume_session_id, :uuid do
+        description "Session ID to resume from (for continuing conversations)"
+      end
+
       run Viban.Executors.Actions.Execute
     end
 
@@ -195,7 +199,7 @@ defmodule Viban.Executors.Executor do
   code_interface do
     define :list_available
     define :list_all
-    define :execute, args: [:task_id, :prompt, :executor_type, {:optional, :working_directory}]
+    define :execute, args: [:task_id, :prompt, :executor_type]
     define :check_available, args: [:executor_type]
   end
 end

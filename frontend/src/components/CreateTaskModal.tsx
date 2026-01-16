@@ -2,6 +2,11 @@ import { createEffect, createSignal, For, on, Show } from "solid-js";
 import { Button, Checkbox, Input, Select } from "~/components/design-system";
 import { type Column, unwrap } from "~/hooks/useKanban";
 import * as sdk from "~/lib/generated/ash";
+import {
+  getStoredString,
+  removeStoredItem,
+  setStoredString,
+} from "~/lib/storageUtils";
 import ImageTextarea, {
   type InlineImage,
   prepareImagesForApi,
@@ -75,14 +80,9 @@ export default function CreateTaskModal(props: CreateTaskModalProps) {
     }
   };
 
-  /**
-   * Find the "In Progress" column for autostart feature.
-   * Returns undefined if columns not provided or no matching column found.
-   */
   const inProgressColumn = (): Column | undefined =>
     props.columns?.find((c) => c.name.toLowerCase() === "in progress");
 
-  // Auto-update branch name when title changes (if not manually edited)
   createEffect(
     on(title, (titleValue) => {
       if (!branchNameManuallyEdited() && titleValue) {
@@ -106,10 +106,8 @@ export default function CreateTaskModal(props: CreateTaskModalProps) {
               setDescription(props.initialValues.description);
             }
           } else {
-            const savedTitle = localStorage.getItem(STORAGE_KEY_TITLE);
-            const savedDescription = localStorage.getItem(
-              STORAGE_KEY_DESCRIPTION,
-            );
+            const savedTitle = getStoredString(STORAGE_KEY_TITLE);
+            const savedDescription = getStoredString(STORAGE_KEY_DESCRIPTION);
             if (savedTitle) setTitle(savedTitle);
             if (savedDescription) setDescription(savedDescription);
           }
@@ -123,7 +121,7 @@ export default function CreateTaskModal(props: CreateTaskModalProps) {
     on(title, (value) => {
       if (!props.isOpen) return;
       if (value) {
-        localStorage.setItem(STORAGE_KEY_TITLE, value);
+        setStoredString(STORAGE_KEY_TITLE, value);
       }
     }),
   );
@@ -132,7 +130,7 @@ export default function CreateTaskModal(props: CreateTaskModalProps) {
     on(description, (value) => {
       if (!props.isOpen) return;
       if (value) {
-        localStorage.setItem(STORAGE_KEY_DESCRIPTION, value);
+        setStoredString(STORAGE_KEY_DESCRIPTION, value);
       }
     }),
   );
@@ -147,12 +145,11 @@ export default function CreateTaskModal(props: CreateTaskModalProps) {
     setSelectedTemplateId("");
     setError(null);
     if (clearStorage) {
-      localStorage.removeItem(STORAGE_KEY_TITLE);
-      localStorage.removeItem(STORAGE_KEY_DESCRIPTION);
+      removeStoredItem(STORAGE_KEY_TITLE);
+      removeStoredItem(STORAGE_KEY_DESCRIPTION);
     }
   };
 
-  // Handle refine button click
   const handleRefine = async () => {
     if (!title().trim()) {
       setError("Title is required for refinement");

@@ -1,4 +1,4 @@
-defmodule Viban.Kanban.Servers.TaskSupervisor do
+defmodule Viban.Kanban.Task.TaskSupervisor do
   @moduledoc """
   Supervises a TaskServer and its HookExecutionServer for a single task.
 
@@ -7,13 +7,19 @@ defmodule Viban.Kanban.Servers.TaskSupervisor do
   """
   use Supervisor
 
-  alias Viban.Kanban.Servers.HookExecutionServer
-  alias Viban.Kanban.Servers.TaskServer
+  alias Viban.CallerTracking
+  alias Viban.Kanban.HookExecution.HookExecutionServer
+  alias Viban.Kanban.Task.TaskServer
 
   @registry Viban.Kanban.ActorRegistry
 
   def start_link({board_id, task}) do
-    Supervisor.start_link(__MODULE__, {board_id, task}, name: via_tuple(task.id))
+    callers = CallerTracking.capture_callers()
+    Supervisor.start_link(__MODULE__, {callers, board_id, task}, name: via_tuple(task.id))
+  end
+
+  def start_link({board_id, task, parent_callers}) do
+    Supervisor.start_link(__MODULE__, {parent_callers, board_id, task}, name: via_tuple(task.id))
   end
 
   def via_tuple(task_id) do
@@ -31,7 +37,9 @@ defmodule Viban.Kanban.Servers.TaskSupervisor do
   end
 
   @impl true
-  def init({board_id, task}) do
+  def init({callers, board_id, task}) do
+    CallerTracking.restore_callers(callers)
+
     children = [
       {TaskServer, {board_id, task}},
       {HookExecutionServer,

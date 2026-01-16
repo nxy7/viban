@@ -1,0 +1,25 @@
+# Caddy reverse proxy for local development
+# Provides automatic HTTPS with locally-trusted certificates
+#
+# Port mapping:
+#   https://localhost:7777 -> Caddy (public HTTPS)
+#   http://localhost:7780  -> Phoenix backend
+#   http://localhost:7778  -> Vite frontend (proxied by Phoenix)
+
+{
+	# Disable HTTP->HTTPS redirect (we don't need port 80)
+	auto_https disable_redirects
+}
+
+localhost:7777 {
+	# Proxy all requests to Phoenix backend
+	reverse_proxy localhost:7780
+
+	# Enable gzip compression
+	encode gzip
+
+	# Required for Electric SQL sync
+	header {
+		Vary "Authorization"
+	}
+}

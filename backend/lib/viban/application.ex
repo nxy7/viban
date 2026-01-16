@@ -134,7 +134,7 @@ defmodule Viban.Application do
       {Oban, AshOban.config([Viban.AppRuntime], Application.fetch_env!(:viban, Oban))},
 
       # Periodical task scheduler
-      Viban.Kanban.Servers.PeriodicalTaskScheduler,
+      Viban.Kanban.PeriodicalTask.PeriodicalTaskScheduler,
 
       # Registries for actor system
       {Registry, keys: :unique, name: Viban.Kanban.ActorRegistry},

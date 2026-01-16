@@ -52,7 +52,7 @@ defmodule Viban.Executors.Runner do
   alias Viban.Executors.ExecutorSession
   alias Viban.Executors.ImageHandler
   alias Viban.Executors.Registry
-  alias Viban.GitHub.PRDetector
+  alias Viban.VCS.GitHub.PRDetector
 
   require Logger
 
@@ -89,7 +89,9 @@ defmodule Viban.Executors.Runner do
           started_at: DateTime.t() | nil,
           output_buffer: [{DateTime.t(), String.t()}],
           exit_code: integer() | nil,
-          image_paths: [String.t()]
+          image_paths: [String.t()],
+          resume_session_id: Ecto.UUID.t() | nil,
+          last_error: String.t() | nil
         }
 
   defstruct [
@@ -104,7 +106,9 @@ defmodule Viban.Executors.Runner do
     :started_at,
     :output_buffer,
     :exit_code,
-    :image_paths
+    :image_paths,
+    :resume_session_id,
+    :last_error
   ]
 
   # ---------------------------------------------------------------------------
@@ -233,6 +237,7 @@ defmodule Viban.Executors.Runner do
     prompt = Keyword.fetch!(opts, :prompt)
     working_directory = Keyword.get(opts, :working_directory)
     images = Keyword.get(opts, :images, [])
+    resume_session_id = Keyword.get(opts, :resume_session_id)
 
     case Registry.get_by_type(executor_type) do
       nil ->
@@ -245,7 +250,8 @@ defmodule Viban.Executors.Runner do
           executor_type,
           prompt,
           working_directory,
-          images
+          images,
+          resume_session_id
         )
     end
   end
@@ -258,12 +264,16 @@ defmodule Viban.Executors.Runner do
       working_directory: working_directory,
       task_id: task_id,
       session_id: session_id,
-      image_paths: image_paths
+      image_paths: image_paths,
+      resume_session_id: resume_session_id
     } = state
 
     enhanced_prompt = ImageHandler.build_prompt_with_images(prompt, image_paths || [])
 
-    executor_opts = Keyword.put(executor_module.default_opts(), :working_directory, working_directory)
+    executor_opts =
+      executor_module.default_opts()
+      |> Keyword.put(:working_directory, working_directory)
+      |> Keyword.put(:resume_session_id, resume_session_id)
 
     {executable, args} = executor_module.build_command(enhanced_prompt, executor_opts)
 
@@ -291,22 +301,29 @@ defmodule Viban.Executors.Runner do
       task_id: task_id,
       session_id: session_id,
       executor_module: executor_module,
-      output_buffer: buffer
+      output_buffer: buffer,
+      last_error: current_error
     } = state
 
     Logger.info("#{@log_prefix} [#{task_id}] Received data (#{byte_size(data)} bytes): #{String.slice(data, 0, 200)}")
 
-    data
-    |> String.split("\n", trim: true)
-    |> Enum.each(&process_output_line(&1, executor_module, task_id, session_id))
+    last_error =
+      data
+      |> String.split("\n", trim: true)
+      |> Enum.reduce(current_error, fn line, acc ->
+        case process_output_line(line, executor_module, task_id, session_id) do
+          {:error, message} -> message
+          _ -> acc
+        end
+      end)
 
     new_buffer = buffer ++ [{DateTime.utc_now(), data}]
-    {:noreply, %{state | output_buffer: new_buffer}}
+    {:noreply, %{state | output_buffer: new_buffer, last_error: last_error}}
   end
 
   @impl true
   def handle_info({port, {:exit_status, exit_code}}, %{port: port} = state) do
-    %{task_id: task_id, session_id: session_id, output_buffer: buffer} = state
+    %{task_id: task_id, session_id: session_id, output_buffer: buffer, last_error: last_error} = state
 
     total_output_size = buffer |> Enum.map(fn {_, data} -> byte_size(data) end) |> Enum.sum()
 
@@ -320,8 +337,8 @@ defmodule Viban.Executors.Runner do
       if exit_code == 0, do: "Completed successfully", else: "Failed with exit code #{exit_code}"
 
     save_message(task_id, session_id, :system, status_msg)
-    update_session_status(session_id, status, exit_code)
-    update_task_status(task_id, status, exit_code)
+    update_session_status(session_id, status, exit_code, last_error)
+    update_task_status(task_id, status, exit_code, last_error)
 
     {:stop, :normal, %{state | status: status, exit_code: exit_code, port: nil}}
   end
@@ -369,7 +386,7 @@ defmodule Viban.Executors.Runner do
     {:via, Elixir.Registry, {@runner_registry, task_id}}
   end
 
-  defp init_with_executor(executor_module, task_id, executor_type, prompt, working_directory, images) do
+  defp init_with_executor(executor_module, task_id, executor_type, prompt, working_directory, images, resume_session_id) do
     if executor_module.available?() do
       image_paths = ImageHandler.save_to_directory(images, working_directory)
 
@@ -385,7 +402,8 @@ defmodule Viban.Executors.Runner do
             status: :starting,
             started_at: DateTime.utc_now(),
             output_buffer: [],
-            image_paths: image_paths
+            image_paths: image_paths,
+            resume_session_id: resume_session_id
           }
 
           send(self(), :start_executor)
@@ -473,6 +491,11 @@ defmodule Viban.Executors.Runner do
       :skip ->
         :ok
 
+      {:ok, %{type: :error, message: message} = event} ->
+        Logger.debug("#{@log_prefix} [#{task_id}] Parsed output type: error")
+        handle_parsed_output({:ok, event}, task_id, session_id)
+        {:error, message}
+
       {:ok, %{type: type}} ->
         Logger.debug("#{@log_prefix} [#{task_id}] Parsed output type: #{type}")
         handle_parsed_output(parsed, task_id, session_id)
@@ -548,11 +571,15 @@ defmodule Viban.Executors.Runner do
     end
   end
 
-  defp update_session_status(session_id, status, exit_code) do
+  defp update_session_status(session_id, status, exit_code, error_message) do
     case ExecutorSession.get(session_id) do
       {:ok, session} ->
         action = status_to_session_action(status)
-        params = if exit_code, do: %{exit_code: exit_code}, else: %{}
+
+        params =
+          %{}
+          |> maybe_add_param(:exit_code, exit_code)
+          |> maybe_add_param(:error_message, error_message)
 
         case apply(ExecutorSession, action, [session, params]) do
           {:ok, _} ->
@@ -567,23 +594,26 @@ defmodule Viban.Executors.Runner do
     end
   end
 
+  defp maybe_add_param(params, _key, nil), do: params
+  defp maybe_add_param(params, key, value), do: Map.put(params, key, value)
+
   defp status_to_session_action(:completed), do: :complete
   defp status_to_session_action(:failed), do: :fail
   defp status_to_session_action(:stopped), do: :stop
 
-  defp update_task_status(task_id, status, exit_code, _stop_reason \\ nil) do
+  defp update_task_status(task_id, status, exit_code, error_message) do
     executor_done = status in [:completed, :failed]
 
     if executor_done do
-      handle_executor_completion(task_id, exit_code)
+      handle_executor_completion(task_id, exit_code, error_message)
     end
   end
 
-  defp handle_executor_completion(task_id, exit_code) do
+  defp handle_executor_completion(task_id, exit_code, error_message) do
     Phoenix.PubSub.broadcast(
       Viban.PubSub,
       "executor:#{task_id}:completed",
-      {:executor_completed, exit_code}
+      {:executor_completed, exit_code, error_message}
     )
   end
 

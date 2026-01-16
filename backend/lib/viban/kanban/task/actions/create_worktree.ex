@@ -28,7 +28,7 @@ defmodule Viban.Kanban.Task.Actions.CreateWorktree do
 
   alias Viban.Kanban.Column
   alias Viban.Kanban.Task
-  alias Viban.Kanban.WorktreeManager
+  alias Viban.Kanban.Task.WorktreeManager
 
   require Logger
 

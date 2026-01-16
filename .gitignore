@@ -6,13 +6,20 @@ backend/_build/
 backend/deps/
 backend/cover/
 backend/.fetch
-backend/erl_crash.dump
 backend/*.ez
 backend/tmp/
 backend/viban-*.tar
 backend/priv/static/*
 !backend/priv/static/.gitkeep
 backend/burrito_out/
+
+# Crash dumps (can appear at root or in backend)
+erl_crash.dump
+backend/erl_crash.dump
+
+# Ash resource snapshots (auto-generated, optional to track)
+# Uncomment the next line to stop tracking snapshots:
+# backend/priv/resource_snapshots/
 
 # Node.js
 frontend/node_modules/

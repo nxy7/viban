@@ -6,7 +6,7 @@ defmodule Viban.Kanban.HookSystemTest do
   - execute_once functionality
   - Repository configuration
   """
-  use Viban.DataCase, async: false
+  use Viban.DataCase, async: true
 
   alias Viban.Kanban.Board
   alias Viban.Kanban.Column

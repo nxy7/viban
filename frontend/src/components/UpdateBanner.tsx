@@ -1,24 +1,13 @@
 import { createResource, createSignal, Show } from "solid-js";
 import { get_download_url, get_update_status } from "~/lib/generated/ash";
+import { getStoredString, setStoredString } from "~/lib/storageUtils";
 import Button from "./design-system/Button";
 
 const DISMISSED_VERSION_KEY = "viban_dismissed_update_version";
 
-function getDismissedVersion(): string | null {
-  try {
-    return localStorage.getItem(DISMISSED_VERSION_KEY);
-  } catch {
-    return null;
-  }
-}
-
-function setDismissedVersion(version: string): void {
-  try {
-    localStorage.setItem(DISMISSED_VERSION_KEY, version);
-  } catch {
-    // localStorage may be unavailable
-  }
-}
+const getDismissedVersion = () => getStoredString(DISMISSED_VERSION_KEY);
+const setDismissedVersion = (version: string) =>
+  setStoredString(DISMISSED_VERSION_KEY, version);
 
 export default function UpdateBanner() {
   const [dismissed, setDismissed] = createSignal(false);

@@ -28,7 +28,8 @@ defmodule Viban.Kanban.Actors.BoardActor do
   """
   use GenServer
 
-  alias Viban.Kanban.Servers.TaskSupervisor
+  alias Viban.CallerTracking
+  alias Viban.Kanban.Task.TaskSupervisor
   alias Viban.Kanban.Task
 
   require Logger
@@ -62,7 +63,8 @@ defmodule Viban.Kanban.Actors.BoardActor do
   """
   @spec start_link(String.t()) :: GenServer.on_start()
   def start_link(board_id) do
-    GenServer.start_link(__MODULE__, board_id, name: via_tuple(board_id))
+    callers = CallerTracking.capture_callers()
+    GenServer.start_link(__MODULE__, {callers, board_id}, name: via_tuple(board_id))
   end
 
   @doc """
@@ -118,7 +120,8 @@ defmodule Viban.Kanban.Actors.BoardActor do
   # ============================================================================
 
   @impl true
-  def init(board_id) do
+  def init({callers, board_id}) do
+    CallerTracking.restore_callers(callers)
     Logger.info("BoardActor starting for board #{board_id}")
 
     state = %__MODULE__{
@@ -290,9 +293,11 @@ defmodule Viban.Kanban.Actors.BoardActor do
   end
 
   defp spawn_task_actor(state, task) do
+    callers = CallerTracking.capture_callers()
+
     case DynamicSupervisor.start_child(
            state.task_supervisor_name,
-           {TaskSupervisor, {state.board_id, task}}
+           {TaskSupervisor, {state.board_id, task, callers}}
          ) do
       {:ok, pid} ->
         Logger.debug("Spawned TaskSupervisor for task #{task.id}")

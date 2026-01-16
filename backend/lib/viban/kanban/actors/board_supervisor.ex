@@ -21,6 +21,7 @@ defmodule Viban.Kanban.Actors.BoardSupervisor do
   """
   use Supervisor
 
+  alias Viban.CallerTracking
   alias Viban.Kanban.Actors.BoardActor
 
   # Registry for actor lookups
@@ -47,7 +48,8 @@ defmodule Viban.Kanban.Actors.BoardSupervisor do
   """
   @spec start_link(board_id()) :: Supervisor.on_start()
   def start_link(board_id) do
-    Supervisor.start_link(__MODULE__, board_id, name: via_tuple(board_id))
+    callers = CallerTracking.capture_callers()
+    Supervisor.start_link(__MODULE__, {callers, board_id}, name: via_tuple(board_id))
   end
 
   @doc """
@@ -73,7 +75,9 @@ defmodule Viban.Kanban.Actors.BoardSupervisor do
   # ============================================================================
 
   @impl true
-  def init(board_id) do
+  def init({callers, board_id}) do
+    CallerTracking.restore_callers(callers)
+
     children = [
       # DynamicSupervisor for TaskActors - started first
       {DynamicSupervisor, name: task_supervisor_name(board_id), strategy: @task_supervision_strategy},

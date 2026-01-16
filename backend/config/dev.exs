@@ -22,14 +22,10 @@ config :viban, Viban.Repo,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10
 
+# In dev, Phoenix runs on HTTP behind Caddy which handles HTTPS
+# Caddy listens on :7777 (HTTPS) and proxies to Phoenix on :7780 (HTTP)
 config :viban, VibanWeb.Endpoint,
-  https: [
-    ip: {127, 0, 0, 1},
-    port: 7777,
-    cipher_suite: :strong,
-    certfile: "priv/cert/selfsigned.pem",
-    keyfile: "priv/cert/selfsigned_key.pem"
-  ],
+  http: [ip: {127, 0, 0, 1}, port: 7780],
   check_origin: false,
   code_reloader: true,
   debug_errors: true,
@@ -46,24 +42,13 @@ config :viban, VibanWeb.Endpoint,
       ~r"priv/gettext/.*(po)$",
       ~r"lib/viban_web/(controllers|live|components)/.*(ex|heex)$"
     ]
-
-    # Enable test endpoints when E2E_TEST=true
   ]
 
 # Disable Bandit compression for E2E tests to avoid Playwright decompression issues
 config :viban, dev_routes: true
+config :viban, :env, :dev
 
 if System.get_env("E2E_TEST") == "true" do
-  config :viban, VibanWeb.Endpoint,
-    https: [
-      ip: {127, 0, 0, 1},
-      port: 7777,
-      cipher_suite: :strong,
-      certfile: "priv/cert/selfsigned.pem",
-      keyfile: "priv/cert/selfsigned_key.pem",
-      http_options: [compress: false]
-    ]
-
   config :viban, :sandbox_enabled, true
 end
 

@@ -22,7 +22,7 @@ defmodule Viban.Kanban.Task.Changes.ProcessDescriptionImages do
 
   use Ash.Resource.Change
 
-  alias Viban.Kanban.TaskImageManager
+  alias Viban.Kanban.Task.ImageManager
 
   require Logger
 
@@ -61,7 +61,7 @@ defmodule Viban.Kanban.Task.Changes.ProcessDescriptionImages do
   @spec process_images_for_new_record(Viban.Kanban.Task.t(), list()) ::
           {:ok, Viban.Kanban.Task.t()} | {:error, term()}
   defp process_images_for_new_record(record, images_input) do
-    case TaskImageManager.save_images(record.id, images_input) do
+    case ImageManager.save_images(record.id, images_input) do
       {:ok, saved_metadata} ->
         record
         |> Ash.Changeset.for_update(:update, %{description_images: saved_metadata})
@@ -80,7 +80,7 @@ defmodule Viban.Kanban.Task.Changes.ProcessDescriptionImages do
     task_id = Ash.Changeset.get_data(changeset, :id)
     existing_images = Ash.Changeset.get_data(changeset, :description_images) || []
 
-    case TaskImageManager.sync_images(task_id, images_input, existing_images) do
+    case ImageManager.sync_images(task_id, images_input, existing_images) do
       {:ok, saved_metadata} ->
         Ash.Changeset.change_attribute(changeset, :description_images, saved_metadata)
 

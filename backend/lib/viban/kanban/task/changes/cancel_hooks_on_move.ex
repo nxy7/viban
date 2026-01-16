@@ -11,7 +11,8 @@ defmodule Viban.Kanban.Task.Changes.CancelHooksOnMove do
 
   use Ash.Resource.Change
 
-  alias Viban.Kanban.Servers.TaskServer
+  alias Viban.CallerTracking
+  alias Viban.Kanban.Task.TaskServer
 
   require Logger
 
@@ -33,7 +34,11 @@ defmodule Viban.Kanban.Task.Changes.CancelHooksOnMove do
 
     Logger.info("CancelHooksOnMove: Task #{task_id} moving from column #{old_column_id} to #{new_column_id}")
 
+    callers = CallerTracking.capture_callers()
+
     spawn(fn ->
+      CallerTracking.restore_callers(callers)
+
       case TaskServer.move(task_id, new_column_id, new_position) do
         :ok ->
           Logger.info("CancelHooksOnMove: TaskServer.move completed for task #{task_id}")

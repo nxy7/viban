@@ -9,7 +9,7 @@ defmodule Viban.Kanban.Task.Changes.CleanupDescriptionImages do
 
   use Ash.Resource.Change
 
-  alias Viban.Kanban.TaskImageManager
+  alias Viban.Kanban.Task.ImageManager
 
   require Logger
 
@@ -22,7 +22,7 @@ defmodule Viban.Kanban.Task.Changes.CleanupDescriptionImages do
   @spec cleanup_images(Ash.Changeset.t(), Viban.Kanban.Task.t()) ::
           {:ok, Viban.Kanban.Task.t()}
   defp cleanup_images(_changeset, record) do
-    case TaskImageManager.delete_task_images(record.id) do
+    case ImageManager.delete_task_images(record.id) do
       {:ok, _} ->
         {:ok, record}
 

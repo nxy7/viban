@@ -1,4 +1,4 @@
-defmodule Viban.Kanban.Servers.HookExecutionServer do
+defmodule Viban.Kanban.HookExecution.HookExecutionServer do
   @moduledoc """
   Executes hooks sequentially for a single task.
 
@@ -20,12 +20,13 @@ defmodule Viban.Kanban.Servers.HookExecutionServer do
   use Viban.StateServer.Core, restart: :permanent
 
   alias Phoenix.PubSub
+  alias Viban.CallerTracking
   alias Viban.Executors.Runner
   alias Viban.Kanban.Actors.HookRunner
   alias Viban.Kanban.ColumnHook
   alias Viban.Kanban.Hook
   alias Viban.Kanban.HookExecution
-  alias Viban.Kanban.Servers.TaskServer
+  alias Viban.Kanban.Task.TaskServer
   alias Viban.Kanban.Task
 
   require Logger
@@ -61,7 +62,8 @@ defmodule Viban.Kanban.Servers.HookExecutionServer do
 
   @spec start_link(map()) :: GenServer.on_start()
   def start_link(args) do
-    GenServer.start_link(__MODULE__, args, name: via_tuple(args.task_id))
+    callers = CallerTracking.capture_callers()
+    GenServer.start_link(__MODULE__, Map.put(args, :callers, callers), name: via_tuple(args.task_id))
   end
 
   defp via_tuple(task_id) do
@@ -105,6 +107,8 @@ defmodule Viban.Kanban.Servers.HookExecutionServer do
 
   @impl true
   def init(args) do
+    CallerTracking.restore_callers(args[:callers] || [])
+
     default_state = %__MODULE__{
       task_id: args.task_id,
       board_id: args.board_id
@@ -187,12 +191,17 @@ defmodule Viban.Kanban.Servers.HookExecutionServer do
 
   @impl true
   def handle_info({:executor_completed, exit_code}, state) do
+    handle_info({:executor_completed, exit_code, nil}, state)
+  end
+
+  @impl true
+  def handle_info({:executor_completed, exit_code, error_message}, state) do
     Logger.info("External executor completed with exit code #{exit_code}", task_id: state.task_id)
 
     if state.stopping do
       {:noreply, state}
     else
-      handle_external_executor_completion(state, exit_code)
+      handle_external_executor_completion(state, exit_code, error_message)
     end
   end
 
@@ -273,9 +282,11 @@ defmodule Viban.Kanban.Servers.HookExecutionServer do
     parent = self()
     exec_id = execution.id
     ch_id = column_hook.id
+    callers = CallerTracking.capture_callers()
 
     {pid, ref} =
       spawn_monitor(fn ->
+        CallerTracking.restore_callers(callers)
         result = HookRunner.execute(hook, task, nil, hook_opts)
         send(parent, {:script_result, exec_id, ch_id, result})
       end)
@@ -395,7 +406,7 @@ defmodule Viban.Kanban.Servers.HookExecutionServer do
   # External Executor Handling
   # ============================================================================
 
-  defp handle_external_executor_completion(state, exit_code) do
+  defp handle_external_executor_completion(state, exit_code, error_message) do
     if state.current_execution_id do
       case HookExecution.get(state.current_execution_id) do
         {:ok, execution} ->
@@ -409,22 +420,41 @@ defmodule Viban.Kanban.Servers.HookExecutionServer do
             HookExecution.complete(execution)
             clear_task_executing(state.task_id)
             TaskServer.hook_completed(state.task_id, execution.id, :ok)
+            {:noreply, update_state(state, current_execution_id: nil, awaiting_external_executor: false)}
           else
-            error_msg = "Executor failed with exit code #{exit_code}"
-            HookExecution.fail(execution, %{error_message: error_msg})
-            set_task_error(state.task_id, execution.hook_name, {:exit_code, exit_code, ""})
-            cancel_remaining_hooks(state.task_id, :error)
-            clear_task_executing(state.task_id)
-            TaskServer.hook_completed(state.task_id, execution.id, {:error, error_msg})
+            column_hook = get_column_hook(execution)
+            hook = get_hook_from_execution(execution)
+
+            reason =
+              if error_message do
+                error_message
+              else
+                {:exit_code, exit_code, ""}
+              end
+
+            if column_hook && hook do
+              {reply, new_state} = handle_hook_error(state, execution, column_hook, hook, reason)
+              {reply, update_state(new_state, awaiting_external_executor: false)}
+            else
+              error_msg = format_error_for_display(exit_code, error_message)
+              HookExecution.fail(execution, %{error_message: error_msg})
+              clear_task_executing(state.task_id)
+              TaskServer.hook_completed(state.task_id, execution.id, {:error, error_msg})
+              {:noreply, update_state(state, current_execution_id: nil, awaiting_external_executor: false)}
+            end
           end
 
         {:error, _} ->
           Logger.error("Could not find execution #{state.current_execution_id}")
+          {:noreply, update_state(state, current_execution_id: nil, awaiting_external_executor: false)}
       end
+    else
+      {:noreply, update_state(state, awaiting_external_executor: false)}
     end
-
-    {:noreply, update_state(state, current_execution_id: nil, awaiting_external_executor: false)}
   end
+
+  defp format_error_for_display(exit_code, nil), do: "Executor failed with exit code #{exit_code}"
+  defp format_error_for_display(exit_code, message), do: "Exit code #{exit_code}: #{message}"
 
   defp stop_external_executor(task_id) do
     case Runner.stop_by_task(task_id, :user_cancelled) do

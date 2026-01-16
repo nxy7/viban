@@ -1,4 +1,4 @@
-defmodule Viban.Kanban.Services.HookService do
+defmodule Viban.Kanban.Hook.HookService do
   @moduledoc """
   Service layer for hooks that merges system (virtual) hooks with database hooks.
 

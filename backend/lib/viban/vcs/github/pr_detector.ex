@@ -1,4 +1,4 @@
-defmodule Viban.GitHub.PRDetector do
+defmodule Viban.VCS.GitHub.PRDetector do
   @moduledoc """
   Detects PRs created by agents and links them to tasks.
 
@@ -8,7 +8,7 @@ defmodule Viban.GitHub.PRDetector do
   - Links detected PRs to tasks
   """
 
-  alias Viban.GitHub.Client
+  alias Viban.VCS.GitHub.Client
   alias Viban.Kanban.Task
 
   require Logger

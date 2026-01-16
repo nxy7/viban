@@ -17,15 +17,26 @@ export default defineConfig({
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
     },
+    {
+      name: "firefox",
+      use: { ...devices["Desktop Firefox"] },
+    },
   ],
   // Global setup/teardown for test cleanup
   globalTeardown: "./tests/global-teardown.ts",
   webServer: [
     {
-      // E2E_TEST=true enables /api/test/* endpoints
-      command: "cd ../backend && E2E_TEST=true mix phx.server",
+      // Caddy handles HTTPS and proxies to Phoenix
+      command: "caddy run --config ../Caddyfile",
       url: "https://localhost:7777/api/health",
       ignoreHTTPSErrors: true,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120 * 1000,
+    },
+    {
+      // E2E_TEST=true enables /api/test/* endpoints
+      command: "cd ../backend && E2E_TEST=true mix phx.server",
+      url: "http://localhost:7780/api/health",
       reuseExistingServer: !process.env.CI,
       timeout: 120 * 1000,
     },

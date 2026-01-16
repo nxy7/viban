@@ -7,7 +7,11 @@ import {
 } from "solid-js";
 import { type SystemTool, unwrap } from "~/hooks/useKanban";
 import * as sdk from "~/lib/generated/ash";
+import { createLogger } from "~/lib/logger";
 import type { ExecutorInfo } from "~/lib/socket";
+import { getStoredString, setStoredString } from "~/lib/storageUtils";
+
+const log = createLogger("System");
 
 const EXECUTOR_PREFERENCE_KEY = "viban:preferredExecutor";
 
@@ -46,7 +50,7 @@ export const SystemProvider: ParentComponent = (props) => {
     const available = execs.filter((e) => e.available);
     if (available.length === 0) return null;
 
-    const storedPreference = localStorage.getItem(EXECUTOR_PREFERENCE_KEY);
+    const storedPreference = getStoredString(EXECUTOR_PREFERENCE_KEY);
     if (storedPreference) {
       const preferred = available.find((e) => e.type === storedPreference);
       if (preferred) return preferred.type;
@@ -60,7 +64,7 @@ export const SystemProvider: ParentComponent = (props) => {
 
   const setSelectedExecutor = (type: string) => {
     setSelectedExecutorState(type);
-    localStorage.setItem(EXECUTOR_PREFERENCE_KEY, type);
+    setStoredString(EXECUTOR_PREFERENCE_KEY, type);
   };
 
   const fetchTools = async () => {
@@ -70,7 +74,7 @@ export const SystemProvider: ParentComponent = (props) => {
       const result = await sdk.list_tools({}).then(unwrap);
       setTools((result as SystemTool[]) ?? []);
     } catch (err) {
-      console.error("[SystemContext] Failed to fetch tools:", err);
+      log.error("Failed to fetch tools", { error: err });
       setToolsError(
         err instanceof Error ? err.message : "Failed to fetch tools",
       );
@@ -85,10 +89,7 @@ export const SystemProvider: ParentComponent = (props) => {
     try {
       const result = await sdk.list_executors({});
       if (!result.success) {
-        console.error(
-          "[SystemContext] Failed to fetch executors:",
-          result.errors,
-        );
+        log.error("Failed to fetch executors", { errors: result.errors });
         return;
       }
       const execs = (result.data ?? []) as ExecutorInfo[];
@@ -99,7 +100,7 @@ export const SystemProvider: ParentComponent = (props) => {
         setSelectedExecutorState(defaultExec);
       }
     } catch (err) {
-      console.error("[SystemContext] Failed to fetch executors:", err);
+      log.error("Failed to fetch executors", { error: err });
     } finally {
       setExecutorsLoading(false);
     }

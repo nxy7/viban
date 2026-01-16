@@ -5,7 +5,7 @@ defmodule Viban.Kanban.MessageTest do
   - Sequence auto-increment
   - Status transitions
   """
-  use Viban.DataCase, async: false
+  use Viban.DataCase, async: true
 
   alias Viban.Kanban.Board
   alias Viban.Kanban.Column

@@ -1,4 +1,4 @@
-defmodule Viban.Kanban.TaskImageManager do
+defmodule Viban.Kanban.Task.ImageManager do
   @moduledoc """
   Manages storage of images embedded in task descriptions.
 
@@ -38,18 +38,18 @@ defmodule Viban.Kanban.TaskImageManager do
   ## Usage
 
       # Save images from base64 data URLs
-      {:ok, metadata} = TaskImageManager.save_images(task_id, [
+      {:ok, metadata} = ImageManager.save_images(task_id, [
         %{"id" => "img-1", "dataUrl" => "data:image/png;base64,...", "name" => "screenshot.png"}
       ])
 
       # Get path to a specific image
-      {:ok, path} = TaskImageManager.get_image_path(task_id, "img-1")
+      {:ok, path} = ImageManager.get_image_path(task_id, "img-1")
 
       # Sync images (add new, keep existing, remove deleted)
-      {:ok, metadata} = TaskImageManager.sync_images(task_id, new_images, existing_metadata)
+      {:ok, metadata} = ImageManager.sync_images(task_id, new_images, existing_metadata)
 
       # Delete all images for a task
-      {:ok, _} = TaskImageManager.delete_task_images(task_id)
+      {:ok, _} = ImageManager.delete_task_images(task_id)
   """
 
   require Logger
@@ -58,7 +58,7 @@ defmodule Viban.Kanban.TaskImageManager do
   # Constants
   # ---------------------------------------------------------------------------
 
-  @log_prefix "[TaskImageManager]"
+  @log_prefix "[Task.ImageManager]"
 
   @images_dir_name "task-images"
 
@@ -110,7 +110,7 @@ defmodule Viban.Kanban.TaskImageManager do
 
   ## Examples
 
-      TaskImageManager.task_images_dir("550e8400-e29b-41d4-a716-446655440000")
+      ImageManager.task_images_dir("550e8400-e29b-41d4-a716-446655440000")
       #=> "/home/user/.local/share/viban/task-images/550e8400-e29b-41d4-a716-446655440000"
   """
   @spec task_images_dir(String.t()) :: String.t()
@@ -140,7 +140,7 @@ defmodule Viban.Kanban.TaskImageManager do
 
   ## Examples
 
-      {:ok, metadata} = TaskImageManager.save_images(task_id, [
+      {:ok, metadata} = ImageManager.save_images(task_id, [
         %{"id" => "img-1", "dataUrl" => "data:image/png;base64,iVBOR...", "name" => "screenshot.png"}
       ])
   """

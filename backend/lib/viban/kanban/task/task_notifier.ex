@@ -1,4 +1,4 @@
-defmodule Viban.Kanban.Notifiers.TaskNotifier do
+defmodule Viban.Kanban.Task.TaskNotifier do
   @moduledoc """
   Ash notifier that broadcasts task changes via PubSub.
 
@@ -18,7 +18,7 @@ defmodule Viban.Kanban.Notifiers.TaskNotifier do
 
   Add this notifier to your Task resource:
 
-      notifiers [Viban.Kanban.Notifiers.TaskNotifier]
+      notifiers [Viban.Kanban.Task.TaskNotifier]
 
   Subscribe to updates in your GenServer:
 

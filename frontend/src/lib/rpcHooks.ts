@@ -60,7 +60,19 @@ function formatErrorMessage(error: AshRpcError): string {
   }
 
   if (error.message) {
-    return interpolateMessage(error.message, error.vars);
+    const interpolated = interpolateMessage(error.message, error.vars);
+    if (interpolated && interpolated !== "Unknown error") {
+      return interpolated;
+    }
+  }
+
+  const details = [
+    error.type && `type: ${error.type}`,
+    error.fields?.length && `fields: ${error.fields.join(", ")}`,
+  ].filter(Boolean);
+
+  if (details.length > 0) {
+    return `Error (${details.join(", ")})`;
   }
 
   return "An unexpected error occurred";

@@ -5,6 +5,7 @@ import KanbanBoard from "~/components/KanbanBoard";
 import TaskDetailsPanel from "~/components/TaskDetailsPanel";
 import { type Task, tasksCollection, useColumns } from "~/hooks/useKanban";
 import { ShortcutProvider } from "~/hooks/useKeyboardShortcuts";
+import { createLogger } from "~/lib/logger";
 import { SystemProvider } from "~/lib/SystemContext";
 import { type ClientActionPayload, socketManager } from "~/lib/socket";
 import {
@@ -13,6 +14,8 @@ import {
   preloadSounds,
   type SoundType,
 } from "~/lib/sounds";
+
+const log = createLogger("BoardPage");
 
 /** Route segment for card detail views */
 const CARD_ROUTE_SEGMENT = "card";
@@ -232,12 +235,12 @@ export default function BoardPage() {
         socketManager
           .joinBoardChannel(currentBoardId, {
             onClientAction: (data: ClientActionPayload) => {
-              console.log("[BoardPage] Received client_action:", data);
+              log.debug("Received client_action", { data });
               handleClientAction(data);
             },
           })
           .catch((err) => {
-            console.error("[BoardPage] Failed to join board channel:", err);
+            log.error("Failed to join board channel", { error: err });
           });
       }
 
@@ -261,18 +264,18 @@ export default function BoardPage() {
         const now = Date.now();
         // Debounce rapid duplicate sounds
         if (now - lastSoundTime < SOUND_DEBOUNCE_MS) {
-          console.log("[BoardPage] Debouncing duplicate sound");
+          log.debug("Debouncing duplicate sound");
           return;
         }
         lastSoundTime = now;
 
         const soundType = (action.sound || "ding") as SoundType;
-        console.log("[BoardPage] Playing sound:", soundType);
+        log.debug("Playing sound", { soundType });
         playSound(soundType);
         break;
       }
       default:
-        console.warn("[BoardPage] Unknown client action type:", action);
+        log.warn("Unknown client action type", { action });
     }
   }
 

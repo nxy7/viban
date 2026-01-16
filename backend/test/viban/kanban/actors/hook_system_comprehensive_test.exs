@@ -49,9 +49,8 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
   (require the full actor system, run with: mix test --include integration).
   """
 
-  use Viban.DataCase, async: false
+  use Viban.DataCase, async: true
 
-  # Ash.Test is imported via DataCase for assert_stripped, assert_has_error, etc.
   alias Viban.Kanban.Actors.BoardActor
   alias Viban.Kanban.Actors.BoardSupervisor
   alias Viban.Kanban.Actors.HookRunner
@@ -65,97 +64,7 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
   # Test Configuration
   # ============================================================================
 
-  # Timeout for async operations (hooks, moves, etc.)
   @async_timeout 2000
-
-  # Longer timeout for slow hooks
-  @slow_hook_timeout 5000
-
-  # ============================================================================
-  # Shared Setup Helpers
-  # ============================================================================
-
-  # Creates a test board with standard columns (TODO, In Progress, To Review).
-  # Clears default column hooks to allow tests to add their own hooks.
-  # Returns a map with board, user, and column references.
-  defp create_board_with_columns do
-    {:ok, user} = create_test_user()
-    {:ok, board} = Board.create(%{name: "Test Board", user_id: user.id})
-
-    {:ok, columns} = Column.read()
-    board_columns = Enum.filter(columns, &(&1.board_id == board.id))
-
-    todo_column = Enum.find(board_columns, &(&1.name == "TODO"))
-    in_progress_column = Enum.find(board_columns, &(&1.name == "In Progress"))
-    to_review_column = Enum.find(board_columns, &(&1.name == "To Review"))
-
-    clear_default_column_hooks(board_columns)
-
-    %{
-      board: board,
-      user: user,
-      todo_column: todo_column,
-      in_progress_column: in_progress_column,
-      to_review_column: to_review_column
-    }
-  end
-
-  defp clear_default_column_hooks(columns) do
-    import Ecto.Query
-
-    column_ids = Enum.map(columns, & &1.id)
-
-    ColumnHook
-    |> where([ch], ch.column_id in ^column_ids)
-    |> Viban.Repo.delete_all()
-  end
-
-  defp wait_for_task_server(task_id, timeout \\ 5000) do
-    registry = Viban.Kanban.ActorRegistry
-
-    wait_until(timeout, fn ->
-      case Registry.lookup(registry, {:task_server, task_id}) do
-        [{_pid, _}] -> true
-        [] -> false
-      end
-    end)
-  end
-
-  defp wait_until(timeout, fun) when timeout > 0 do
-    if fun.() do
-      :ok
-    else
-      Process.sleep(50)
-      wait_until(timeout - 50, fun)
-    end
-  end
-
-  defp wait_until(_timeout, _fun), do: :timeout
-
-  defp create_temp_worktree do
-    path =
-      Path.join(System.tmp_dir!(), "viban_test_worktree_#{System.unique_integer([:positive])}")
-
-    File.mkdir_p!(path)
-    path
-  end
-
-  defp create_task_with_worktree(attrs) do
-    worktree = create_temp_worktree()
-    {:ok, task} = Task.create(attrs)
-
-    {:ok, task} =
-      Task.assign_worktree(task, %{worktree_path: worktree, worktree_branch: "test-branch"})
-
-    {task, worktree}
-  end
-
-  # Creates a temporary file path with automatic cleanup on test exit.
-  defp temp_file_with_cleanup(prefix) do
-    path = Path.join(System.tmp_dir!(), "#{prefix}_#{System.unique_integer()}")
-    on_exit(fn -> File.rm(path) end)
-    path
-  end
 
   # ============================================================================
   # HOOK EXECUTION FEEDBACK TESTS (3 tests)
@@ -173,7 +82,6 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
       todo_column: todo_column,
       in_progress_column: in_progress_column
     } do
-      # Create a hook that takes time to execute so we can observe the running state
       {:ok, hook} =
         Hook.create_script_hook(%{
           name: "Slow Hook",
@@ -188,30 +96,25 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
           position: 0
         })
 
-      {task, worktree} =
+      {task, _worktree} =
         create_task_with_worktree(%{
           title: "Test Task",
           column_id: todo_column.id
         })
 
       start_supervised!({BoardSupervisor, board.id})
-      wait_for_task_server(task.id)
+      assert {:ok, _pid} = wait_for_task_server(task.id)
 
       {:ok, _moved_task} = Task.move(task, %{column_id: in_progress_column.id})
 
-      # Wait for hook to start but not finish
       Process.sleep(500)
 
       {:ok, executing_task} = Task.get(task.id)
 
       assert executing_task.in_progress == true
-      # Note: agent_status may be :running or :executing depending on implementation
       assert executing_task.agent_status in [:running, :executing]
       assert executing_task.agent_status_message
       assert String.contains?(executing_task.agent_status_message, "Slow Hook")
-
-      # Cleanup
-      File.rm_rf(worktree)
     end
 
     test "clears status and returns to idle after successful completion", %{
@@ -233,14 +136,14 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
           position: 0
         })
 
-      {task, worktree} =
+      {task, _worktree} =
         create_task_with_worktree(%{
           title: "Test Task",
           column_id: todo_column.id
         })
 
       start_supervised!({BoardSupervisor, board.id})
-      wait_for_task_server(task.id)
+      assert {:ok, _pid} = wait_for_task_server(task.id)
 
       {:ok, _moved_task} = Task.move(task, %{column_id: in_progress_column.id})
 
@@ -251,9 +154,6 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
       assert completed_task.in_progress == false
       assert completed_task.agent_status == :idle
       assert completed_task.error_message == nil
-
-      # Cleanup
-      File.rm_rf(worktree)
     end
 
     test "sets error state and moves to To Review on hook failure", %{
@@ -275,14 +175,14 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
           position: 0
         })
 
-      {task, worktree} =
+      {task, _worktree} =
         create_task_with_worktree(%{
           title: "Test Task",
           column_id: todo_column.id
         })
 
       start_supervised!({BoardSupervisor, board.id})
-      wait_for_task_server(task.id)
+      assert {:ok, _pid} = wait_for_task_server(task.id)
 
       {:ok, _moved_task} = Task.move(task, %{column_id: in_progress_column.id})
 
@@ -293,11 +193,6 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
       assert failed_task.agent_status == :error
       assert failed_task.error_message
       assert String.contains?(failed_task.error_message, "Failing Hook")
-      # Note: Auto-move to To Review on failure is not implemented yet
-      # assert failed_task.column_id == to_review_column.id
-
-      # Cleanup
-      File.rm_rf(worktree)
     end
   end
 
@@ -347,14 +242,14 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
           position: 1
         })
 
-      {task, worktree} =
+      {task, _worktree} =
         create_task_with_worktree(%{
           title: "Test Task",
           column_id: todo_column.id
         })
 
       start_supervised!({BoardSupervisor, board.id})
-      wait_for_task_server(task.id)
+      assert {:ok, _pid} = wait_for_task_server(task.id)
 
       {:ok, _moved_task} = Task.move(task, %{column_id: in_progress_column.id})
 
@@ -364,14 +259,8 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
 
       assert failed_task.agent_status == :error
       assert failed_task.error_message
-      # Note: Auto-move to To Review on failure is not implemented yet
-      # assert failed_task.column_id == to_review_column.id
 
-      # Hook B should NOT have run
       refute File.exists?(marker_file)
-
-      # Cleanup
-      File.rm_rf(worktree)
     end
 
     @tag :skip
@@ -412,14 +301,14 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
           position: 0
         })
 
-      {task, worktree} =
+      {task, _worktree} =
         create_task_with_worktree(%{
           title: "Test Task",
           column_id: todo_column.id
         })
 
       start_supervised!({BoardSupervisor, board.id})
-      wait_for_task_server(task.id)
+      assert {:ok, _pid} = wait_for_task_server(task.id)
 
       {:ok, _moved_task} = Task.move(task, %{column_id: in_progress_column.id})
 
@@ -430,24 +319,12 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
       assert final_task.column_id == to_review_column.id
       assert final_task.agent_status == :error
 
-      # To Review hook should NOT have run
       refute File.exists?(marker_file)
-
-      # Cleanup
-      File.rm_rf(worktree)
     end
 
     @tag :skip
     @tag timeout: 10_000
     test "treats timeout as failure" do
-      # This test requires actual timeout implementation in TaskActor.
-      # Currently skipped as the timeout mechanism may not be fully implemented.
-      # When implemented, this should:
-      # 1. Create a hook with a long-running command
-      # 2. Configure a short timeout
-      # 3. Verify the task is moved to error state after timeout
-      #
-      # For now, we verify the error message format helper works correctly.
       error_message = format_timeout_error("Timeout Hook")
       assert String.contains?(error_message, "Timeout Hook")
       assert String.contains?(error_message, "timed out")
@@ -478,28 +355,25 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
       create_board_with_columns()
     end
 
-    @tag :skip
-    @tag reason: "Hook cancellation on task move timing is unreliable in tests"
     test "stops running hook and cancels pending hooks when task is manually moved", %{
       board: board,
       todo_column: todo_column,
       in_progress_column: in_progress_column,
       to_review_column: to_review_column
     } do
-      marker_file = temp_file_with_cleanup("slow_hook")
-      second_marker_file = temp_file_with_cleanup("second_hook")
+      alias Viban.Kanban.HookExecution
 
       {:ok, slow_hook} =
         Hook.create_script_hook(%{
           name: "Slow Hook",
-          command: "sleep 3 && touch #{marker_file}",
+          command: "sleep 10",
           board_id: board.id
         })
 
       {:ok, second_hook} =
         Hook.create_script_hook(%{
           name: "Second Hook",
-          command: "touch #{second_marker_file}",
+          command: "echo 'second'",
           board_id: board.id
         })
 
@@ -517,52 +391,50 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
           position: 1
         })
 
-      {task, worktree} =
+      {task, _worktree} =
         create_task_with_worktree(%{
           title: "Test Task",
           column_id: todo_column.id
         })
 
       start_supervised!({BoardSupervisor, board.id})
-      wait_for_task_server(task.id)
+      assert {:ok, _pid} = wait_for_task_server(task.id)
 
-      # Move task to In Progress (starts slow hook)
       {:ok, moved_task1} = Task.move(task, %{column_id: in_progress_column.id})
 
-      # Wait for hook to start
-      Process.sleep(500)
+      assert {:ok, _} = wait_for_hook_running(task.id, "Slow Hook"),
+             "Slow Hook should have started running"
 
-      # Move task to To Review while hook is running
       {:ok, _moved_task2} = Task.move(moved_task1, %{column_id: to_review_column.id})
 
-      # Wait for slow hook would have completed
-      Process.sleep(@slow_hook_timeout)
+      assert {:ok, _} = wait_for_hook_status(task.id, "Slow Hook", :cancelled),
+             "Slow Hook should have been cancelled"
 
-      # Neither hook should have completed
-      refute File.exists?(marker_file), "Slow hook should have been stopped"
-      refute File.exists?(second_marker_file), "Second hook should have been cancelled"
+      {:ok, executions} = HookExecution.history_for_task(task.id)
+      slow_hook_exec = Enum.find(executions, &(&1.hook_name == "Slow Hook"))
+      second_hook_exec = Enum.find(executions, &(&1.hook_name == "Second Hook"))
+
+      assert slow_hook_exec.status == :cancelled
+      assert slow_hook_exec.skip_reason in [:column_change, :user_cancelled]
+
+      assert second_hook_exec.status in [:cancelled, :skipped]
 
       {:ok, final_task} = Task.get(task.id)
       assert final_task.column_id == to_review_column.id
-
-      # Cleanup
-      File.rm_rf(worktree)
     end
 
-    @tag :skip
-    @tag reason: "Hook cancellation on task move timing is unreliable in tests"
     test "programmatic move interrupts hooks same as manual move", %{
       board: board,
       todo_column: todo_column,
       in_progress_column: in_progress_column,
       to_review_column: to_review_column
     } do
-      marker_file = temp_file_with_cleanup("prog_hook")
+      alias Viban.Kanban.HookExecution
 
       {:ok, hook} =
         Hook.create_script_hook(%{
           name: "Hook Before Programmatic Move",
-          command: "sleep 2 && touch #{marker_file}",
+          command: "sleep 10",
           board_id: board.id
         })
 
@@ -573,46 +445,44 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
           position: 0
         })
 
-      {task, worktree} =
+      {task, _worktree} =
         create_task_with_worktree(%{
           title: "Test Task",
           column_id: todo_column.id
         })
 
       start_supervised!({BoardSupervisor, board.id})
-      wait_for_task_server(task.id)
+      assert {:ok, _pid} = wait_for_task_server(task.id)
 
       {:ok, moved_task1} = Task.move(task, %{column_id: in_progress_column.id})
 
-      Process.sleep(500)
+      assert {:ok, _} = wait_for_hook_running(task.id, "Hook Before Programmatic Move"),
+             "Hook should have started running"
 
-      # Programmatically move task
       {:ok, _moved_task2} = Task.move(moved_task1, %{column_id: to_review_column.id})
 
-      Process.sleep(@slow_hook_timeout)
+      assert {:ok, _} = wait_for_hook_status(task.id, "Hook Before Programmatic Move", :cancelled),
+             "Hook should have been cancelled"
 
-      refute File.exists?(marker_file)
+      {:ok, executions} = HookExecution.history_for_task(task.id)
+      hook_exec = Enum.find(executions, &(&1.hook_name == "Hook Before Programmatic Move"))
+
+      assert hook_exec.status == :cancelled
+      assert hook_exec.skip_reason in [:column_change, :user_cancelled]
 
       {:ok, final_task} = Task.get(task.id)
       assert final_task.column_id == to_review_column.id
-
-      # Cleanup
-      File.rm_rf(worktree)
     end
 
-    @tag :skip
-    @tag reason: "Hook cancellation on task delete timing is unreliable in tests"
     test "stops hook and deletes task when task is deleted during hook execution", %{
       board: board,
       todo_column: todo_column,
       in_progress_column: in_progress_column
     } do
-      marker_file = temp_file_with_cleanup("delete_hook")
-
       {:ok, hook} =
         Hook.create_script_hook(%{
           name: "Hook Before Delete",
-          command: "sleep 3 && touch #{marker_file}",
+          command: "sleep 10",
           board_id: board.id
         })
 
@@ -623,7 +493,7 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
           position: 0
         })
 
-      {task, worktree} =
+      {task, _worktree} =
         create_task_with_worktree(%{
           title: "Test Task",
           column_id: todo_column.id
@@ -632,22 +502,20 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
       task_id = task.id
 
       start_supervised!({BoardSupervisor, board.id})
-      wait_for_task_server(task.id)
+      assert {:ok, _pid} = wait_for_task_server(task.id)
 
       {:ok, moved_task} = Task.move(task, %{column_id: in_progress_column.id})
 
-      Process.sleep(500)
+      assert {:ok, _} = wait_for_hook_running(task_id, "Hook Before Delete"),
+             "Hook should have started running"
 
       :ok = Task.destroy(moved_task)
       BoardActor.notify_task_deleted(board.id, task_id)
 
-      Process.sleep(@slow_hook_timeout)
+      assert {:ok, _} = wait_for_no_running_hooks(task_id),
+             "All hooks should have stopped after task deletion"
 
-      refute File.exists?(marker_file)
       assert {:error, _} = Task.get(task_id)
-
-      # Cleanup
-      File.rm_rf(worktree)
     end
   end
 
@@ -711,14 +579,14 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
           position: 2
         })
 
-      {task, worktree} =
+      {task, _worktree} =
         create_task_with_worktree(%{
           title: "Test Task",
           column_id: todo_column.id
         })
 
       start_supervised!({BoardSupervisor, board.id})
-      wait_for_task_server(task.id)
+      assert {:ok, _pid} = wait_for_task_server(task.id)
 
       {:ok, _moved_task} = Task.move(task, %{column_id: in_progress_column.id})
 
@@ -731,9 +599,6 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
 
       {:ok, final_task} = Task.get(task.id)
       assert final_task.agent_status == :idle
-
-      # Cleanup
-      File.rm_rf(worktree)
     end
 
     test "skips remaining hooks when middle hook fails", %{
@@ -786,32 +651,24 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
           position: 2
         })
 
-      {task, worktree} =
+      {task, _worktree} =
         create_task_with_worktree(%{
           title: "Test Task",
           column_id: todo_column.id
         })
 
       start_supervised!({BoardSupervisor, board.id})
-      wait_for_task_server(task.id)
+      assert {:ok, _pid} = wait_for_task_server(task.id)
 
       {:ok, _moved_task} = Task.move(task, %{column_id: in_progress_column.id})
 
       Process.sleep(@async_timeout)
 
-      # Hook A should have run
       assert File.exists?(marker_file_a)
-
-      # Hook C should NOT have run
       refute File.exists?(marker_file_c)
 
       {:ok, final_task} = Task.get(task.id)
       assert final_task.agent_status == :error
-      # Note: Auto-move to To Review on failure is not implemented yet
-      # assert final_task.column_id == to_review_column.id
-
-      # Cleanup
-      File.rm_rf(worktree)
     end
 
     test "executes same hook on different columns independently", %{
@@ -846,35 +703,29 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
           execute_once: false
         })
 
-      {task, worktree} =
+      {task, _worktree} =
         create_task_with_worktree(%{
           title: "Test Task",
           column_id: todo_column.id
         })
 
       start_supervised!({BoardSupervisor, board.id})
-      wait_for_task_server(task.id)
+      assert {:ok, _pid} = wait_for_task_server(task.id)
 
-      # Move to In Progress (first execution)
       {:ok, moved1} = Task.move(task, %{column_id: in_progress_column.id})
       Process.sleep(@async_timeout)
 
       assert String.trim(File.read!(counter_file)) == "1"
 
-      # Move to To Review (second execution)
       {:ok, moved2} = Task.move(moved1, %{column_id: to_review_column.id})
       Process.sleep(@async_timeout)
 
       assert String.trim(File.read!(counter_file)) == "2"
 
-      # Move back to In Progress (third execution)
       {:ok, _moved3} = Task.move(moved2, %{column_id: in_progress_column.id})
       Process.sleep(@async_timeout)
 
       assert String.trim(File.read!(counter_file)) == "3"
-
-      # Cleanup
-      File.rm_rf(worktree)
     end
   end
 
@@ -911,14 +762,14 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
           execute_once: true
         })
 
-      {task, worktree} =
+      {task, _worktree} =
         create_task_with_worktree(%{
           title: "Test Task",
           column_id: todo_column.id
         })
 
       start_supervised!({BoardSupervisor, board.id})
-      wait_for_task_server(task.id)
+      assert {:ok, _pid} = wait_for_task_server(task.id)
 
       {:ok, _moved_task} = Task.move(task, %{column_id: in_progress_column.id})
       Process.sleep(@async_timeout)
@@ -927,9 +778,6 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
 
       {:ok, executed_task} = Task.get(task.id)
       assert column_hook.id in executed_task.executed_hooks
-
-      # Cleanup
-      File.rm_rf(worktree)
     end
 
     test "skips hook on subsequent column entries", %{
@@ -955,33 +803,27 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
           execute_once: true
         })
 
-      {task, worktree} =
+      {task, _worktree} =
         create_task_with_worktree(%{
           title: "Test Task",
           column_id: todo_column.id
         })
 
       start_supervised!({BoardSupervisor, board.id})
-      wait_for_task_server(task.id)
+      assert {:ok, _pid} = wait_for_task_server(task.id)
 
-      # First move
       {:ok, moved1} = Task.move(task, %{column_id: in_progress_column.id})
       Process.sleep(@async_timeout)
 
       assert String.trim(File.read!(counter_file)) == "1"
 
-      # Move back
       {:ok, moved2} = Task.move(moved1, %{column_id: todo_column.id})
       Process.sleep(500)
 
-      # Second move - hook should be skipped
       {:ok, _moved3} = Task.move(moved2, %{column_id: in_progress_column.id})
       Process.sleep(@async_timeout)
 
       assert String.trim(File.read!(counter_file)) == "1"
-
-      # Cleanup
-      File.rm_rf(worktree)
     end
 
     test "remains skipped even after error is cleared", %{
@@ -1007,22 +849,20 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
           execute_once: true
         })
 
-      {task, worktree} =
+      {task, _worktree} =
         create_task_with_worktree(%{
           title: "Test Task",
           column_id: todo_column.id
         })
 
       start_supervised!({BoardSupervisor, board.id})
-      wait_for_task_server(task.id)
+      assert {:ok, _pid} = wait_for_task_server(task.id)
 
-      # First move - hook executes
       {:ok, _moved1} = Task.move(task, %{column_id: in_progress_column.id})
       Process.sleep(@async_timeout)
 
       assert String.trim(File.read!(counter_file)) == "1"
 
-      # Simulate error and clear it
       {:ok, errored_task} = Task.get(task.id)
 
       {:ok, errored_task} =
@@ -1035,18 +875,13 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
       {:ok, cleared_task} = Task.clear_error(errored_task)
       assert cleared_task.agent_status == :idle
 
-      # Move back
       {:ok, moved2} = Task.move(cleared_task, %{column_id: todo_column.id})
       Process.sleep(500)
 
-      # Second move - hook should still be skipped
       {:ok, _moved3} = Task.move(moved2, %{column_id: in_progress_column.id})
       Process.sleep(@async_timeout)
 
       assert String.trim(File.read!(counter_file)) == "1"
-
-      # Cleanup
-      File.rm_rf(worktree)
     end
   end
 
@@ -1167,7 +1002,7 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
       in_progress_column: in_progress_column,
       to_review_column: to_review_column
     } do
-      {kanban_task, worktree} =
+      {kanban_task, _worktree} =
         create_task_with_worktree(%{
           title: "Test Task",
           column_id: todo_column.id
@@ -1176,9 +1011,8 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
       task_id = kanban_task.id
 
       start_supervised!({BoardSupervisor, board.id})
-      wait_for_task_server(kanban_task.id)
+      assert {:ok, _pid} = wait_for_task_server(kanban_task.id)
 
-      # Simulate two concurrent moves using Elixir.Task (not Viban.Kanban.Task)
       async_task1 =
         Elixir.Task.async(fn ->
           {:ok, moved} = Task.move(kanban_task, %{column_id: in_progress_column.id})
@@ -1195,40 +1029,33 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
       result1 = Elixir.Task.await(async_task1, 5000)
       result2 = Elixir.Task.await(async_task2, 5000)
 
-      # At least one should succeed
       assert match?({:ok, _}, result1) or match?({:ok, _}, result2)
 
       Process.sleep(@async_timeout)
 
       {:ok, final_task} = Task.get(task_id)
       assert final_task.column_id in [in_progress_column.id, to_review_column.id]
-
-      # Cleanup
-      File.rm_rf(worktree)
     end
 
-    @tag :skip
-    @tag reason: "Hook cancellation on rapid transitions timing is unreliable in tests"
     test "cancels hooks during rapid column transitions", %{
       board: board,
       todo_column: todo_column,
       in_progress_column: in_progress_column,
       to_review_column: to_review_column
     } do
-      in_progress_marker = temp_file_with_cleanup("rapid_move_ip")
-      to_review_marker = temp_file_with_cleanup("rapid_move_tr")
+      alias Viban.Kanban.HookExecution
 
       {:ok, ip_hook} =
         Hook.create_script_hook(%{
           name: "In Progress Hook",
-          command: "sleep 2 && touch #{in_progress_marker}",
+          command: "sleep 10",
           board_id: board.id
         })
 
       {:ok, tr_hook} =
         Hook.create_script_hook(%{
           name: "To Review Hook",
-          command: "touch #{to_review_marker}",
+          command: "sleep 10",
           board_id: board.id
         })
 
@@ -1246,34 +1073,39 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
           position: 0
         })
 
-      {task, worktree} =
+      {task, _worktree} =
         create_task_with_worktree(%{
           title: "Test Task",
           column_id: todo_column.id
         })
 
       start_supervised!({BoardSupervisor, board.id})
-      wait_for_task_server(task.id)
+      assert {:ok, _pid} = wait_for_task_server(task.id)
 
-      # Rapid moves: TODO -> In Progress -> To Review -> TODO
       {:ok, moved1} = Task.move(task, %{column_id: in_progress_column.id})
-      Process.sleep(100)
+
+      assert {:ok, _} = wait_for_hook_running(task.id, "In Progress Hook", 3000),
+             "In Progress Hook should have started"
 
       {:ok, moved2} = Task.move(moved1, %{column_id: to_review_column.id})
-      Process.sleep(100)
+
+      assert {:ok, _} = wait_for_hook_status(task.id, "In Progress Hook", :cancelled, 3000),
+             "In Progress Hook should have been cancelled"
 
       {:ok, _moved3} = Task.move(moved2, %{column_id: todo_column.id})
 
-      Process.sleep(@slow_hook_timeout)
+      assert {:ok, _} = wait_for_all_hooks_terminal(task.id),
+             "All hooks should reach terminal state"
 
-      # In Progress hook should have been cancelled
-      refute File.exists?(in_progress_marker)
+      {:ok, executions} = HookExecution.history_for_task(task.id)
+      ip_hook_execs = Enum.filter(executions, &(&1.hook_name == "In Progress Hook"))
+      tr_hook_execs = Enum.filter(executions, &(&1.hook_name == "To Review Hook"))
+
+      assert Enum.all?(ip_hook_execs, &(&1.status in [:cancelled, :skipped]))
+      assert Enum.all?(tr_hook_execs, &(&1.status in [:cancelled, :skipped]))
 
       {:ok, final_task} = Task.get(task.id)
       assert final_task.column_id == todo_column.id
-
-      # Cleanup
-      File.rm_rf(worktree)
     end
 
     test "persists hook executions for crash recovery" do
@@ -1339,6 +1171,225 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
       {:ok, cancelled} = HookExecution.cancel(running, %{skip_reason: :server_restart})
       assert cancelled.status == :cancelled
       assert cancelled.skip_reason == :server_restart
+    end
+  end
+
+  # ============================================================================
+  # TRANSPARENT HOOK TESTS
+  # ============================================================================
+
+  describe "Transparent hook behavior" do
+    @describetag :integration
+
+    setup do
+      create_board_with_columns()
+    end
+
+    test "transparent hook executes when task is in error state", %{
+      board: board,
+      todo_column: todo_column,
+      to_review_column: to_review_column
+    } do
+      alias Viban.Kanban.HookExecution
+
+      marker_file = temp_file_with_cleanup("transparent_hook")
+
+      {:ok, transparent_hook} =
+        Hook.create_script_hook(%{
+          name: "Transparent Hook",
+          command: "touch #{marker_file}",
+          board_id: board.id
+        })
+
+      {:ok, _column_hook} =
+        ColumnHook.create(%{
+          column_id: to_review_column.id,
+          hook_id: transparent_hook.id,
+          position: 0,
+          transparent: true
+        })
+
+      {task, _worktree} =
+        create_task_with_worktree(%{
+          title: "Test Task",
+          column_id: todo_column.id
+        })
+
+      {:ok, errored_task} =
+        Task.set_error(task, %{
+          agent_status: :error,
+          error_message: "Previous hook failed",
+          in_progress: false
+        })
+
+      start_supervised!({BoardSupervisor, board.id})
+      assert {:ok, _pid} = wait_for_task_server(task.id)
+
+      {:ok, _moved_task} = Task.move(errored_task, %{column_id: to_review_column.id})
+
+      assert {:ok, completed_exec} = wait_for_hook_status(task.id, "Transparent Hook", :completed)
+
+      assert File.exists?(marker_file)
+
+      {:ok, executions} = HookExecution.history_for_task(task.id)
+      transparent_exec = Enum.find(executions, &(&1.hook_name == "Transparent Hook"))
+      assert transparent_exec
+      assert transparent_exec.status == :completed
+      assert completed_exec.status == :completed
+    end
+
+    test "non-transparent hook is skipped when task is in error state", %{
+      board: board,
+      todo_column: todo_column,
+      to_review_column: to_review_column
+    } do
+      marker_file = temp_file_with_cleanup("non_transparent")
+
+      {:ok, normal_hook} =
+        Hook.create_script_hook(%{
+          name: "Normal Hook",
+          command: "touch #{marker_file}",
+          board_id: board.id
+        })
+
+      {:ok, _column_hook} =
+        ColumnHook.create(%{
+          column_id: to_review_column.id,
+          hook_id: normal_hook.id,
+          position: 0,
+          transparent: false
+        })
+
+      {task, _worktree} =
+        create_task_with_worktree(%{
+          title: "Test Task",
+          column_id: todo_column.id
+        })
+
+      {:ok, errored_task} =
+        Task.set_error(task, %{
+          agent_status: :error,
+          error_message: "Previous hook failed",
+          in_progress: false
+        })
+
+      start_supervised!({BoardSupervisor, board.id})
+      assert {:ok, _pid} = wait_for_task_server(task.id)
+
+      {:ok, _moved_task} = Task.move(errored_task, %{column_id: to_review_column.id})
+
+      assert {:ok, skipped_exec} = wait_for_hook_status(task.id, "Normal Hook", :skipped)
+
+      refute File.exists?(marker_file)
+
+      assert skipped_exec.status == :skipped
+      assert skipped_exec.skip_reason == :error
+    end
+
+    test "mix of transparent and non-transparent hooks respects error state", %{
+      board: board,
+      todo_column: todo_column,
+      to_review_column: to_review_column
+    } do
+      transparent_marker = temp_file_with_cleanup("transparent_marker")
+      normal_marker = temp_file_with_cleanup("normal_marker")
+
+      {:ok, transparent_hook} =
+        Hook.create_script_hook(%{
+          name: "Transparent Hook",
+          command: "touch #{transparent_marker}",
+          board_id: board.id
+        })
+
+      {:ok, normal_hook} =
+        Hook.create_script_hook(%{
+          name: "Normal Hook",
+          command: "touch #{normal_marker}",
+          board_id: board.id
+        })
+
+      {:ok, _} =
+        ColumnHook.create(%{
+          column_id: to_review_column.id,
+          hook_id: transparent_hook.id,
+          position: 0,
+          transparent: true
+        })
+
+      {:ok, _} =
+        ColumnHook.create(%{
+          column_id: to_review_column.id,
+          hook_id: normal_hook.id,
+          position: 1,
+          transparent: false
+        })
+
+      {task, _worktree} =
+        create_task_with_worktree(%{
+          title: "Test Task",
+          column_id: todo_column.id
+        })
+
+      {:ok, errored_task} =
+        Task.set_error(task, %{
+          agent_status: :error,
+          error_message: "Previous hook failed",
+          in_progress: false
+        })
+
+      start_supervised!({BoardSupervisor, board.id})
+      assert {:ok, _pid} = wait_for_task_server(task.id)
+
+      {:ok, _moved_task} = Task.move(errored_task, %{column_id: to_review_column.id})
+
+      assert {:ok, transparent_exec} = wait_for_hook_status(task.id, "Transparent Hook", :completed)
+      assert {:ok, normal_exec} = wait_for_hook_status(task.id, "Normal Hook", :skipped)
+
+      assert File.exists?(transparent_marker)
+      refute File.exists?(normal_marker)
+
+      assert transparent_exec.status == :completed
+      assert normal_exec.status == :skipped
+      assert normal_exec.skip_reason == :error
+    end
+
+    test "transparent hook runs on task without error state", %{
+      board: board,
+      todo_column: todo_column,
+      in_progress_column: in_progress_column
+    } do
+      marker_file = temp_file_with_cleanup("transparent_normal")
+
+      {:ok, transparent_hook} =
+        Hook.create_script_hook(%{
+          name: "Transparent Hook",
+          command: "touch #{marker_file}",
+          board_id: board.id
+        })
+
+      {:ok, _column_hook} =
+        ColumnHook.create(%{
+          column_id: in_progress_column.id,
+          hook_id: transparent_hook.id,
+          position: 0,
+          transparent: true
+        })
+
+      {task, _worktree} =
+        create_task_with_worktree(%{
+          title: "Test Task",
+          column_id: todo_column.id
+        })
+
+      start_supervised!({BoardSupervisor, board.id})
+      assert {:ok, _pid} = wait_for_task_server(task.id)
+
+      {:ok, _moved_task} = Task.move(task, %{column_id: in_progress_column.id})
+
+      assert {:ok, exec} = wait_for_hook_status(task.id, "Transparent Hook", :completed)
+
+      assert File.exists?(marker_file)
+      assert exec.status == :completed
     end
   end
 

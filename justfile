@@ -1,18 +1,20 @@
 # Viban Justfile - Development commands
 #
-# App runs at: https://localhost:7777 (Phoenix with self-signed HTTPS)
+# App runs at: https://localhost:7777 (Caddy HTTPS -> Phoenix HTTP)
+# Architecture: Caddy (:7777 HTTPS) -> Phoenix (:7780 HTTP) -> Vite (:7778 HTTP)
 
 # Default recipe - show available commands
 default:
     @just --list
 
-# Start all services (database, backend, frontend)
+# Start all services (database, caddy, backend, frontend)
 dev:
     #!/usr/bin/env bash
     set -a && source .env && set +a
     trap 'kill 0' EXIT
     docker compose up db &
     sleep 3
+    caddy run --config Caddyfile &
     (cd backend && mix deps.get && mix ash.setup && elixir --sname viban --cookie viban -S mix phx.server) &
     (cd frontend && bun i && bun dev) &
     wait
@@ -66,6 +68,7 @@ dev-e2e:
     trap 'kill 0' EXIT
     docker compose up db &
     sleep 3
+    caddy run --config Caddyfile &
     (cd backend && E2E_TEST=true mix phx.server) &
     (cd frontend && bun dev) &
     wait
@@ -185,11 +188,13 @@ fmt: format
 
 # Kill all dangling backend processes (use when port is blocked)
 kill:
-    @echo "Killing dangling Elixir/Phoenix processes..."
+    @echo "Killing dangling Elixir/Phoenix/Caddy processes..."
     -lsof -ti:7777 | xargs kill -9 2>/dev/null
     -lsof -ti:7778 | xargs kill -9 2>/dev/null
+    -lsof -ti:7780 | xargs kill -9 2>/dev/null
     -pkill -9 -f "viban.*phx.server" 2>/dev/null
     -pkill -9 -f "vinxi" 2>/dev/null
+    -pkill -9 -f "caddy run" 2>/dev/null
     @sleep 1
     @echo "Done. Ports should be free now."
 

@@ -12,7 +12,7 @@ defmodule Viban.Workers.PRSyncWorker do
     queue: :default,
     max_attempts: 3
 
-  alias Viban.GitHub.PRDetector
+  alias Viban.VCS.GitHub.PRDetector
   alias Viban.Kanban.Task
 
   require Ash.Query

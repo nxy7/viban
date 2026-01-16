@@ -28,10 +28,11 @@ defmodule Viban.Executors.Actions.Execute do
 
     working_directory = Map.get(input.arguments, :working_directory)
     images = Map.get(input.arguments, :images, [])
+    resume_session_id = Map.get(input.arguments, :resume_session_id)
 
     with :ok <- verify_executor_available(executor_type),
          :ok <- update_task_status(task_id, executor_type),
-         {:ok, pid} <- start_runner(task_id, executor_type, prompt, working_directory, images) do
+         {:ok, pid} <- start_runner(task_id, executor_type, prompt, working_directory, images, resume_session_id) do
       {:ok,
        %{
          status: :started,
@@ -75,13 +76,14 @@ defmodule Viban.Executors.Actions.Execute do
     end
   end
 
-  defp start_runner(task_id, executor_type, prompt, working_directory, images) do
+  defp start_runner(task_id, executor_type, prompt, working_directory, images, resume_session_id) do
     case Runner.start(
            task_id: task_id,
            executor_type: executor_type,
            prompt: prompt,
            working_directory: working_directory,
-           images: images
+           images: images,
+           resume_session_id: resume_session_id
          ) do
       {:ok, pid} ->
         {:ok, pid}

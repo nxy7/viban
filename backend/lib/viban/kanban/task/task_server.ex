@@ -1,4 +1,4 @@
-defmodule Viban.Kanban.Servers.TaskServer do
+defmodule Viban.Kanban.Task.TaskServer do
   @moduledoc """
   Manages the lifecycle of a single task, including hook execution coordination.
 
@@ -30,15 +30,16 @@ defmodule Viban.Kanban.Servers.TaskServer do
   use GenServer, restart: :transient
 
   alias Phoenix.PubSub
+  alias Viban.CallerTracking
   alias Viban.Kanban.Actors.ColumnSemaphore
   alias Viban.Kanban.Column
   alias Viban.Kanban.ColumnHook
   alias Viban.Kanban.Hook
   alias Viban.Kanban.HookExecution
-  alias Viban.Kanban.Servers.HookExecutionServer
-  alias Viban.Kanban.Servers.TaskSupervisor
+  alias Viban.Kanban.HookExecution.HookExecutionServer
+  alias Viban.Kanban.Task.TaskSupervisor
   alias Viban.Kanban.Task
-  alias Viban.Kanban.WorktreeManager
+  alias Viban.Kanban.Task.WorktreeManager
 
   require Logger
 
@@ -69,7 +70,8 @@ defmodule Viban.Kanban.Servers.TaskServer do
 
   @spec start_link({String.t(), Task.t()}) :: GenServer.on_start()
   def start_link({board_id, task}) do
-    GenServer.start_link(__MODULE__, {board_id, task}, name: via_tuple(task.id))
+    callers = CallerTracking.capture_callers()
+    GenServer.start_link(__MODULE__, {callers, board_id, task}, name: via_tuple(task.id))
   end
 
   @spec via_tuple(String.t()) :: {:via, Registry, {atom(), term()}}
@@ -141,7 +143,8 @@ defmodule Viban.Kanban.Servers.TaskServer do
   # ============================================================================
 
   @impl true
-  def init({board_id, task}) do
+  def init({callers, board_id, task}) do
+    CallerTracking.restore_callers(callers)
     Logger.info("TaskServer starting", task_id: task.id)
 
     state = %__MODULE__{

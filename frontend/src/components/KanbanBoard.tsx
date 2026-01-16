@@ -49,7 +49,6 @@ import KeyboardShortcutsHelp from "./KeyboardShortcutsHelp";
 import { TaskCardOverlay } from "./TaskCard";
 
 
-/** Valid settings tabs */
 type SettingsTab =
   | "general"
   | "templates"
@@ -58,25 +57,14 @@ type SettingsTab =
   | "scheduled"
   | "system";
 
-/** Represents where a task will be dropped */
 export interface DropTarget {
-  /** Column ID where task will be dropped */
   columnId: string;
-  /** Task ID to insert before, or null to append at end */
   beforeTaskId: string | null;
 }
 
-/** Global pointer position tracker for accurate drag positioning */
+// DragOverlay doesn't update draggable.transformed.center during drag, so we track pointer position globally
 let globalPointerY = 0;
 
-/**
- * Custom collision detector for kanban boards.
- * Prioritizes task droppables over column droppables and calculates
- * the correct insertion point based on the pointer's Y position.
- *
- * Uses global pointer position for accurate collision detection since
- * draggable.transformed.center doesn't track properly with DragOverlay.
- */
 const createKanbanCollisionDetector = (
   columnIds: Set<string>,
   getTaskColumnId: (taskId: string) => string | undefined,
@@ -86,13 +74,11 @@ const createKanbanCollisionDetector = (
     droppables: Droppable[],
     _context: { activeDroppableId: string | number | null },
   ): Droppable | null => {
-    // Use actual pointer position for Y, but draggable center for X (column detection)
     const draggableCenter = {
       x: draggable.transformed.center.x,
       y: globalPointerY || draggable.transformed.center.y,
     };
 
-    // Separate column droppables from task droppables
     const columnDroppables: Droppable[] = [];
     const taskDroppables: Droppable[] = [];
 

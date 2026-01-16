@@ -11,11 +11,14 @@ import {
   useTaskEvents,
 } from "~/hooks/useKanban";
 import { getErrorMessage } from "~/lib/errorUtils";
+import { createLogger } from "~/lib/logger";
 import {
   type ExecutorInfo,
   type LLMTodoItem,
   socketManager,
 } from "~/lib/socket";
+
+const log = createLogger("TaskChat");
 
 export type AgentStatusType = "idle" | "thinking" | "executing" | "error";
 
@@ -83,15 +86,17 @@ function taskEventToOutputLine(event: TaskEvent): OutputLine | null {
       if (role === "tool" && typeof content === "string") {
         try {
           content = JSON.parse(content);
-        } catch {
-          // Keep as string
+        } catch (e) {
+          log.debug("Failed to parse tool content as JSON, keeping as string", {
+            eventId: event.id,
+            error: e,
+          });
         }
       }
     } else {
       outputType = "system";
     }
 
-    // Parse metadata for todos
     let metadata: Record<string, unknown> | undefined;
     if (event.metadata) {
       try {
@@ -99,8 +104,8 @@ function taskEventToOutputLine(event: TaskEvent): OutputLine | null {
           typeof event.metadata === "string"
             ? JSON.parse(event.metadata)
             : (event.metadata as Record<string, unknown>);
-      } catch {
-        // Ignore parsing errors
+      } catch (e) {
+        log.debug("Failed to parse event metadata", { eventId: event.id, error: e });
       }
     }
 
@@ -253,12 +258,12 @@ export function useTaskChat(
         const { executors: availableExecutors } =
           await socketManager.listExecutors(id);
         setExecutors(availableExecutors);
-        console.log("[useTaskChat] Available executors:", availableExecutors);
+        log.debug("Available executors", { executors: availableExecutors });
       } catch (err) {
-        console.error("[useTaskChat] Failed to list executors:", err);
+        log.error("Failed to list executors", { error: err });
       }
     } catch (err) {
-      console.error("[useTaskChat] Connection error:", err);
+      log.error("Connection error", { error: err });
       setError(getErrorMessage(err, "Failed to connect"));
       setIsConnected(false);
     } finally {
@@ -318,9 +323,9 @@ export function useTaskChat(
         undefined,
         images,
       );
-      console.log("[useTaskChat] Message queued successfully");
+      log.debug("Message queued successfully");
     } catch (err) {
-      console.error("[useTaskChat] Send message error:", err);
+      log.error("Send message error", { error: err });
       setError(getErrorMessage(err, "Failed to send message"));
       throw err;
     }
@@ -339,7 +344,7 @@ export function useTaskChat(
     try {
       await socketManager.stopExecutor(id);
     } catch (err) {
-      console.error("[useTaskChat] Stop executor error:", err);
+      log.error("Stop executor error", { error: err });
       setError(getErrorMessage(err, "Failed to stop executor"));
       throw err;
     }

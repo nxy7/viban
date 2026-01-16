@@ -10,7 +10,7 @@ This document defines the coding standards and practices for this project when w
 
 ## Development URLs
 
-- **Dev**: `https://localhost:7777` (Phoenix with self-signed certs, proxies to Vite on port 7778)
+- **Dev**: `https://localhost:7777` (Phoenix with mkcert certs, proxies to Vite on port 7778)
 - **Prod/CI**: `https://localhost:7777` (deploy mode, serves bundled frontend)
 
 ## Comment Policy

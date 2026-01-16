@@ -1,6 +1,9 @@
 import { createSignal, For, Show } from "solid-js";
 import { fileToDataUrl } from "~/lib/fileUtils";
+import { createLogger } from "~/lib/logger";
 import { CloseIcon } from "./ui/Icons";
+
+const log = createLogger("ImageTextarea");
 
 /**
  * Inline image data for task descriptions.
@@ -115,7 +118,7 @@ export default function ImageTextarea(props: ImageTextareaProps) {
       try {
         await addImageFromFile(file);
       } catch (err) {
-        console.error("Failed to process pasted image:", err);
+        log.error("Failed to process pasted image", { error: err });
       }
     }
   };
@@ -133,7 +136,7 @@ export default function ImageTextarea(props: ImageTextareaProps) {
         try {
           await addImageFromFile(file);
         } catch (err) {
-          console.error("Failed to process dropped image:", err);
+          log.error("Failed to process dropped image", { error: err });
         }
       }
     }

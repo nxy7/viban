@@ -7,35 +7,30 @@ import {
   Show,
 } from "solid-js";
 import { Button, Input, Select, Textarea } from "~/components/design-system";
-import { type Branch, type Task, unwrap } from "~/hooks/useKanban";
+import { type Branch, type Task, unwrap, useRepositories } from "~/hooks/useKanban";
 import * as sdk from "~/lib/generated/ash";
+import { getStoredString, setStoredString } from "~/lib/storageUtils";
 import ErrorBanner from "./ui/ErrorBanner";
 import { LoadingSpinner, PRIcon } from "./ui/Icons";
 import Modal from "./ui/Modal";
 
 const PREFERRED_BASE_BRANCH_KEY = "viban:preferred-base-branch";
 
-function getPreferredBaseBranch(): string | null {
-  try {
-    return localStorage.getItem(PREFERRED_BASE_BRANCH_KEY);
-  } catch {
-    return null;
-  }
-}
-
-function setPreferredBaseBranch(branch: string): void {
-  try {
-    localStorage.setItem(PREFERRED_BASE_BRANCH_KEY, branch);
-  } catch {
-    // Ignore localStorage errors
-  }
-}
+const getPreferredBaseBranch = () => getStoredString(PREFERRED_BASE_BRANCH_KEY);
+const setPreferredBaseBranch = (branch: string) =>
+  setStoredString(PREFERRED_BASE_BRANCH_KEY, branch);
 
 interface CreatePRModalProps {
   isOpen: boolean;
   onClose: () => void;
   task: Task;
+  boardId: string;
   onSuccess?: (prUrl: string) => void;
+}
+
+function getBranchUrl(repoHtmlUrl: string | null, branchName: string): string | null {
+  if (!repoHtmlUrl) return null;
+  return `${repoHtmlUrl}/tree/${encodeURIComponent(branchName)}`;
 }
 
 export default function CreatePRModal(props: CreatePRModalProps) {
@@ -44,6 +39,15 @@ export default function CreatePRModal(props: CreatePRModalProps) {
   const [baseBranch, setBaseBranch] = createSignal<string | undefined>();
   const [isSubmitting, setIsSubmitting] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
+
+  const { repositories } = useRepositories(() => props.boardId);
+  const repository = () => repositories()[0] ?? null;
+  const branchUrl = () => {
+    const repo = repository();
+    const branch = props.task.worktree_branch;
+    if (!repo?.html_url || !branch) return null;
+    return getBranchUrl(repo.html_url, branch);
+  };
 
   const [branches] = createResource(
     () => (props.isOpen ? props.task.id : null),
@@ -143,9 +147,23 @@ export default function CreatePRModal(props: CreatePRModalProps) {
           <div class="flex items-center gap-2">
             <PRIcon status="draft" class="w-4 h-4 text-gray-400" />
             <span class="text-sm text-gray-400">Head branch:</span>
-            <span class="text-sm font-mono text-brand-400">
-              {props.task.worktree_branch}
-            </span>
+            <Show
+              when={branchUrl()}
+              fallback={
+                <span class="text-sm font-mono text-brand-400">
+                  {props.task.worktree_branch}
+                </span>
+              }
+            >
+              <a
+                href={branchUrl()!}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-sm font-mono text-brand-400 hover:text-brand-300 hover:underline"
+              >
+                {props.task.worktree_branch}
+              </a>
+            </Show>
           </div>
           <Show when={branches.loading}>
             <div class="flex items-center gap-2 text-sm text-gray-500">

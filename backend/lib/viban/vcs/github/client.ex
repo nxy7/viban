@@ -1,9 +1,9 @@
-defmodule Viban.GitHub.Client do
+defmodule Viban.VCS.GitHub.Client do
   @moduledoc """
   GitHub API client for PR operations using the gh CLI.
   """
 
-  alias Viban.GitHub.PRDetector
+  alias Viban.VCS.GitHub.PRDetector
 
   require Logger
 
@@ -32,7 +32,7 @@ defmodule Viban.GitHub.Client do
         {:ok, %{url: pr_url, number: pr_number, status: :open}}
 
       {:error, error} ->
-        Logger.error("[GitHub.Client] Failed to create PR: #{error}")
+        Logger.error("[VCS.GitHub.Client] Failed to create PR: #{error}")
         {:error, error}
     end
   end
@@ -164,7 +164,6 @@ defmodule Viban.GitHub.Client do
     end
   end
 
-  # Run gh CLI command in the specified directory
   defp run_gh(args, working_directory) do
     opts = [cd: working_directory, stderr_to_stdout: true]
 
@@ -173,7 +172,7 @@ defmodule Viban.GitHub.Client do
         {:ok, output}
 
       {error, exit_code} ->
-        Logger.warning("[GitHub.Client] gh command failed (exit #{exit_code}): #{String.slice(error, 0, 200)}")
+        Logger.warning("[VCS.GitHub.Client] gh command failed (exit #{exit_code}): #{String.slice(error, 0, 200)}")
 
         {:error, String.trim(error)}
     end

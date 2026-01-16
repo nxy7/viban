@@ -96,6 +96,7 @@ defmodule Viban.Executors.Implementations.ClaudeCode do
     skip_permissions = Keyword.get(opts, :skip_permissions, true)
     system_prompt = Keyword.get(opts, :system_prompt)
     mcp_config = Keyword.get(opts, :mcp_config)
+    resume_session_id = Keyword.get(opts, :resume_session_id)
 
     claude_executable = find_claude_executable() || "claude"
 
@@ -108,6 +109,7 @@ defmodule Viban.Executors.Implementations.ClaudeCode do
       |> maybe_add_arg(system_prompt, "--append-system-prompt")
       |> maybe_add_arg(mcp_config, "--mcp-config")
       |> maybe_add_arg(working_dir, "--add-dir")
+      |> maybe_add_arg(resume_session_id, "--resume")
 
     wrap_with_pty(claude_executable, claude_args)
   end

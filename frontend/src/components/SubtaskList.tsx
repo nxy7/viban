@@ -1,6 +1,6 @@
 import { createResource, createSignal, For, Show } from "solid-js";
 import { Button } from "~/components/design-system";
-import { type Subtask, type Task, unwrap } from "~/hooks/useKanban";
+import { type Task, unwrap } from "~/hooks/useKanban";
 import * as sdk from "~/lib/generated/ash";
 import ErrorBanner from "./ui/ErrorBanner";
 import {
@@ -11,23 +11,26 @@ import {
 } from "./ui/Icons";
 import ProgressBar from "./ui/ProgressBar";
 
-/**
- * Polling intervals for refetching subtasks after generation starts.
- * Uses increasing intervals to balance responsiveness with performance.
- */
 const SUBTASK_POLL_INTERVALS_MS = [2000, 5000, 10000] as const;
-
-/** Percentage multiplier for progress calculation */
 const PERCENTAGE_MULTIPLIER = 100;
+
+interface SubtaskListItem {
+  id: string;
+  title: string;
+  description: string | null;
+  agent_status: "idle" | "thinking" | "executing" | "error" | null;
+  priority: "low" | "medium" | "high" | null;
+  position: string;
+}
 
 interface SubtaskListProps {
   task: Task;
   onSubtaskClick?: (subtaskId: string) => void;
 }
 
-type SubtaskAgentStatus = Subtask["agent_status"];
+type SubtaskAgentStatus = SubtaskListItem["agent_status"];
+type SubtaskPriority = SubtaskListItem["priority"];
 
-/** Get status indicator color based on agent status */
 function getStatusColor(agentStatus: SubtaskAgentStatus): string {
   switch (agentStatus) {
     case "thinking":
@@ -40,9 +43,6 @@ function getStatusColor(agentStatus: SubtaskAgentStatus): string {
   }
 }
 
-type SubtaskPriority = Subtask["priority"];
-
-/** Get priority badge styles */
 function getPriorityStyles(priority: SubtaskPriority): string {
   switch (priority) {
     case "high":
@@ -58,10 +58,9 @@ export default function SubtaskList(props: SubtaskListProps) {
   const [isGenerating, setIsGenerating] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
 
-  // Fetch subtasks
   const [subtasks, { refetch }] = createResource(
     () => props.task.id,
-    async (taskId: string): Promise<Subtask[]> => {
+    async (taskId: string): Promise<SubtaskListItem[]> => {
       const result = await sdk
         .list_subtasks({
           input: { parent_task_id: taskId },
@@ -75,18 +74,14 @@ export default function SubtaskList(props: SubtaskListProps) {
           ],
         })
         .then(unwrap);
-      return result as unknown as Subtask[];
+      return result ?? [];
     },
   );
 
-  // Check if generation is in progress (from task status or local state)
   const isGenLoading = () =>
     isGenerating() || props.task.subtask_generation_status === "generating";
 
-  /**
-   * Calculate progress percentage based on idle subtasks.
-   * Assumes idle status means the subtask is complete.
-   */
+  // idle status indicates subtask completion
   const progress = () => {
     const subs = subtasks();
     if (!subs || subs.length === 0) return 0;
@@ -105,8 +100,7 @@ export default function SubtaskList(props: SubtaskListProps) {
       .then(unwrap);
 
     setIsGenerating(false);
-    // Poll for completion - the task status will update via Electric sync
-    // but we can refetch subtasks after a delay using increasing intervals
+    // Electric sync handles task status, but subtask list needs manual refetch
     for (const delay of SUBTASK_POLL_INTERVALS_MS) {
       setTimeout(() => refetch(), delay);
     }

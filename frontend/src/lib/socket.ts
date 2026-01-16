@@ -1,5 +1,8 @@
 import { type Channel, Socket } from "phoenix";
+import { createLogger } from "./logger";
 import { showError } from "./notifications";
+
+const log = createLogger("Socket");
 
 // ============================================================================
 // Configuration Constants
@@ -250,7 +253,7 @@ class SocketManager {
 
     this.connectionPromise = new Promise((resolve, reject) => {
       const socketUrl = getSocketUrl();
-      console.log(`[Socket] Connecting to ${socketUrl}`);
+      log.info(`Connecting to ${socketUrl}`);
 
       this.socket = new Socket(socketUrl, {
         params: {},
@@ -262,17 +265,17 @@ class SocketManager {
       const socketRef = this.socket;
 
       socketRef.onOpen(() => {
-        console.log("[Socket] Connected");
+        log.info("Connected");
         this.connectionPromise = null;
         resolve(socketRef);
       });
 
       socketRef.onError((error: unknown) => {
-        console.error("[Socket] Error:", error);
+        log.error("Connection error", { error });
       });
 
       socketRef.onClose(() => {
-        console.log("[Socket] Closed");
+        log.info("Connection closed");
       });
 
       socketRef.connect();
@@ -311,17 +314,17 @@ class SocketManager {
       channel
         .join()
         .receive("ok", (resp: unknown) => {
-          console.log(`[Channel] Joined ${topic}`, resp);
+          log.debug(`Joined ${topic}`, { resp });
           this.channels.set(topic, channel);
           resolve(channel);
         })
         .receive("error", (resp: unknown) => {
-          console.error(`[Channel] Failed to join ${topic}`, resp);
+          log.error(`Failed to join ${topic}`, { resp });
           const errorResp = resp as { reason?: string };
           reject(new Error(errorResp.reason || "Failed to join channel"));
         })
         .receive("timeout", () => {
-          console.error(`[Channel] Timeout joining ${topic}`);
+          log.error(`Timeout joining ${topic}`);
           reject(new Error("Channel join timeout"));
         });
     });
@@ -336,7 +339,7 @@ class SocketManager {
     if (channel) {
       channel.leave();
       this.channels.delete(topic);
-      console.log(`[Channel] Left ${topic}`);
+      log.debug(`Left ${topic}`);
     }
   }
 
@@ -363,7 +366,7 @@ class SocketManager {
     const onClientAction = handlers.onClientAction;
     if (onClientAction) {
       channel.on("client_action", (data: unknown) => {
-        console.log(`[BoardChannel] Received client_action:`, data);
+        log.debug("Received client_action", { data });
         onClientAction(data as ClientActionPayload);
       });
     }
@@ -372,17 +375,17 @@ class SocketManager {
       channel
         .join()
         .receive("ok", (resp: unknown) => {
-          console.log(`[Channel] Joined ${topic}`, resp);
+          log.debug(`Joined ${topic}`, { resp });
           this.channels.set(topic, channel);
           resolve(channel);
         })
         .receive("error", (resp: unknown) => {
-          console.error(`[Channel] Failed to join ${topic}`, resp);
+          log.error(`Failed to join ${topic}`, { resp });
           const errorResp = resp as { reason?: string };
           reject(new Error(errorResp.reason || "Failed to join channel"));
         })
         .receive("timeout", () => {
-          console.error(`[Channel] Timeout joining ${topic}`);
+          log.error(`Timeout joining ${topic}`);
           reject(new Error("Channel join timeout"));
         });
     });
@@ -397,7 +400,7 @@ class SocketManager {
     if (channel) {
       channel.leave();
       this.channels.delete(topic);
-      console.log(`[Channel] Left ${topic}`);
+      log.debug(`Left ${topic}`);
     }
   }
 
@@ -503,7 +506,7 @@ class SocketManager {
     // Leave all channels
     for (const [topic, channel] of this.channels) {
       channel.leave();
-      console.log(`[Channel] Left ${topic}`);
+      log.debug(`Left ${topic}`);
     }
     this.channels.clear();
 
