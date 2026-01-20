@@ -5,14 +5,14 @@ defmodule VibanWeb.Live.BoardLive.Components.TaskCard do
 
   use Phoenix.Component
 
-  alias Phoenix.LiveView.JS
-
-  import VibanWeb.CoreComponents
-
   use Phoenix.VerifiedRoutes,
     endpoint: VibanWeb.Endpoint,
     router: VibanWeb.Router,
     statics: VibanWeb.static_paths()
+
+  import VibanWeb.CoreComponents
+
+  alias Phoenix.LiveView.JS
 
   attr :task, :map, required: true
   attr :board_id, :string, required: true
@@ -100,7 +100,10 @@ defmodule VibanWeb.Live.BoardLive.Components.TaskCard do
       target="_blank"
       rel="noopener noreferrer"
       onclick="event.stopPropagation()"
-      class={["text-xs px-2 py-0.5 rounded-full self-start flex items-center gap-1 hover:opacity-80 transition-opacity", pr_badge_classes(@task.pr_status)]}
+      class={[
+        "text-xs px-2 py-0.5 rounded-full self-start flex items-center gap-1 hover:opacity-80 transition-opacity",
+        pr_badge_classes(@task.pr_status)
+      ]}
     >
       <.pr_icon />
       <span>{@task.pr_number}</span>

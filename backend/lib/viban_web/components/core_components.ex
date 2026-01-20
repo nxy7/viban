@@ -8,6 +8,7 @@ defmodule VibanWeb.CoreComponents do
   use Phoenix.Component
   use Gettext, backend: VibanWeb.Gettext
 
+  alias Phoenix.HTML.FormField
   alias Phoenix.LiveView.JS
 
   # ============================================================================
@@ -23,8 +24,16 @@ defmodule VibanWeb.CoreComponents do
       :if={msg = Phoenix.Flash.get(@flash, @kind)}
       id={"flash-#{@kind}"}
       phx-click={JS.push("lv:clear-flash", value: %{key: @kind}) |> hide("#flash-#{@kind}")}
-      phx-mounted={JS.transition({"ease-out duration-300", "translate-x-full opacity-0", "translate-x-0 opacity-100"})}
-      phx-remove={JS.transition({"ease-in duration-200", "translate-x-0 opacity-100", "translate-x-full opacity-0"})}
+      phx-mounted={
+        JS.transition(
+          {"ease-out duration-300", "translate-x-full opacity-0", "translate-x-0 opacity-100"}
+        )
+      }
+      phx-remove={
+        JS.transition(
+          {"ease-in duration-200", "translate-x-0 opacity-100", "translate-x-full opacity-0"}
+        )
+      }
       role="alert"
       class={[
         "fixed top-4 right-4 z-50 w-80 rounded-lg border shadow-lg backdrop-blur-sm overflow-hidden cursor-pointer",
@@ -33,10 +42,26 @@ defmodule VibanWeb.CoreComponents do
     >
       <div class="flex items-start gap-3 p-4">
         <div class="flex-shrink-0 mt-0.5">
-          <.icon :if={@kind == :info} name="hero-information-circle" class={["h-5 w-5", flash_icon_classes(@kind)]} />
-          <.icon :if={@kind == :success} name="hero-check-circle" class={["h-5 w-5", flash_icon_classes(@kind)]} />
-          <.icon :if={@kind == :error} name="hero-exclamation-circle" class={["h-5 w-5", flash_icon_classes(@kind)]} />
-          <.icon :if={@kind == :warning} name="hero-exclamation-triangle" class={["h-5 w-5", flash_icon_classes(@kind)]} />
+          <.icon
+            :if={@kind == :info}
+            name="hero-information-circle"
+            class={["h-5 w-5", flash_icon_classes(@kind)]}
+          />
+          <.icon
+            :if={@kind == :success}
+            name="hero-check-circle"
+            class={["h-5 w-5", flash_icon_classes(@kind)]}
+          />
+          <.icon
+            :if={@kind == :error}
+            name="hero-exclamation-circle"
+            class={["h-5 w-5", flash_icon_classes(@kind)]}
+          />
+          <.icon
+            :if={@kind == :warning}
+            name="hero-exclamation-triangle"
+            class={["h-5 w-5", flash_icon_classes(@kind)]}
+          />
         </div>
         <div class="flex-1 min-w-0">
           <p class={["text-sm font-medium", flash_title_classes(@kind)]}>
@@ -127,13 +152,13 @@ defmodule VibanWeb.CoreComponents do
   attr :label, :string, default: nil
   attr :value, :any
   attr :type, :string, default: "text"
-  attr :field, Phoenix.HTML.FormField, doc: "a form field struct"
+  attr :field, FormField, doc: "a form field struct"
   attr :errors, :list, default: []
   attr :class, :string, default: nil
   attr :rest, :global, include: ~w(accept autocomplete capture cols disabled form list max maxlength min minlength
                                    multiple pattern placeholder readonly required rows size step autofocus)
 
-  def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
+  def input(%{field: %FormField{} = field} = assigns) do
     errors = if Phoenix.Component.used_input?(field), do: field.errors, else: []
 
     assigns
@@ -220,11 +245,7 @@ defmodule VibanWeb.CoreComponents do
       data-cancel={JS.exec(@on_cancel, "phx-remove")}
       class="relative z-50 hidden"
     >
-      <div
-        id={"#{@id}-bg"}
-        class="fixed inset-0 bg-black/80 transition-opacity"
-        aria-hidden="true"
-      />
+      <div id={"#{@id}-bg"} class="fixed inset-0 bg-black/80 transition-opacity" aria-hidden="true" />
       <div
         class="fixed inset-0 overflow-y-auto"
         aria-labelledby={"#{@id}-title"}
@@ -261,7 +282,10 @@ defmodule VibanWeb.CoreComponents do
     js
     |> JS.show(to: "##{id}")
     |> JS.show(to: "##{id}-bg", transition: {"ease-out duration-200", "opacity-0", "opacity-100"})
-    |> JS.show(to: "##{id}-container", transition: {"ease-out duration-200", "opacity-0 scale-95", "opacity-100 scale-100"})
+    |> JS.show(
+      to: "##{id}-container",
+      transition: {"ease-out duration-200", "opacity-0 scale-95", "opacity-100 scale-100"}
+    )
     |> JS.add_class("overflow-hidden", to: "body")
     |> JS.focus_first(to: "##{id}-container")
   end
@@ -269,7 +293,10 @@ defmodule VibanWeb.CoreComponents do
   def hide_modal(js \\ %JS{}, id) do
     js
     |> JS.hide(to: "##{id}-bg", transition: {"ease-in duration-100", "opacity-100", "opacity-0"})
-    |> JS.hide(to: "##{id}-container", transition: {"ease-in duration-100", "opacity-100 scale-100", "opacity-0 scale-95"})
+    |> JS.hide(
+      to: "##{id}-container",
+      transition: {"ease-in duration-100", "opacity-100 scale-100", "opacity-0 scale-95"}
+    )
     |> JS.hide(to: "##{id}", transition: {"block", "block", "hidden"})
     |> JS.remove_class("overflow-hidden", to: "body")
     |> JS.pop_focus()
@@ -295,11 +322,7 @@ defmodule VibanWeb.CoreComponents do
       data-cancel={JS.exec(@on_cancel, "phx-remove")}
       class="relative z-40 hidden"
     >
-      <div
-        id={"#{@id}-bg"}
-        class="fixed inset-0 bg-black/60 transition-opacity"
-        aria-hidden="true"
-      />
+      <div id={"#{@id}-bg"} class="fixed inset-0 bg-black/60 transition-opacity" aria-hidden="true" />
       <div class="fixed inset-0 overflow-hidden">
         <div class="absolute inset-0 overflow-hidden">
           <div class="pointer-events-none fixed inset-y-0 right-0 flex max-w-full">
@@ -358,9 +381,20 @@ defmodule VibanWeb.CoreComponents do
 
   def spinner(assigns) do
     ~H"""
-    <svg class={["animate-spin", @class]} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    <svg
+      class={["animate-spin", @class]}
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+    >
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+      </circle>
+      <path
+        class="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+      >
+      </path>
     </svg>
     """
   end

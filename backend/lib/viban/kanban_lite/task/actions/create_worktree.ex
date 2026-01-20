@@ -7,8 +7,8 @@ defmodule Viban.KanbanLite.Task.Actions.CreateWorktree do
 
   use Ash.Resource.Actions.Implementation
 
-  alias Viban.KanbanLite.Task
   alias Viban.Kanban.Task.WorktreeManager
+  alias Viban.KanbanLite.Task
 
   @impl true
   def run(_input, opts, _context) do

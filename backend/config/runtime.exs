@@ -75,12 +75,8 @@ if config_env() == :prod do
   host = System.get_env("PHX_HOST") || "localhost"
   port = String.to_integer(System.get_env("PORT") || if(deploy_mode?, do: "7777", else: "4000"))
 
-  config :viban, :database_url, database_url
-  config :viban, :using_external_database, using_external_database?
-
   # In deploy mode, always start the server (no need for PHX_SERVER env var)
   server_enabled? = deploy_mode? or System.get_env("PHX_SERVER") != nil
-
   db_uri = URI.parse(database_url)
   [db_username, db_password] = String.split(db_uri.userinfo || "postgres:postgres", ":")
   db_name = String.trim_leading(db_uri.path || "/postgres", "/")
@@ -101,8 +97,6 @@ if config_env() == :prod do
     pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
     socket_options: maybe_ipv6
 
-  config :viban, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
-
   config :viban, VibanWeb.Endpoint,
     server: server_enabled?,
     url: [host: host, port: port, scheme: "http"],
@@ -111,4 +105,8 @@ if config_env() == :prod do
       port: port
     ],
     secret_key_base: secret_key_base
+
+  config :viban, :database_url, database_url
+  config :viban, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
+  config :viban, :using_external_database, using_external_database?
 end

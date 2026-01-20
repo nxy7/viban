@@ -29,8 +29,8 @@ defmodule Viban.Kanban.Actors.BoardActor do
   use GenServer
 
   alias Viban.CallerTracking
-  alias Viban.Kanban.Task.TaskSupervisor
   alias Viban.Kanban.Task
+  alias Viban.Kanban.Task.TaskSupervisor
 
   require Logger
 

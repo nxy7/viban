@@ -11,8 +11,7 @@ defmodule Viban.KanbanLite.Repository.Changes.AutoCloneLocalRepo do
     local_path = Ash.Changeset.get_attribute(changeset, :local_path)
 
     if provider == :local and not is_nil(local_path) and File.dir?(local_path) do
-      changeset
-      |> Ash.Changeset.change_attribute(:clone_status, :cloned)
+      Ash.Changeset.change_attribute(changeset, :clone_status, :cloned)
     else
       changeset
     end

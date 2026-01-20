@@ -95,10 +95,7 @@ defmodule VibanWeb.Live.HomeLive do
         class="w-8 h-8 rounded-full"
       />
       <span class="text-gray-300">{@user.provider_login}</span>
-      <button
-        phx-click="logout"
-        class="text-gray-400 hover:text-gray-200 text-sm"
-      >
+      <button phx-click="logout" class="text-gray-400 hover:text-gray-200 text-sm">
         Logout
       </button>
     </div>
@@ -107,8 +104,7 @@ defmodule VibanWeb.Live.HomeLive do
       phx-click="login"
       class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors flex items-center gap-2"
     >
-      <.github_icon class="w-5 h-5" />
-      Sign in with GitHub
+      <.github_icon class="w-5 h-5" /> Sign in with GitHub
     </button>
     """
   end
@@ -169,7 +165,10 @@ defmodule VibanWeb.Live.HomeLive do
             Repository *
           </label>
 
-          <div :if={@selected_repo} class="flex items-center justify-between p-3 bg-gray-800 border border-brand-500/50 rounded-lg">
+          <div
+            :if={@selected_repo}
+            class="flex items-center justify-between p-3 bg-gray-800 border border-brand-500/50 rounded-lg"
+          >
             <div class="flex items-center gap-2">
               <img
                 src={@selected_repo["owner"]["avatar_url"]}
@@ -177,15 +176,14 @@ defmodule VibanWeb.Live.HomeLive do
                 class="w-5 h-5 rounded-full"
               />
               <span class="font-medium text-white">{@selected_repo["full_name"]}</span>
-              <span :if={@selected_repo["private"]} class="px-1.5 py-0.5 text-xs bg-amber-500/20 text-amber-400 rounded">
+              <span
+                :if={@selected_repo["private"]}
+                class="px-1.5 py-0.5 text-xs bg-amber-500/20 text-amber-400 rounded"
+              >
                 Private
               </span>
             </div>
-            <button
-              type="button"
-              phx-click="clear_repo"
-              class="text-gray-400 hover:text-gray-200"
-            >
+            <button type="button" phx-click="clear_repo" class="text-gray-400 hover:text-gray-200">
               <.icon name="hero-x-mark" class="w-5 h-5" />
             </button>
           </div>
@@ -202,15 +200,17 @@ defmodule VibanWeb.Live.HomeLive do
 
             <div class="max-h-64 overflow-y-auto bg-gray-800 border border-gray-700 rounded-lg">
               <div :if={@repos_loading} class="p-4 text-center text-gray-400">
-                <.spinner class="h-6 w-6 mx-auto mb-2" />
-                Loading repositories...
+                <.spinner class="h-6 w-6 mx-auto mb-2" /> Loading repositories...
               </div>
 
               <div :if={@repos_error} class="p-4 text-center text-red-400">
                 {@repos_error}
               </div>
 
-              <div :if={!@repos_loading && !@repos_error && @repos == []} class="p-4 text-center text-gray-400">
+              <div
+                :if={!@repos_loading && !@repos_error && @repos == []}
+                class="p-4 text-center text-gray-400"
+              >
                 No repositories found
               </div>
 
@@ -228,7 +228,10 @@ defmodule VibanWeb.Live.HomeLive do
                     class="w-5 h-5 rounded-full"
                   />
                   <span class="font-medium text-white">{repo["full_name"]}</span>
-                  <span :if={repo["private"]} class="px-1.5 py-0.5 text-xs bg-amber-500/20 text-amber-400 rounded">
+                  <span
+                    :if={repo["private"]}
+                    class="px-1.5 py-0.5 text-xs bg-amber-500/20 text-amber-400 rounded"
+                  >
                     Private
                   </span>
                 </div>
@@ -243,7 +246,10 @@ defmodule VibanWeb.Live.HomeLive do
           </div>
         </div>
 
-        <div :if={@create_error} class="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
+        <div
+          :if={@create_error}
+          class="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm"
+        >
           {@create_error}
         </div>
 
@@ -274,11 +280,16 @@ defmodule VibanWeb.Live.HomeLive do
 
   defp boards_list(assigns) do
     ~H"""
-    <div :if={@boards == []} class="bg-gray-900/50 border border-gray-800 border-dashed rounded-xl p-12 text-center">
+    <div
+      :if={@boards == []}
+      class="bg-gray-900/50 border border-gray-800 border-dashed rounded-xl p-12 text-center"
+    >
       <.icon name="hero-clipboard-document-list" class="w-12 h-12 text-gray-600 mx-auto mb-4" />
       <h3 class="text-lg font-medium text-gray-400 mb-2">No boards yet</h3>
       <p class="text-gray-500 mb-4">
-        {if @user, do: "Create your first board to get started", else: "Sign in to create your first board"}
+        {if @user,
+          do: "Create your first board to get started",
+          else: "Sign in to create your first board"}
       </p>
       <button
         phx-click={if @user, do: "start_creating", else: "login"}
@@ -378,9 +389,7 @@ defmodule VibanWeb.Live.HomeLive do
   end
 
   def handle_event("create_board", %{"name" => name, "description" => description}, socket) do
-    if !socket.assigns.selected_repo do
-      {:noreply, assign(socket, :create_error, "Please select a repository")}
-    else
+    if socket.assigns.selected_repo do
       repo = socket.assigns.selected_repo
 
       {:noreply, assign(socket, :is_submitting, true)}
@@ -408,6 +417,8 @@ defmodule VibanWeb.Live.HomeLive do
            |> assign(:is_submitting, false)
            |> assign(:create_error, "Failed to create board")}
       end
+    else
+      {:noreply, assign(socket, :create_error, "Please select a repository")}
     end
   end
 

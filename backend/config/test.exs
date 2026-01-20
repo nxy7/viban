@@ -1,5 +1,7 @@
 import Config
 
+alias Ecto.Adapters.SQL.Sandbox
+
 # Ash testing configuration
 # Disable async operations during tests to work with transactional testing
 config :ash, :disable_async?, true
@@ -33,12 +35,12 @@ config :viban, Viban.Repo,
   hostname: "localhost",
   database: "viban_test#{System.get_env("MIX_TEST_PARTITION")}",
   port: 5432,
-  pool: Ecto.Adapters.SQL.Sandbox,
+  pool: Sandbox,
   pool_size: System.schedulers_online() * 2
 
 config :viban, Viban.RepoSqlite,
   database: Path.expand("../priv/repo_sqlite_test#{System.get_env("MIX_TEST_PARTITION")}.db", __DIR__),
-  pool: Ecto.Adapters.SQL.Sandbox,
+  pool: Sandbox,
   pool_size: System.schedulers_online() * 2
 
 config :viban, VibanWeb.Endpoint,
@@ -46,9 +48,10 @@ config :viban, VibanWeb.Endpoint,
   secret_key_base: "test_secret_key_base_that_is_at_least_64_bytes_long_for_testing_purposes_only_here",
   server: false
 
+config :viban, :env, :test
+
 # Disable auto-migration during tests (mix test runs migrations separately)
 config :viban, auto_migrate: false
 
 # Disable BoardManager during tests - it tries to load boards before sandbox is ready
 config :viban, start_board_manager: false
-config :viban, :env, :test

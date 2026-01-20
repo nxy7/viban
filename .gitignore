@@ -13,6 +13,14 @@ backend/priv/static/*
 !backend/priv/static/.gitkeep
 backend/burrito_out/
 
+# SQLite databases (development/test)
+backend/*.db
+backend/*.db-shm
+backend/*.db-wal
+backend/priv/*.db
+backend/priv/*.db-shm
+backend/priv/*.db-wal
+
 # Crash dumps (can appear at root or in backend)
 erl_crash.dump
 backend/erl_crash.dump

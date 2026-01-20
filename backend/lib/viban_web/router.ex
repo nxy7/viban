@@ -20,7 +20,6 @@ defmodule VibanWeb.Router do
     plug :accepts, ["json"]
   end
 
-
   # Test endpoints (only available when sandbox_enabled)
   scope "/api/test", VibanWeb do
     pipe_through :api

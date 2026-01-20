@@ -5,9 +5,9 @@ defmodule VibanWeb.Live.BoardLive.Components.Modals do
 
   use Phoenix.Component
 
-  alias Phoenix.LiveView.JS
-
   import VibanWeb.CoreComponents
+
+  alias Phoenix.LiveView.JS
 
   # ============================================================================
   # Create Task Modal
@@ -23,13 +23,7 @@ defmodule VibanWeb.Live.BoardLive.Components.Modals do
       <h2 class="text-xl font-semibold mb-4">Create Task in {@column_name}</h2>
       <.form for={@form} phx-submit="create_task" class="space-y-4">
         <input type="hidden" name="column_id" value={@column_id} />
-        <.input
-          field={@form[:title]}
-          label="Title"
-          placeholder="Task title..."
-          required
-          autofocus
-        />
+        <.input field={@form[:title]} label="Title" placeholder="Task title..." required autofocus />
         <.input
           field={@form[:description]}
           type="textarea"
@@ -75,12 +69,7 @@ defmodule VibanWeb.Live.BoardLive.Components.Modals do
           placeholder="Describe the changes..."
           rows="6"
         />
-        <.input
-          field={@form[:base_branch]}
-          label="Base Branch"
-          placeholder="main"
-          value="main"
-        />
+        <.input field={@form[:base_branch]} label="Base Branch" placeholder="main" value="main" />
         <div class="flex justify-end gap-3 pt-2">
           <.button type="button" variant="ghost" phx-click="hide_pr_modal">
             Cancel
@@ -104,7 +93,9 @@ defmodule VibanWeb.Live.BoardLive.Components.Modals do
           <.icon name="hero-exclamation-triangle" class="h-6 w-6 text-red-400" />
         </div>
         <h2 class="text-xl font-semibold mb-2">Delete Task</h2>
-        <p class="text-gray-400 mb-6">Are you sure you want to delete this task? This action cannot be undone.</p>
+        <p class="text-gray-400 mb-6">
+          Are you sure you want to delete this task? This action cannot be undone.
+        </p>
         <div class="flex justify-center gap-3">
           <.button type="button" variant="ghost" phx-click="cancel_delete_task">
             Cancel

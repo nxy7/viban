@@ -8,9 +8,9 @@ defmodule VibanWeb.ConnCase do
 
   using do
     quote do
-      import Plug.Conn
       import Phoenix.ConnTest
       import Phoenix.LiveViewTest
+      import Plug.Conn
       import VibanWeb.ConnCase
 
       alias VibanWeb.Router.Helpers, as: Routes

@@ -8,8 +8,8 @@ defmodule Viban.Kanban.Repository.Actions.ListBranches do
 
   use Ash.Resource.Actions.Implementation
 
-  alias Viban.VCS.GitHub.Client
   alias Viban.Kanban.Task
+  alias Viban.VCS.GitHub.Client
 
   require Logger
 

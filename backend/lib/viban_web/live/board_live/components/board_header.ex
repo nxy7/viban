@@ -5,12 +5,12 @@ defmodule VibanWeb.Live.BoardLive.Components.BoardHeader do
 
   use Phoenix.Component
 
-  import VibanWeb.CoreComponents
-
   use Phoenix.VerifiedRoutes,
     endpoint: VibanWeb.Endpoint,
     router: VibanWeb.Router,
     statics: VibanWeb.static_paths()
+
+  import VibanWeb.CoreComponents
 
   attr :board, :map, required: true
   attr :filter_text, :string, required: true

@@ -187,13 +187,12 @@ defmodule VibanWeb.Live.BoardLive.Components.BoardSettings do
   defp repository_config(assigns) do
     ~H"""
     <div class="space-y-3">
-      <div :if={@editing_repo && @repo_form} class="p-4 bg-gray-800 border border-gray-700 rounded-lg space-y-4">
+      <div
+        :if={@editing_repo && @repo_form}
+        class="p-4 bg-gray-800 border border-gray-700 rounded-lg space-y-4"
+      >
         <.form for={@repo_form} phx-submit="save_repository" class="space-y-4">
-          <.input
-            field={@repo_form[:name]}
-            label="Name"
-            placeholder="e.g., My Project"
-          />
+          <.input field={@repo_form[:name]} label="Name" placeholder="e.g., My Project" />
           <div>
             <.input
               field={@repo_form[:local_path]}
@@ -205,11 +204,7 @@ defmodule VibanWeb.Live.BoardLive.Components.BoardSettings do
             </p>
           </div>
           <div>
-            <.input
-              field={@repo_form[:default_branch]}
-              label="Default Branch"
-              placeholder="main"
-            />
+            <.input field={@repo_form[:default_branch]} label="Default Branch" placeholder="main" />
             <p class="text-xs text-gray-500 mt-1">
               Base branch for creating new task worktrees
             </p>
@@ -225,9 +220,14 @@ defmodule VibanWeb.Live.BoardLive.Components.BoardSettings do
         </.form>
       </div>
 
-      <div :if={!@editing_repo && @repository} class="p-4 bg-gray-800/50 border border-gray-700 rounded-lg">
+      <div
+        :if={!@editing_repo && @repository}
+        class="p-4 bg-gray-800/50 border border-gray-700 rounded-lg"
+      >
         <div class="flex-1 min-w-0">
-          <span class="font-medium text-white">{@repository.full_name || @repository.name || "Unnamed Repository"}</span>
+          <span class="font-medium text-white">
+            {@repository.full_name || @repository.name || "Unnamed Repository"}
+          </span>
           <div class="flex flex-wrap gap-2 mt-2 text-xs text-gray-500">
             <span
               :if={@repository.local_path}
@@ -278,19 +278,18 @@ defmodule VibanWeb.Live.BoardLive.Components.BoardSettings do
           phx-click="new_template"
           class="px-3 py-1.5 text-sm font-medium text-white bg-brand-600 hover:bg-brand-500 rounded-md transition-colors"
         >
-          <.icon name="hero-plus" class="w-4 h-4 mr-1 inline" />
-          New Template
+          <.icon name="hero-plus" class="w-4 h-4 mr-1 inline" /> New Template
         </button>
       </div>
 
-      <div :if={@editing_template && @template_form} class="p-4 bg-gray-800 border border-gray-700 rounded-lg">
+      <div
+        :if={@editing_template && @template_form}
+        class="p-4 bg-gray-800 border border-gray-700 rounded-lg"
+      >
         <.form for={@template_form} phx-submit="save_template" class="space-y-4">
           <div>
             <label class="block text-sm font-medium text-gray-300 mb-1">Template Name</label>
-            <.input
-              field={@template_form[:name]}
-              placeholder="e.g., Feature, Bugfix, Research"
-            />
+            <.input field={@template_form[:name]} placeholder="e.g., Feature, Bugfix, Research" />
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-300 mb-1">Description Template</label>
@@ -301,7 +300,9 @@ defmodule VibanWeb.Live.BoardLive.Components.BoardSettings do
               placeholder="## Summary&#10;&#10;## Requirements&#10;&#10;## Acceptance Criteria"
               class="font-mono text-sm"
             />
-            <p class="text-xs text-gray-500 mt-1">Markdown template for new tasks using this template</p>
+            <p class="text-xs text-gray-500 mt-1">
+              Markdown template for new tasks using this template
+            </p>
           </div>
           <div class="flex gap-2 pt-2">
             <.button type="button" variant="ghost" phx-click="cancel_edit_template" class="flex-1">
@@ -314,7 +315,10 @@ defmodule VibanWeb.Live.BoardLive.Components.BoardSettings do
         </.form>
       </div>
 
-      <div :if={@templates == [] && !@editing_template} class="text-center py-8 text-gray-500 border border-dashed border-gray-700 rounded-lg">
+      <div
+        :if={@templates == [] && !@editing_template}
+        class="text-center py-8 text-gray-500 border border-dashed border-gray-700 rounded-lg"
+      >
         <.icon name="hero-document-duplicate" class="w-8 h-8 mx-auto mb-2 opacity-50" />
         <p class="text-sm">No templates yet</p>
         <p class="text-xs mt-1">Click "New Template" to create one</p>
@@ -328,8 +332,13 @@ defmodule VibanWeb.Live.BoardLive.Components.BoardSettings do
           <div class="flex items-start justify-between">
             <div class="flex-1 min-w-0">
               <h4 class="font-medium text-white">{template.name}</h4>
-              <p :if={template.description_template} class="text-xs text-gray-500 mt-1 font-mono truncate">
-                {String.slice(template.description_template || "", 0, 60)}<span :if={String.length(template.description_template || "") > 60}>...</span>
+              <p
+                :if={template.description_template}
+                class="text-xs text-gray-500 mt-1 font-mono truncate"
+              >
+                {String.slice(template.description_template || "", 0, 60)}<span :if={
+                  String.length(template.description_template || "") > 60
+                }>...</span>
               </p>
             </div>
             <div class="flex items-center gap-1 ml-2">
@@ -388,8 +397,7 @@ defmodule VibanWeb.Live.BoardLive.Components.BoardSettings do
           phx-click="new_hook"
           class="px-3 py-1.5 text-sm font-medium text-white bg-brand-600 hover:bg-brand-500 rounded-md transition-colors"
         >
-          <.icon name="hero-plus" class="w-4 h-4 mr-1 inline" />
-          New Hook
+          <.icon name="hero-plus" class="w-4 h-4 mr-1 inline" /> New Hook
         </button>
       </div>
 
@@ -408,8 +416,7 @@ defmodule VibanWeb.Live.BoardLive.Components.BoardSettings do
                   @hook_kind != :script && "bg-gray-700 text-gray-300 hover:bg-gray-600"
                 ]}
               >
-                <.icon name="hero-command-line" class="w-4 h-4 mr-1 inline" />
-                Script
+                <.icon name="hero-command-line" class="w-4 h-4 mr-1 inline" /> Script
               </button>
               <button
                 type="button"
@@ -421,18 +428,14 @@ defmodule VibanWeb.Live.BoardLive.Components.BoardSettings do
                   @hook_kind != :agent && "bg-gray-700 text-gray-300 hover:bg-gray-600"
                 ]}
               >
-                <.icon name="hero-sparkles" class="w-4 h-4 mr-1 inline" />
-                AI Agent
+                <.icon name="hero-sparkles" class="w-4 h-4 mr-1 inline" /> AI Agent
               </button>
             </div>
           </div>
 
           <div>
             <label class="block text-sm font-medium text-gray-300 mb-1">Hook Name</label>
-            <.input
-              field={@hook_form[:name]}
-              placeholder="e.g., Run tests, Deploy preview"
-            />
+            <.input field={@hook_form[:name]} placeholder="e.g., Run tests, Deploy preview" />
           </div>
 
           <div :if={@hook_kind == :script}>
@@ -527,7 +530,9 @@ defmodule VibanWeb.Live.BoardLive.Components.BoardSettings do
         >
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
-              <span class="px-1.5 py-0.5 text-xs font-medium bg-purple-600 text-white rounded">System</span>
+              <span class="px-1.5 py-0.5 text-xs font-medium bg-purple-600 text-white rounded">
+                System
+              </span>
               <span class="font-medium text-white">{hook.name}</span>
             </div>
           </div>
@@ -561,11 +566,21 @@ defmodule VibanWeb.Live.BoardLive.Components.BoardSettings do
                 </span>
                 <span class="font-medium text-white">{hook.name}</span>
               </div>
-              <p :if={hook.hook_kind == :script && hook.command} class="text-xs text-gray-500 mt-1 font-mono truncate">
-                {String.slice(hook.command || "", 0, 50)}<span :if={String.length(hook.command || "") > 50}>...</span>
+              <p
+                :if={hook.hook_kind == :script && hook.command}
+                class="text-xs text-gray-500 mt-1 font-mono truncate"
+              >
+                {String.slice(hook.command || "", 0, 50)}<span :if={
+                  String.length(hook.command || "") > 50
+                }>...</span>
               </p>
-              <p :if={hook.hook_kind == :agent && hook.agent_prompt} class="text-xs text-gray-500 mt-1 truncate">
-                {String.slice(hook.agent_prompt || "", 0, 50)}<span :if={String.length(hook.agent_prompt || "") > 50}>...</span>
+              <p
+                :if={hook.hook_kind == :agent && hook.agent_prompt}
+                class="text-xs text-gray-500 mt-1 truncate"
+              >
+                {String.slice(hook.agent_prompt || "", 0, 50)}<span :if={
+                  String.length(hook.agent_prompt || "") > 50
+                }>...</span>
               </p>
             </div>
             <div class="flex items-center gap-1 ml-2">
@@ -610,7 +625,8 @@ defmodule VibanWeb.Live.BoardLive.Components.BoardSettings do
       <div :for={column <- @columns} class="p-4 bg-gray-800/50 border border-gray-700 rounded-lg">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
-            <div class="w-3 h-3 rounded-full" style={"background-color: #{column.color || "#6b7280"}"}></div>
+            <div class="w-3 h-3 rounded-full" style={"background-color: #{column.color || "#6b7280"}"}>
+            </div>
             <span class="font-medium text-white">{column.name}</span>
           </div>
           <span class="text-xs text-gray-500">No hooks configured</span>
@@ -642,19 +658,18 @@ defmodule VibanWeb.Live.BoardLive.Components.BoardSettings do
           phx-click="new_periodical_task"
           class="px-3 py-1.5 text-sm font-medium text-white bg-brand-600 hover:bg-brand-500 rounded-md transition-colors"
         >
-          <.icon name="hero-plus" class="w-4 h-4 mr-1 inline" />
-          New Schedule
+          <.icon name="hero-plus" class="w-4 h-4 mr-1 inline" /> New Schedule
         </button>
       </div>
 
-      <div :if={@editing_periodical_task && @periodical_task_form} class="p-4 bg-gray-800 border border-gray-700 rounded-lg">
+      <div
+        :if={@editing_periodical_task && @periodical_task_form}
+        class="p-4 bg-gray-800 border border-gray-700 rounded-lg"
+      >
         <.form for={@periodical_task_form} phx-submit="save_periodical_task" class="space-y-4">
           <div>
             <label class="block text-sm font-medium text-gray-300 mb-1">Title</label>
-            <.input
-              field={@periodical_task_form[:title]}
-              placeholder="e.g., Daily Code Review"
-            />
+            <.input field={@periodical_task_form[:title]} placeholder="e.g., Daily Code Review" />
             <p class="text-xs text-gray-500 mt-1">
               Tasks will be created as "#1 Title", "#2 Title", etc.
             </p>
@@ -722,7 +737,12 @@ defmodule VibanWeb.Live.BoardLive.Components.BoardSettings do
             </select>
           </div>
           <div class="flex gap-2 pt-2">
-            <.button type="button" variant="ghost" phx-click="cancel_edit_periodical_task" class="flex-1">
+            <.button
+              type="button"
+              variant="ghost"
+              phx-click="cancel_edit_periodical_task"
+              class="flex-1"
+            >
               Cancel
             </.button>
             <.button type="submit" class="flex-1">
@@ -732,7 +752,10 @@ defmodule VibanWeb.Live.BoardLive.Components.BoardSettings do
         </.form>
       </div>
 
-      <div :if={@periodical_tasks == [] && !@editing_periodical_task} class="text-center py-8 text-gray-500 border border-dashed border-gray-700 rounded-lg">
+      <div
+        :if={@periodical_tasks == [] && !@editing_periodical_task}
+        class="text-center py-8 text-gray-500 border border-dashed border-gray-700 rounded-lg"
+      >
         <.icon name="hero-clock" class="w-8 h-8 mx-auto mb-2 opacity-50" />
         <p class="text-sm">No scheduled tasks yet</p>
         <p class="text-xs mt-1">Click "New Schedule" to create one</p>
@@ -764,7 +787,9 @@ defmodule VibanWeb.Live.BoardLive.Components.BoardSettings do
                 </span>
               </div>
               <p :if={task.description} class="text-xs text-gray-400 mt-1 truncate">
-                {String.slice(task.description || "", 0, 80)}<span :if={String.length(task.description || "") > 80}>...</span>
+                {String.slice(task.description || "", 0, 80)}<span :if={
+                  String.length(task.description || "") > 80
+                }>...</span>
               </p>
               <div class="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-xs text-gray-500">
                 <div class="flex items-center gap-1">
@@ -861,7 +886,10 @@ defmodule VibanWeb.Live.BoardLive.Components.BoardSettings do
         </p>
       </div>
 
-      <div :if={@system_tools == []} class="text-center py-8 text-gray-500 border border-dashed border-gray-700 rounded-lg">
+      <div
+        :if={@system_tools == []}
+        class="text-center py-8 text-gray-500 border border-dashed border-gray-700 rounded-lg"
+      >
         <.icon name="hero-cog-6-tooth" class="w-8 h-8 mx-auto mb-2 opacity-50" />
         <p class="text-sm">Unable to load system tools</p>
       </div>

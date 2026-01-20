@@ -6,8 +6,11 @@ defmodule VibanWeb.Live.BoardLive.TaskPanelComponent do
 
   use VibanWeb, :live_component
 
-  alias Viban.KanbanLite.{Task, Message, ExecutorSession, HookExecution}
   alias Viban.Executors.Executor
+  alias Viban.KanbanLite.ExecutorSession
+  alias Viban.KanbanLite.HookExecution
+  alias Viban.KanbanLite.Message
+  alias Viban.KanbanLite.Task
 
   @impl true
   def mount(socket) do
@@ -160,7 +163,12 @@ defmodule VibanWeb.Live.BoardLive.TaskPanelComponent do
           class="p-2 text-gray-400 hover:text-white transition-colors"
           title={if @panel_fullscreen, do: "Exit fullscreen (f)", else: "Fullscreen (f)"}
         >
-          <.icon name={if @panel_fullscreen, do: "hero-arrows-pointing-in", else: "hero-arrows-pointing-out"} class="h-4 w-4" />
+          <.icon
+            name={
+              if @panel_fullscreen, do: "hero-arrows-pointing-in", else: "hero-arrows-pointing-out"
+            }
+            class="h-4 w-4"
+          />
         </button>
         <button
           phx-click={@on_close}
@@ -190,11 +198,7 @@ defmodule VibanWeb.Live.BoardLive.TaskPanelComponent do
   defp activity_section(assigns) do
     ~H"""
     <div class="flex-1 flex flex-col overflow-hidden">
-      <div
-        id="activity-feed"
-        class="flex-1 overflow-y-auto p-4 space-y-3"
-        phx-hook="ScrollToBottom"
-      >
+      <div id="activity-feed" class="flex-1 overflow-y-auto p-4 space-y-3" phx-hook="ScrollToBottom">
         <.activity_item :for={item <- @activity_feed} item={item} />
 
         <div :if={@activity_feed == []} class="text-center text-gray-500 py-8">
@@ -240,7 +244,11 @@ defmodule VibanWeb.Live.BoardLive.TaskPanelComponent do
             phx-change="select_executor"
             phx-target={@myself}
           >
-            <option :for={exec <- @executors} value={exec.type} selected={exec.type == @selected_executor}>
+            <option
+              :for={exec <- @executors}
+              value={exec.type}
+              selected={exec.type == @selected_executor}
+            >
               {exec.name}
             </option>
             <option :if={@executors == []} value="claude_code">Claude Code</option>
@@ -297,8 +305,7 @@ defmodule VibanWeb.Live.BoardLive.TaskPanelComponent do
 
         <div :if={@is_running} class="flex items-center justify-between">
           <span class="text-sm text-gray-400">
-            <.spinner class="h-4 w-4 inline mr-2" />
-            Running...
+            <.spinner class="h-4 w-4 inline mr-2" /> Running...
           </span>
           <button
             type="button"
@@ -333,8 +340,18 @@ defmodule VibanWeb.Live.BoardLive.TaskPanelComponent do
         <.field_description task={@task} myself={@myself} />
         <.field_branch :if={@task.worktree_branch} task={@task} myself={@myself} />
         <.field_pull_request :if={@task.pr_url} task={@task} />
-        <.field_subtasks :if={@task.is_parent || @subtasks != []} task={@task} subtasks={@subtasks} columns={@columns} myself={@myself} />
-        <.field_error :if={@task.agent_status == :error && @task.error_message} task={@task} myself={@myself} />
+        <.field_subtasks
+          :if={@task.is_parent || @subtasks != []}
+          task={@task}
+          subtasks={@subtasks}
+          columns={@columns}
+          myself={@myself}
+        />
+        <.field_error
+          :if={@task.agent_status == :error && @task.error_message}
+          task={@task}
+          myself={@myself}
+        />
         <.field_actions task={@task} myself={@myself} />
         <.field_hook_executions :if={@hook_executions != []} hook_executions={@hook_executions} />
       </div>
@@ -349,7 +366,9 @@ defmodule VibanWeb.Live.BoardLive.TaskPanelComponent do
   defp field_title(assigns) do
     ~H"""
     <div>
-      <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Title</label>
+      <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+        Title
+      </label>
       <input
         type="text"
         value={@task.title}
@@ -364,7 +383,9 @@ defmodule VibanWeb.Live.BoardLive.TaskPanelComponent do
   defp field_column(assigns) do
     ~H"""
     <div>
-      <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Column</label>
+      <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+        Column
+      </label>
       <form phx-change="move_task_to_column" phx-target={@myself}>
         <select
           name="column_id"
@@ -382,7 +403,9 @@ defmodule VibanWeb.Live.BoardLive.TaskPanelComponent do
   defp field_description(assigns) do
     ~H"""
     <div>
-      <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Description</label>
+      <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+        Description
+      </label>
       <textarea
         phx-blur="update_task_description"
         phx-target={@myself}
@@ -397,7 +420,9 @@ defmodule VibanWeb.Live.BoardLive.TaskPanelComponent do
   defp field_branch(assigns) do
     ~H"""
     <div>
-      <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Branch</label>
+      <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+        Branch
+      </label>
       <div class="flex items-center gap-2">
         <code class="text-sm text-brand-400 truncate flex-1">{@task.worktree_branch}</code>
         <button
@@ -426,15 +451,16 @@ defmodule VibanWeb.Live.BoardLive.TaskPanelComponent do
   defp field_pull_request(assigns) do
     ~H"""
     <div>
-      <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Pull Request</label>
+      <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+        Pull Request
+      </label>
       <a
         href={@task.pr_url}
         target="_blank"
         rel="noopener noreferrer"
         class="flex items-center gap-2 text-sm text-brand-400 hover:text-brand-300"
       >
-        <.pr_icon status={@task.pr_status} />
-        PR #{@task.pr_number}
+        <.pr_icon status={@task.pr_status} /> PR #{@task.pr_number}
         <.icon name="hero-arrow-top-right-on-square" class="h-3 w-3" />
       </a>
     </div>
@@ -472,7 +498,9 @@ defmodule VibanWeb.Live.BoardLive.TaskPanelComponent do
         disabled={@task.subtask_generation_status == :generating}
       >
         <.spinner :if={@task.subtask_generation_status == :generating} class="h-3 w-3 inline mr-1" />
-        {if @task.subtask_generation_status == :generating, do: "Generating...", else: "+ Generate subtasks with AI"}
+        {if @task.subtask_generation_status == :generating,
+          do: "Generating...",
+          else: "+ Generate subtasks with AI"}
       </button>
     </div>
     """
@@ -499,7 +527,9 @@ defmodule VibanWeb.Live.BoardLive.TaskPanelComponent do
   defp field_actions(assigns) do
     ~H"""
     <div class="pt-4 border-t border-gray-800">
-      <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">Actions</label>
+      <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">
+        Actions
+      </label>
       <div class="grid grid-cols-2 gap-2">
         <.button
           :if={!@task.worktree_path}
@@ -577,10 +607,16 @@ defmodule VibanWeb.Live.BoardLive.TaskPanelComponent do
       @item.role == :system && "bg-gray-800/50 text-gray-400 text-sm"
     ]}>
       <div class="flex items-start gap-2">
-        <div :if={@item.role == :user} class="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0">
+        <div
+          :if={@item.role == :user}
+          class="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0"
+        >
           <.icon name="hero-user" class="h-3 w-3 text-gray-400" />
         </div>
-        <div :if={@item.role == :assistant} class="w-6 h-6 rounded-full bg-brand-500/20 flex items-center justify-center flex-shrink-0">
+        <div
+          :if={@item.role == :assistant}
+          class="w-6 h-6 rounded-full bg-brand-500/20 flex items-center justify-center flex-shrink-0"
+        >
           <.icon name="hero-cpu-chip" class="h-3 w-3 text-brand-400" />
         </div>
         <div class="flex-1 min-w-0">
@@ -643,8 +679,7 @@ defmodule VibanWeb.Live.BoardLive.TaskPanelComponent do
     <div class="flex items-center gap-2 text-xs text-gray-500 py-1">
       <div class="flex-1 border-t border-gray-800"></div>
       <span class="flex items-center gap-1">
-        <.icon name="hero-plus-circle" class="h-3 w-3" />
-        Task created
+        <.icon name="hero-plus-circle" class="h-3 w-3" /> Task created
       </span>
       <div class="flex-1 border-t border-gray-800"></div>
     </div>
@@ -663,12 +698,15 @@ defmodule VibanWeb.Live.BoardLive.TaskPanelComponent do
 
   defp agent_status_badge(assigns) do
     ~H"""
-    <div :if={@status != :idle} class={[
-      "flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium",
-      @status == :executing && "bg-brand-500/20 text-brand-400",
-      @status == :thinking && "bg-blue-500/20 text-blue-400",
-      @status == :error && "bg-red-500/20 text-red-400"
-    ]}>
+    <div
+      :if={@status != :idle}
+      class={[
+        "flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium",
+        @status == :executing && "bg-brand-500/20 text-brand-400",
+        @status == :thinking && "bg-blue-500/20 text-blue-400",
+        @status == :error && "bg-red-500/20 text-red-400"
+      ]}
+    >
       <.spinner :if={@status == :executing} class="h-3 w-3" />
       <.icon :if={@status == :thinking} name="hero-chat-bubble-left-ellipsis" class="h-3 w-3" />
       <.icon :if={@status == :error} name="hero-exclamation-circle" class="h-3 w-3" />
@@ -786,9 +824,7 @@ defmodule VibanWeb.Live.BoardLive.TaskPanelComponent do
   def handle_event("stop_executor", _params, socket) do
     task = socket.assigns.task
 
-    running_session =
-      socket.assigns.executor_sessions
-      |> Enum.find(&(&1.status in [:running, :pending]))
+    running_session = Enum.find(socket.assigns.executor_sessions, &(&1.status in [:running, :pending]))
 
     if running_session do
       case ExecutorSession.stop(running_session) do
@@ -810,7 +846,10 @@ defmodule VibanWeb.Live.BoardLive.TaskPanelComponent do
   end
 
   def handle_event("update_task_description", %{"value" => description}, socket) do
-    notify_parent({:update_task, socket.assigns.task.id, %{description: if(description == "", do: nil, else: description)}})
+    notify_parent(
+      {:update_task, socket.assigns.task.id, %{description: if(description == "", do: nil, else: description)}}
+    )
+
     {:noreply, socket}
   end
 
@@ -858,6 +897,7 @@ defmodule VibanWeb.Live.BoardLive.TaskPanelComponent do
     if path = socket.assigns.task.worktree_path do
       System.cmd("code", [path], stderr_to_stdout: true)
     end
+
     {:noreply, socket}
   end
 
@@ -865,6 +905,7 @@ defmodule VibanWeb.Live.BoardLive.TaskPanelComponent do
     if path = socket.assigns.task.worktree_path do
       System.cmd("open", [path], stderr_to_stdout: true)
     end
+
     {:noreply, socket}
   end
 
@@ -1070,8 +1111,7 @@ defmodule VibanWeb.Live.BoardLive.TaskPanelComponent do
       }
     ]
 
-    (message_events ++ session_events ++ hook_events ++ task_created)
-    |> Enum.sort_by(& &1.timestamp, {:asc, DateTime})
+    Enum.sort_by(message_events ++ session_events ++ hook_events ++ task_created, & &1.timestamp, {:asc, DateTime})
   end
 
   defp is_task_running(sessions) do
@@ -1096,13 +1136,15 @@ defmodule VibanWeb.Live.BoardLive.TaskPanelComponent do
   defp format_time(datetime), do: Calendar.strftime(datetime, "%H:%M")
 
   defp format_relative_time(nil), do: ""
+
   defp format_relative_time(datetime) do
     diff = DateTime.diff(DateTime.utc_now(), datetime, :second)
+
     cond do
       diff < 60 -> "#{diff}s ago"
       diff < 3600 -> "#{div(diff, 60)}m ago"
-      diff < 86400 -> "#{div(diff, 3600)}h ago"
-      true -> "#{div(diff, 86400)}d ago"
+      diff < 86_400 -> "#{div(diff, 3600)}h ago"
+      true -> "#{div(diff, 86_400)}d ago"
     end
   end
 end

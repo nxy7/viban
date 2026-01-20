@@ -121,9 +121,7 @@ defmodule Viban.Kanban.SystemHooks.ExecuteAIHook do
   defp start_without_message(task, previous_session, worktree_path) do
     prompt = "Continue working on this task."
 
-    Logger.info(
-      "[ExecuteAIHook] Resuming session #{previous_session.id} for task #{task.id}"
-    )
+    Logger.info("[ExecuteAIHook] Resuming session #{previous_session.id} for task #{task.id}")
 
     start_executor(task, prompt, @default_executor, worktree_path, [], previous_session.id)
   end
@@ -132,7 +130,7 @@ defmodule Viban.Kanban.SystemHooks.ExecuteAIHook do
     user_prompt = message.prompt || ""
     executor_type = parse_executor_type(message.executor_type)
     images = message.images || []
-    resume_session_id = if previous_session, do: previous_session.id, else: nil
+    resume_session_id = if previous_session, do: previous_session.id
 
     prompt =
       if previous_session do

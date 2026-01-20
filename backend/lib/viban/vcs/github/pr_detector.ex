@@ -8,8 +8,8 @@ defmodule Viban.VCS.GitHub.PRDetector do
   - Links detected PRs to tasks
   """
 
-  alias Viban.VCS.GitHub.Client
   alias Viban.Kanban.Task
+  alias Viban.VCS.GitHub.Client
 
   require Logger
 

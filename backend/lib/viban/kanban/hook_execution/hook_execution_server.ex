@@ -26,8 +26,8 @@ defmodule Viban.Kanban.HookExecution.HookExecutionServer do
   alias Viban.Kanban.ColumnHook
   alias Viban.Kanban.Hook
   alias Viban.Kanban.HookExecution
-  alias Viban.Kanban.Task.TaskServer
   alias Viban.Kanban.Task
+  alias Viban.Kanban.Task.TaskServer
 
   require Logger
 

@@ -6,18 +6,23 @@ defmodule VibanWeb.Live.BoardLive do
 
   use VibanWeb, :live_view
 
-  alias Viban.KanbanLite.{Board, Column, Task, TaskTemplate, Hook, ColumnHook, PeriodicalTask}
-  alias Viban.Kanban.SystemHooks.Registry, as: SystemHooks
-  alias Viban.AppRuntime.SystemTools
-  alias VibanWeb.Live.BoardLive.TaskPanelComponent
-
   import VibanWeb.Live.BoardLive.Components.BoardHeader
   import VibanWeb.Live.BoardLive.Components.BoardSettings
   import VibanWeb.Live.BoardLive.Components.Column
   import VibanWeb.Live.BoardLive.Components.ColumnSettings
   import VibanWeb.Live.BoardLive.Components.Modals
 
+  alias Viban.AppRuntime.SystemTools
+  alias Viban.Kanban.SystemHooks.Registry, as: SystemHooks
+  alias Viban.KanbanLite.Board
+  alias Viban.KanbanLite.Column
+  alias Viban.KanbanLite.ColumnHook
+  alias Viban.KanbanLite.Hook
+  alias Viban.KanbanLite.PeriodicalTask
   alias Viban.KanbanLite.Repository
+  alias Viban.KanbanLite.Task
+  alias Viban.KanbanLite.TaskTemplate
+  alias VibanWeb.Live.BoardLive.TaskPanelComponent
 
   require Logger
 
@@ -133,7 +138,11 @@ defmodule VibanWeb.Live.BoardLive do
   def render(assigns) do
     ~H"""
     <div id="board-sound-system" phx-hook="SoundSystem"></div>
-    <div id="board-shortcuts" phx-hook="KeyboardShortcuts" class="h-screen flex flex-col bg-gray-950 text-white overflow-hidden">
+    <div
+      id="board-shortcuts"
+      phx-hook="KeyboardShortcuts"
+      class="h-screen flex flex-col bg-gray-950 text-white overflow-hidden"
+    >
       <.board_header board={@board} filter_text={@filter_text} columns={@columns} />
 
       <main class="flex-1 p-6 overflow-hidden">
@@ -172,11 +181,7 @@ defmodule VibanWeb.Live.BoardLive do
         on_close={JS.patch(~p"/board/#{@board.id}")}
       />
 
-      <.create_pr_modal
-        :if={@show_pr_modal && @selected_task}
-        task={@selected_task}
-        form={@pr_form}
-      />
+      <.create_pr_modal :if={@show_pr_modal && @selected_task} task={@selected_task} form={@pr_form} />
 
       <.shortcuts_help_modal :if={@show_shortcuts_help} task_open={@selected_task != nil} />
 
@@ -252,8 +257,7 @@ defmodule VibanWeb.Live.BoardLive do
 
   defp navigate_task(socket, direction) do
     all_tasks =
-      socket.assigns.columns
-      |> Enum.flat_map(fn col ->
+      Enum.flat_map(socket.assigns.columns, fn col ->
         tasks_for_column(socket.assigns.tasks, col.id, socket.assigns.filter_text)
       end)
 
@@ -597,15 +601,13 @@ defmodule VibanWeb.Live.BoardLive do
         hook ->
           Hook.update(hook, %{
             name: params["name"],
-            command: if(hook.hook_kind == :script, do: params["command"], else: nil),
-            agent_prompt: if(hook.hook_kind == :agent, do: params["agent_prompt"], else: nil),
+            command: if(hook.hook_kind == :script, do: params["command"]),
+            agent_prompt: if(hook.hook_kind == :agent, do: params["agent_prompt"]),
             agent_executor:
               if(hook.hook_kind == :agent,
-                do: String.to_existing_atom(params["agent_executor"] || "claude_code"),
-                else: nil
+                do: String.to_existing_atom(params["agent_executor"] || "claude_code")
               ),
-            agent_auto_approve:
-              if(hook.hook_kind == :agent, do: params["agent_auto_approve"] == "true", else: nil),
+            agent_auto_approve: if(hook.hook_kind == :agent, do: params["agent_auto_approve"] == "true"),
             default_execute_once: params["default_execute_once"] == "true",
             default_transparent: params["default_transparent"] == "true"
           })
@@ -1261,32 +1263,34 @@ defmodule VibanWeb.Live.BoardLive do
   # ============================================================================
 
   def handle_event("move_task", %{"task_id" => task_id, "column_id" => column_id} = params, socket) do
-    with {:ok, task} <- Task.get(task_id) do
-      move_params = %{column_id: column_id}
+    case Task.get(task_id) do
+      {:ok, task} ->
+        move_params = %{column_id: column_id}
 
-      move_params =
-        case params do
-          %{"before_task_id" => before_id} when before_id != "" ->
-            Map.put(move_params, :before_task_id, before_id)
+        move_params =
+          case params do
+            %{"before_task_id" => before_id} when before_id != "" ->
+              Map.put(move_params, :before_task_id, before_id)
 
-          %{"after_task_id" => after_id} when after_id != "" ->
-            Map.put(move_params, :after_task_id, after_id)
+            %{"after_task_id" => after_id} when after_id != "" ->
+              Map.put(move_params, :after_task_id, after_id)
 
-          _ ->
-            move_params
+            _ ->
+              move_params
+          end
+
+        case Task.move(task, move_params) do
+          {:ok, updated_task} ->
+            tasks = Map.put(socket.assigns.tasks, task_id, updated_task)
+            broadcast_update(socket.assigns.board.id, {:task_moved, updated_task})
+            {:noreply, assign(socket, :tasks, tasks)}
+
+          {:error, _} ->
+            {:noreply, socket}
         end
 
-      case Task.move(task, move_params) do
-        {:ok, updated_task} ->
-          tasks = Map.put(socket.assigns.tasks, task_id, updated_task)
-          broadcast_update(socket.assigns.board.id, {:task_moved, updated_task})
-          {:noreply, assign(socket, :tasks, tasks)}
-
-        {:error, _} ->
-          {:noreply, socket}
-      end
-    else
-      _ -> {:noreply, socket}
+      _ ->
+        {:noreply, socket}
     end
   end
 
@@ -1298,7 +1302,11 @@ defmodule VibanWeb.Live.BoardLive do
     {:noreply, assign(socket, :show_pr_modal, false)}
   end
 
-  def handle_event("create_pr", %{"title" => title, "body" => body, "base_branch" => base_branch, "task_id" => task_id}, socket) do
+  def handle_event(
+        "create_pr",
+        %{"title" => title, "body" => body, "base_branch" => base_branch, "task_id" => task_id},
+        socket
+      ) do
     case Task.create_pr(task_id, title, body, base_branch) do
       {:ok, result} ->
         case Task.get(task_id) do
@@ -1445,39 +1453,41 @@ defmodule VibanWeb.Live.BoardLive do
   end
 
   def handle_info({TaskPanelComponent, {:toggle_subtask, subtask_id, columns}}, socket) do
-    with {:ok, subtask} <- Task.get(subtask_id) do
-      done_column =
-        Enum.find(columns, fn c ->
-          String.downcase(c.name) in ["done", "completed"]
-        end)
+    case Task.get(subtask_id) do
+      {:ok, subtask} ->
+        done_column =
+          Enum.find(columns, fn c ->
+            String.downcase(c.name) in ["done", "completed"]
+          end)
 
-      todo_column =
-        Enum.find(columns, fn c ->
-          String.downcase(c.name) == "todo"
-        end)
+        todo_column =
+          Enum.find(columns, fn c ->
+            String.downcase(c.name) == "todo"
+          end)
 
-      target_column =
-        if subtask.column_id == done_column.id do
-          todo_column
+        target_column =
+          if subtask.column_id == done_column.id do
+            todo_column
+          else
+            done_column
+          end
+
+        if target_column do
+          case Task.move(subtask, %{column_id: target_column.id}) do
+            {:ok, updated_subtask} ->
+              tasks = Map.put(socket.assigns.tasks, subtask_id, updated_subtask)
+              broadcast_update(socket.assigns.board.id, {:task_moved, updated_subtask})
+              {:noreply, assign(socket, :tasks, tasks)}
+
+            _ ->
+              {:noreply, socket}
+          end
         else
-          done_column
+          {:noreply, socket}
         end
 
-      if target_column do
-        case Task.move(subtask, %{column_id: target_column.id}) do
-          {:ok, updated_subtask} ->
-            tasks = Map.put(socket.assigns.tasks, subtask_id, updated_subtask)
-            broadcast_update(socket.assigns.board.id, {:task_moved, updated_subtask})
-            {:noreply, assign(socket, :tasks, tasks)}
-
-          _ ->
-            {:noreply, socket}
-        end
-      else
+      _ ->
         {:noreply, socket}
-      end
-    else
-      _ -> {:noreply, socket}
     end
   end
 

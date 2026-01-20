@@ -352,8 +352,6 @@ defmodule Viban.DataCase do
       if active == [] do
         {:ok, history} = HookExecution.history_for_task(task_id)
         history
-      else
-        nil
       end
     end)
   end
@@ -381,8 +379,6 @@ defmodule Viban.DataCase do
 
       if running == [] do
         :ok
-      else
-        nil
       end
     end)
   end

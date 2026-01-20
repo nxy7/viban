@@ -37,8 +37,8 @@ defmodule Viban.Kanban.Task.TaskServer do
   alias Viban.Kanban.Hook
   alias Viban.Kanban.HookExecution
   alias Viban.Kanban.HookExecution.HookExecutionServer
-  alias Viban.Kanban.Task.TaskSupervisor
   alias Viban.Kanban.Task
+  alias Viban.Kanban.Task.TaskSupervisor
   alias Viban.Kanban.Task.WorktreeManager
 
   require Logger

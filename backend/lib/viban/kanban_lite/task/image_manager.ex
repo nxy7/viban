@@ -6,7 +6,9 @@ defmodule Viban.KanbanLite.Task.ImageManager do
   is independent of the database backend.
   """
 
-  defdelegate save_images(task_id, images), to: Viban.Kanban.Task.ImageManager
-  defdelegate sync_images(task_id, new_images, existing_images), to: Viban.Kanban.Task.ImageManager
-  defdelegate delete_task_images(task_id), to: Viban.Kanban.Task.ImageManager
+  alias Viban.Kanban.Task.ImageManager
+
+  defdelegate save_images(task_id, images), to: ImageManager
+  defdelegate sync_images(task_id, new_images, existing_images), to: ImageManager
+  defdelegate delete_task_images(task_id), to: ImageManager
 end

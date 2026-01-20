@@ -26,8 +26,8 @@ defmodule Viban.Kanban.Task.Actions.CreatePR do
 
   use Ash.Resource.Actions.Implementation
 
-  alias Viban.VCS.GitHub.Client
   alias Viban.Kanban.Task
+  alias Viban.VCS.GitHub.Client
 
   require Logger
 

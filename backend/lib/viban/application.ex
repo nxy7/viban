@@ -96,7 +96,7 @@ defmodule Viban.Application do
     if db_path do
       db_dir = Path.dirname(db_path)
 
-      unless File.dir?(db_dir) do
+      if !File.dir?(db_dir) do
         IO.puts("#{IO.ANSI.cyan()}📁 Creating SQLite data directory: #{db_dir}#{IO.ANSI.reset()}")
         File.mkdir_p!(db_dir)
       end

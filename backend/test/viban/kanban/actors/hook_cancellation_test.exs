@@ -5,8 +5,8 @@ defmodule Viban.Kanban.HookCancellationTest do
   alias Viban.Kanban.ColumnHook
   alias Viban.Kanban.Hook
   alias Viban.Kanban.HookExecution
-  alias Viban.Kanban.Task.TaskServer
   alias Viban.Kanban.Task
+  alias Viban.Kanban.Task.TaskServer
 
   # ============================================================================
   # Setup Helpers
@@ -296,7 +296,7 @@ defmodule Viban.Kanban.HookCancellationTest do
       {:ok, cancelled} = HookExecution.cancel(exec, %{skip_reason: :column_change})
 
       assert cancelled.status == :cancelled
-      assert cancelled.completed_at != nil
+      assert cancelled.completed_at
     end
 
     test "cancel/2 from :running sets completed_at timestamp", %{task: task, column: column} do
@@ -314,7 +314,7 @@ defmodule Viban.Kanban.HookCancellationTest do
       {:ok, cancelled} = HookExecution.cancel(running, %{skip_reason: :column_change})
 
       assert cancelled.status == :cancelled
-      assert cancelled.completed_at != nil
+      assert cancelled.completed_at
     end
 
     test "cancellation preserves started_at if was running", %{task: task, column: column} do

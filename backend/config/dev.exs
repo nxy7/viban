@@ -43,15 +43,16 @@ config :viban, VibanWeb.Endpoint,
     ]
   ]
 
+config :viban, :env, :dev
+
+# Import secrets if they exist (GitHub OAuth credentials)
 # Disable Bandit compression for E2E tests to avoid Playwright decompression issues
 config :viban, dev_routes: true
-config :viban, :env, :dev
 
 if System.get_env("E2E_TEST") == "true" do
   config :viban, :sandbox_enabled, true
 end
 
-# Import secrets if they exist (GitHub OAuth credentials)
 if File.exists?(Path.expand("dev.secret.exs", __DIR__)) do
   import_config "dev.secret.exs"
 end

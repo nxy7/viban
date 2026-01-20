@@ -7,8 +7,8 @@ defmodule Viban.KanbanLite.ColumnHook do
     domain: Viban.KanbanLite,
     data_layer: AshSqlite.DataLayer
 
-  alias Viban.KanbanLite.ColumnHook.Validations
   alias Viban.Kanban.SystemHooks.Registry
+  alias Viban.KanbanLite.ColumnHook.Validations
 
   sqlite do
     table "column_hooks"

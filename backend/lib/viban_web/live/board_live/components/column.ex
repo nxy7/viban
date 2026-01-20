@@ -5,15 +5,15 @@ defmodule VibanWeb.Live.BoardLive.Components.Column do
 
   use Phoenix.Component
 
-  alias Phoenix.LiveView.JS
-
-  import VibanWeb.CoreComponents
-  import VibanWeb.Live.BoardLive.Components.TaskCard
-
   use Phoenix.VerifiedRoutes,
     endpoint: VibanWeb.Endpoint,
     router: VibanWeb.Router,
     statics: VibanWeb.static_paths()
+
+  import VibanWeb.CoreComponents
+  import VibanWeb.Live.BoardLive.Components.TaskCard
+
+  alias Phoenix.LiveView.JS
 
   attr :column, :map, required: true
   attr :board_id, :string, required: true
@@ -67,8 +67,7 @@ defmodule VibanWeb.Live.BoardLive.Components.Column do
           phx-click={@on_add_click}
           class="w-full flex items-center justify-center gap-2 text-sm text-gray-400 hover:text-white hover:bg-gray-800 py-2 rounded-lg transition-colors"
         >
-          <.icon name="hero-plus" class="h-4 w-4" />
-          Add a card
+          <.icon name="hero-plus" class="h-4 w-4" /> Add a card
         </button>
       </div>
     </div>

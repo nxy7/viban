@@ -149,10 +149,7 @@ defmodule VibanWeb.Live.BoardLive.Components.ColumnSettings do
       <.form :if={@form} for={@form} phx-submit="save_column_settings" class="space-y-4">
         <div>
           <label class="block text-sm font-medium text-gray-300 mb-1">Name</label>
-          <.input
-            field={@form[:name]}
-            disabled={@is_system_column}
-          />
+          <.input field={@form[:name]} disabled={@is_system_column} />
           <p :if={@is_system_column} class="text-xs text-gray-500 mt-1">
             System columns cannot be renamed
           </p>
@@ -168,7 +165,8 @@ defmodule VibanWeb.Live.BoardLive.Components.ColumnSettings do
               phx-value-color={color}
               class={[
                 "w-6 h-6 rounded-full transition-transform focus:outline-none",
-                @form[:color].value == color && "scale-110 ring-2 ring-white ring-offset-2 ring-offset-gray-800"
+                @form[:color].value == color &&
+                  "scale-110 ring-2 ring-white ring-offset-2 ring-offset-gray-800"
               ]}
               style={"background-color: #{color}"}
             />
@@ -199,15 +197,28 @@ defmodule VibanWeb.Live.BoardLive.Components.ColumnSettings do
             Delete All Tasks
           </.button>
         </div>
-        <div :if={@show_delete_confirm} class="p-3 bg-red-900/20 border border-red-500/30 rounded-md space-y-2">
+        <div
+          :if={@show_delete_confirm}
+          class="p-3 bg-red-900/20 border border-red-500/30 rounded-md space-y-2"
+        >
           <p class="text-sm text-red-400">
             Delete all tasks in this column? This cannot be undone.
           </p>
           <div class="flex gap-2">
-            <.button type="button" variant="ghost" phx-click="cancel_delete_column_tasks" class="flex-1">
+            <.button
+              type="button"
+              variant="ghost"
+              phx-click="cancel_delete_column_tasks"
+              class="flex-1"
+            >
               Cancel
             </.button>
-            <.button type="button" variant="danger" phx-click="confirm_delete_column_tasks" class="flex-1">
+            <.button
+              type="button"
+              variant="danger"
+              phx-click="confirm_delete_column_tasks"
+              class="flex-1"
+            >
               Delete All
             </.button>
           </div>
@@ -239,7 +250,10 @@ defmodule VibanWeb.Live.BoardLive.Components.ColumnSettings do
         </div>
       </div>
 
-      <div :if={@column_hooks == []} class="text-center py-4 text-gray-500 border border-dashed border-gray-700 rounded-lg">
+      <div
+        :if={@column_hooks == []}
+        class="text-center py-4 text-gray-500 border border-dashed border-gray-700 rounded-lg"
+      >
         <.icon name="hero-bolt" class="w-5 h-5 mx-auto mb-1 opacity-50" />
         <p class="text-xs">No hooks assigned</p>
       </div>
@@ -313,7 +327,8 @@ defmodule VibanWeb.Live.BoardLive.Components.ColumnSettings do
             phx-value-hook_id={hook.id}
             class={[
               "px-2 py-1 text-xs font-medium rounded transition-colors",
-              hook.is_system && "bg-purple-900/50 text-purple-300 hover:bg-purple-900/70 border border-purple-500/30",
+              hook.is_system &&
+                "bg-purple-900/50 text-purple-300 hover:bg-purple-900/70 border border-purple-500/30",
               !hook.is_system && "bg-gray-700 text-gray-300 hover:bg-gray-600 border border-gray-600"
             ]}
           >
@@ -356,7 +371,8 @@ defmodule VibanWeb.Live.BoardLive.Components.ColumnSettings do
             phx-click="toggle_concurrency_limit"
             class="sr-only peer"
           />
-          <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-600"></div>
+          <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-600">
+          </div>
         </label>
       </div>
 

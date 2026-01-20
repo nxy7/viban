@@ -83,7 +83,7 @@ config :viban, Viban.RepoSqlite,
   database: Path.expand("~/.viban/viban.db"),
   pool_size: 1,
   journal_mode: :wal,
-  cache_size: -64000,
+  cache_size: -64_000,
   temp_store: :memory,
   busy_timeout: 5000
 

@@ -48,7 +48,7 @@ defmodule Viban.Kanban.HookExecutionTest do
       assert exec.hook_name == "Test Hook"
       assert exec.hook_id == "test-hook-id"
       assert exec.task_id == task.id
-      assert exec.queued_at != nil
+      assert exec.queued_at
       assert exec.started_at == nil
       assert exec.completed_at == nil
     end
@@ -65,7 +65,7 @@ defmodule Viban.Kanban.HookExecutionTest do
       {:ok, started_exec} = HookExecution.start(exec)
 
       assert started_exec.status == :running
-      assert started_exec.started_at != nil
+      assert started_exec.started_at
       assert started_exec.completed_at == nil
     end
 
@@ -82,7 +82,7 @@ defmodule Viban.Kanban.HookExecutionTest do
       {:ok, completed_exec} = HookExecution.complete(started_exec)
 
       assert completed_exec.status == :completed
-      assert completed_exec.completed_at != nil
+      assert completed_exec.completed_at
       assert completed_exec.error_message == nil
     end
 
@@ -101,7 +101,7 @@ defmodule Viban.Kanban.HookExecutionTest do
         HookExecution.fail(started_exec, %{error_message: "Script exited with code 1"})
 
       assert failed_exec.status == :failed
-      assert failed_exec.completed_at != nil
+      assert failed_exec.completed_at
       assert failed_exec.error_message == "Script exited with code 1"
     end
 
@@ -124,7 +124,7 @@ defmodule Viban.Kanban.HookExecutionTest do
 
       assert cancelled_exec.status == :cancelled
       assert cancelled_exec.skip_reason == :column_change
-      assert cancelled_exec.completed_at != nil
+      assert cancelled_exec.completed_at
     end
 
     test "skip/2 transitions :pending -> :skipped with reason", %{task: task, column: column} do
@@ -140,7 +140,7 @@ defmodule Viban.Kanban.HookExecutionTest do
 
       assert skipped_exec.status == :skipped
       assert skipped_exec.skip_reason == :disabled
-      assert skipped_exec.completed_at != nil
+      assert skipped_exec.completed_at
     end
 
     test "can cancel pending execution", %{task: task, column: column} do
@@ -356,7 +356,7 @@ defmodule Viban.Kanban.HookExecutionTest do
       settings = %{
         "execute_once" => true,
         "transparent" => false,
-        "timeout" => 30000
+        "timeout" => 30_000
       }
 
       {:ok, exec} =
