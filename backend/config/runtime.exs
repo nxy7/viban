@@ -75,55 +75,8 @@ if config_env() == :prod do
   host = System.get_env("PHX_HOST") || "localhost"
   port = String.to_integer(System.get_env("PORT") || if(deploy_mode?, do: "7777", else: "4000"))
 
-  # SSL certificates for HTTPS (enables HTTP/2 for Electric SQL sync)
-  # In deploy mode, certs are stored in ~/.viban/cert and generated if missing
-  cert_dir =
-    if deploy_mode? do
-      Path.expand("~/.viban/cert")
-    else
-      case :code.priv_dir(:viban) do
-        {:error, _} -> "priv/cert"
-        path -> Path.join(to_string(path), "cert")
-      end
-    end
-
-  full_cert_path = System.get_env("SSL_CERT_PATH") || Path.join(cert_dir, "selfsigned.pem")
-  full_key_path = System.get_env("SSL_KEY_PATH") || Path.join(cert_dir, "selfsigned_key.pem")
-
-  # Generate self-signed certs in deploy mode if they don't exist
   config :viban, :database_url, database_url
   config :viban, :using_external_database, using_external_database?
-
-  if deploy_mode? and not (File.exists?(full_cert_path) and File.exists?(full_key_path)) do
-    File.mkdir_p!(cert_dir)
-
-    if System.find_executable("openssl") do
-      System.cmd(
-        "openssl",
-        [
-          "req",
-          "-x509",
-          "-newkey",
-          "rsa:2048",
-          "-keyout",
-          full_key_path,
-          "-out",
-          full_cert_path,
-          "-sha256",
-          "-days",
-          "365",
-          "-nodes",
-          "-subj",
-          "/CN=localhost",
-          "-addext",
-          "subjectAltName=DNS:localhost,IP:127.0.0.1"
-        ],
-        stderr_to_stdout: true
-      )
-    end
-  end
-
-  use_https = File.exists?(full_cert_path) && File.exists?(full_key_path)
 
   # In deploy mode, always start the server (no need for PHX_SERVER env var)
   server_enabled? = deploy_mode? or System.get_env("PHX_SERVER") != nil
@@ -148,30 +101,14 @@ if config_env() == :prod do
     pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
     socket_options: maybe_ipv6
 
-  # HTTPS mode - enables HTTP/2 for multiplexed connections (needed for Electric SQL)
   config :viban, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
-  if use_https do
-    config :viban, VibanWeb.Endpoint,
-      server: server_enabled?,
-      url: [host: host, port: port, scheme: "https"],
-      https: [
-        ip: {0, 0, 0, 0, 0, 0, 0, 0},
-        port: port,
-        cipher_suite: :strong,
-        certfile: full_cert_path,
-        keyfile: full_key_path
-      ],
-      secret_key_base: secret_key_base
-  else
-    # HTTP mode - fallback if no certs
-    config :viban, VibanWeb.Endpoint,
-      server: server_enabled?,
-      url: [host: host, port: port, scheme: "http"],
-      http: [
-        ip: {0, 0, 0, 0, 0, 0, 0, 0},
-        port: port
-      ],
-      secret_key_base: secret_key_base
-  end
+  config :viban, VibanWeb.Endpoint,
+    server: server_enabled?,
+    url: [host: host, port: port, scheme: "http"],
+    http: [
+      ip: {0, 0, 0, 0, 0, 0, 0, 0},
+      port: port
+    ],
+    secret_key_base: secret_key_base
 end

@@ -40,7 +40,6 @@
             nativeBuildInputs = [
               erlang
               elixir
-              pkgs.bun
               pkgs.zig
               pkgs.xz
               pkgs.git
@@ -87,9 +86,6 @@
               # Elixir/Erlang (pinned to OTP 27 for Burrito builds)
               erlang
               elixir
-
-              # Node.js / Bun
-              pkgs.bun
             ];
           };
         };

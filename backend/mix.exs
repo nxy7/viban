@@ -90,10 +90,12 @@ defmodule Viban.MixProject do
       # Database
       {:ecto_sql, "~> 3.10"},
       {:postgrex, ">= 0.0.0"},
+      {:ecto_sqlite3, "~> 0.17"},
 
       # Ash Framework
       {:ash, "~> 3.0"},
       {:ash_postgres, "~> 2.0"},
+      {:ash_sqlite, "~> 0.2"},
       {:ash_phoenix, "~> 2.0"},
       {:ash_typescript, "~> 0.2"},
       {:ash_ai, "~> 0.3"},
@@ -139,8 +141,8 @@ defmodule Viban.MixProject do
 
       # Dev/Test
       {:floki, ">= 0.30.0", only: :test},
+      {:hammox, "~> 0.7", only: :test},
       {:tidewave, "~> 0.2", only: :dev},
-      {:reverse_proxy_plug, "~> 3.0", only: :dev},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:styler, "~> 1.0", only: [:dev, :test], runtime: false},
 

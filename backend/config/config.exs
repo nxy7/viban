@@ -79,6 +79,14 @@ config :viban, Viban.Repo,
   migration_primary_key: [type: :uuid],
   migration_timestamps: [type: :utc_datetime_usec]
 
+config :viban, Viban.RepoSqlite,
+  database: Path.expand("~/.viban/viban.db"),
+  pool_size: 1,
+  journal_mode: :wal,
+  cache_size: -64000,
+  temp_store: :memory,
+  busy_timeout: 5000
+
 config :viban, VibanWeb.Endpoint,
   url: [host: "localhost"],
   adapter: Bandit.PhoenixAdapter,
@@ -95,11 +103,12 @@ config :viban, VibanWeb.Endpoint,
 config :viban, :github_client_id, nil
 
 config :viban,
-  ecto_repos: [Viban.Repo],
+  ecto_repos: [Viban.Repo, Viban.RepoSqlite],
   generators: [timestamp_type: :utc_datetime],
   ash_domains: [
     Viban.Messages,
     Viban.Kanban,
+    Viban.KanbanLite,
     Viban.Accounts,
     Viban.Executors,
     Viban.AppRuntime,

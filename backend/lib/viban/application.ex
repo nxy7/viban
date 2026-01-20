@@ -16,9 +16,9 @@ defmodule Viban.Application do
   def start(_type, _args) do
     Viban.CLI.run()
     setup_deploy_mode()
-    ensure_ssl_certs_for_dev()
     setup_shutdown_hook()
     run_migrations()
+    setup_sqlite()
     configure_phoenix_sync()
 
     children = core_children() ++ optional_children() ++ endpoint_children()
@@ -45,16 +45,6 @@ defmodule Viban.Application do
   def stop(_state) do
     Viban.DeployMode.stop_postgres()
     :ok
-  end
-
-  # ============================================================================
-  # SSL Certificate Setup
-  # ============================================================================
-
-  defp ensure_ssl_certs_for_dev do
-    if Application.get_env(:viban, :dev_routes) do
-      Viban.Release.ensure_ssl_certs()
-    end
   end
 
   # ============================================================================
@@ -100,6 +90,19 @@ defmodule Viban.Application do
     end
   end
 
+  defp setup_sqlite do
+    db_path = Application.get_env(:viban, Viban.RepoSqlite)[:database]
+
+    if db_path do
+      db_dir = Path.dirname(db_path)
+
+      unless File.dir?(db_dir) do
+        IO.puts("#{IO.ANSI.cyan()}📁 Creating SQLite data directory: #{db_dir}#{IO.ANSI.reset()}")
+        File.mkdir_p!(db_dir)
+      end
+    end
+  end
+
   # ============================================================================
   # Phoenix Configuration
   # ============================================================================
@@ -124,6 +127,7 @@ defmodule Viban.Application do
       # Telemetry and database
       VibanWeb.Telemetry,
       Viban.Repo,
+      Viban.RepoSqlite,
 
       # Clustering and communication
       {DNSCluster, query: Application.get_env(:viban, :dns_cluster_query) || :ignore},

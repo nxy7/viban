@@ -20,10 +20,6 @@ defmodule VibanWeb.Router do
     plug :accepts, ["json"]
   end
 
-  pipeline :spa do
-    plug :accepts, ["html"]
-    plug :fetch_session
-  end
 
   # Test endpoints (only available when sandbox_enabled)
   scope "/api/test", VibanWeb do
@@ -110,22 +106,14 @@ defmodule VibanWeb.Router do
       live_dashboard "/dashboard", metrics: VibanWeb.Telemetry
       oban_dashboard("/oban")
     end
-
-    forward "/_build", ReverseProxyPlug,
-      upstream: "http://127.0.0.1:7778/_build",
-      client: ReverseProxyPlug.HTTPClient.Adapters.Req,
-      client_options: [receive_timeout: 30_000, retry: :transient]
   end
 
-  if Application.compile_env(:viban, :dev_routes) do
-    scope "/" do
-      pipe_through :spa
-      forward "/", VibanWeb.Plugs.DevProxy
-    end
-  else
-    scope "/", VibanWeb do
-      pipe_through :spa
-      get "/*path", SPAController, :index
-    end
+  # LiveView routes (main app)
+  scope "/", VibanWeb.Live do
+    pipe_through :browser
+
+    live "/", HomeLive, :index
+    live "/board/:board_id", BoardLive, :show
+    live "/board/:board_id/task/:task_id", BoardLive, :task
   end
 end

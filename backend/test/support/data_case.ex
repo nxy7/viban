@@ -48,6 +48,9 @@ defmodule Viban.DataCase do
     pid = Sandbox.start_owner!(Viban.Repo, shared: not tags[:async])
     on_exit(fn -> Sandbox.stop_owner(pid) end)
 
+    sqlite_pid = Sandbox.start_owner!(Viban.RepoSqlite, shared: not tags[:async])
+    on_exit(fn -> Sandbox.stop_owner(sqlite_pid) end)
+
     # For async integration tests, set up automatic sandbox allowances
     if tags[:async] do
       # Store the test pid for later use by allow_sandbox_access/1
@@ -69,6 +72,7 @@ defmodule Viban.DataCase do
   def allow_sandbox_access(pid) when is_pid(pid) do
     test_pid = Process.get(:test_pid) || self()
     Sandbox.allow(Viban.Repo, test_pid, pid)
+    Sandbox.allow(Viban.RepoSqlite, test_pid, pid)
   end
 
   @doc """
@@ -78,6 +82,7 @@ defmodule Viban.DataCase do
   def allow_sandbox_access_to_supervisor(supervisor_pid) when is_pid(supervisor_pid) do
     test_pid = Process.get(:test_pid) || self()
     Sandbox.allow(Viban.Repo, test_pid, supervisor_pid)
+    Sandbox.allow(Viban.RepoSqlite, test_pid, supervisor_pid)
 
     # Allow all children recursively
     case Supervisor.which_children(supervisor_pid) do
@@ -85,6 +90,7 @@ defmodule Viban.DataCase do
         Enum.each(children, fn
           {_id, pid, :worker, _modules} when is_pid(pid) ->
             Sandbox.allow(Viban.Repo, test_pid, pid)
+            Sandbox.allow(Viban.RepoSqlite, test_pid, pid)
 
           {_id, pid, :supervisor, _modules} when is_pid(pid) ->
             allow_sandbox_access_to_supervisor(pid)

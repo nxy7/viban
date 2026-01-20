@@ -22,10 +22,9 @@ config :viban, Viban.Repo,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10
 
-# In dev, Phoenix runs on HTTP behind Caddy which handles HTTPS
-# Caddy listens on :7777 (HTTPS) and proxies to Phoenix on :7780 (HTTP)
+# In dev, Phoenix runs on HTTP directly on port 7777
 config :viban, VibanWeb.Endpoint,
-  http: [ip: {127, 0, 0, 1}, port: 7780],
+  http: [ip: {127, 0, 0, 1}, port: 7777],
   check_origin: false,
   code_reloader: true,
   debug_errors: true,

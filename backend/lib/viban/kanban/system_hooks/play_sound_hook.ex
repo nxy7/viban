@@ -36,13 +36,14 @@ defmodule Viban.Kanban.SystemHooks.PlaySoundHook do
     board_id = Keyword.get(opts, :board_id)
     hook_settings = Keyword.get(opts, :hook_settings, %{})
 
-    # Get sound from settings, default to "ding"
     sound = get_sound_from_settings(hook_settings)
 
     Logger.info("[PlaySoundHook] Broadcasting play-sound to board #{board_id}, sound: #{sound}")
 
     if board_id do
       BoardChannel.broadcast_client_action(board_id, "play-sound", %{sound: sound})
+
+      Phoenix.PubSub.broadcast(Viban.PubSub, "board:#{board_id}", {:play_sound, sound})
     else
       Logger.warning("[PlaySoundHook] No board_id provided, cannot broadcast")
     end

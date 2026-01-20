@@ -4,14 +4,24 @@ This document defines the coding standards and practices for this project when w
 
 ## Project Structure
 
-- `frontend/` - SolidJS frontend application
-- `backend/` - Elixir/Ash backend application
+- `backend/` - Elixir/Ash backend application with Phoenix LiveView frontend
 - `.claude/agents/` - Custom Claude agents for specialized tasks
 
 ## Development URLs
 
-- **Dev**: `https://localhost:7777` (Phoenix with mkcert certs, proxies to Vite on port 7778)
-- **Prod/CI**: `https://localhost:7777` (deploy mode, serves bundled frontend)
+- **Dev**: `http://localhost:7777` (Phoenix HTTP)
+- **Prod**: `http://localhost:7777` (deploy mode, Phoenix HTTP)
+
+## Starting Development
+
+```bash
+# Start all services (database + backend)
+just dev
+
+# Or manually:
+docker compose up db &
+cd backend && mix phx.server
+```
 
 ## Comment Policy
 
@@ -20,47 +30,35 @@ Comments are code smell. This project follows a strict no-comment philosophy:
 ### Forbidden Comments
 
 1. **Comments explaining "what" the code does**
-   ```typescript
-   // BAD: Get the user name
-   const userName = user.name;
-
-   // BAD: Filter active items
-   const activeItems = items.filter(item => item.active);
+   ```elixir
+   # BAD: Get the user name
+   user_name = user.name
    ```
 
 2. **Comments explaining "how"**
-   ```typescript
-   // BAD: Loop through each item and check if active
-   for (const item of items) { ... }
+   ```elixir
+   # BAD: Loop through each item and check if active
+   Enum.filter(items, &(&1.active))
    ```
 
 3. **Comments that should be variable/function names**
-   ```typescript
-   // BAD:
-   const x = items.filter(i => i.status === 'active'); // active items
+   ```elixir
+   # BAD:
+   x = Enum.filter(items, &(&1.status == :active)) # active items
 
-   // GOOD:
-   const activeItems = items.filter(item => item.status === 'active');
+   # GOOD:
+   active_items = Enum.filter(items, &(&1.status == :active))
    ```
 
 ### Acceptable Comments
 
 1. **Explaining "why" when it cannot be expressed in code**
-   ```typescript
-   // Safari requires this workaround due to IndexedDB bug in version 15.4
-   const db = await openWithRetry();
-
-   // Business rule: Premium users get extended trial per legal agreement
-   const trialDays = user.isPremium ? 30 : 7;
+   ```elixir
+   # Business rule: Premium users get extended trial per legal agreement
+   trial_days = if user.premium?, do: 30, else: 7
    ```
 
 2. **Section dividers for large files**
-   ```typescript
-   // ============================================================================
-   // Private Functions
-   // ============================================================================
-   ```
-
    ```elixir
    # ============================================================================
    # Command Queue Processing
@@ -69,7 +67,6 @@ Comments are code smell. This project follows a strict no-comment philosophy:
 
 3. **Documentation for public APIs**
    - `@moduledoc` and `@doc` in Elixir
-   - JSDoc for exported functions in TypeScript (sparingly)
 
 ### The Rule
 
@@ -78,35 +75,28 @@ If code "needs" a comment to be understood, the code should be refactored instea
 - Use descriptive variable names
 - Break complex logic into smaller, understandable pieces
 
-## Backend/Frontend Communication
+## Architecture
 
-All communication between backend and frontend MUST use one of these two methods:
+### Phoenix LiveView (UI)
 
-### 1. Electric SQL (for real-time data sync)
-- Used for reactive queries that need real-time updates
-- Collections defined in `frontend/src/lib/useKanban.ts` (e.g., `boardsCollection`, `tasksCollection`)
-- Use `useLiveQuery` from `@tanstack/solid-db` to query collections
+- All UI is server-rendered with Phoenix LiveView
+- LiveView files in `lib/viban_web/live/`
+- Components in `lib/viban_web/live/*/components/`
+- Real-time updates via PubSub
 
-### 2. AshTypescript Generated SDK (for RPC actions)
-- Generated file: `frontend/src/lib/generated/ash.ts`
-- Regenerate with: `mix ash.codegen` (from backend directory)
-- Functions like `create_task`, `update_board`, `move_task`, etc.
-- Automatically handles error notifications via `rpcHooks.ts`
-- **DO NOT** create custom `fetch` calls to `/api/rpc/run` - use the generated SDK
+### Ash Framework (Backend)
 
-### Adding New RPC Actions
-1. Add `rpc_action` in the domain's `typescript_rpc` block (e.g., `lib/viban/kanban.ex`)
-2. Run `mix ash.codegen` to regenerate the SDK
-3. Import and use the generated function in frontend
+- Resources in `lib/viban/kanban_lite/` (SQLite-backed)
+- Domain in `lib/viban/kanban_lite.ex`
+- Actions define business logic
+- Policies define authorization
+
+### Data Layer
+
+- SQLite for persistent storage (via AshSqlite)
+- PubSub for real-time updates between LiveView processes
 
 ## Code Quality Standards
-
-### TypeScript/SolidJS
-
-- No `any` types unless absolutely necessary
-- Minimal type casting - restructure code so TypeScript infers correctly
-- Use reactive primitives correctly (createSignal, createEffect, createMemo)
-- Proper error boundaries and loading states
 
 ### Elixir/Ash
 
@@ -114,6 +104,13 @@ All communication between backend and frontend MUST use one of these two methods
 - Use proper Ash conventions for resources, policies, and relationships
 - `@moduledoc` and `@doc` for public APIs
 - Clear module organization
+
+### Phoenix LiveView
+
+- Keep assigns minimal
+- Use components for reusable UI pieces
+- Handle events in the parent LiveView when possible
+- Use `push_patch` for URL changes, `push_navigate` for full page changes
 
 ## Versioning
 

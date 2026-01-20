@@ -46,7 +46,7 @@ jobs:
         run: nix develop --command bash -c "cd backend && mix compile --warnings-as-errors"
 
       - name: Setup database
-        run: nix develop --command bash -c "cd backend && mix ash.setup"
+        run: nix develop --command bash -c "cd backend && mix ash.setup && mix ecto.migrate --repo Viban.RepoSqlite"
         env:
           MIX_ENV: test
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/viban_test
@@ -57,32 +57,9 @@ jobs:
           MIX_ENV: test
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/viban_test
 
-  frontend-check:
-    name: Frontend Checks
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
-
-      - name: Setup Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@main
-
-      - name: Install dependencies
-        run: nix develop --command bash -c "cd frontend && bun install --frozen-lockfile"
-
-      - name: Lint and format check
-        run: nix develop --command bash -c "cd frontend && bun run check"
-
-      - name: Type check
-        run: nix develop --command bash -c "cd frontend && bun run typecheck"
-
   build:
     name: Build Binary
-    needs: [backend-test, frontend-check]
+    needs: [backend-test]
     runs-on: ubuntu-latest
 
     steps:
@@ -104,44 +81,3 @@ jobs:
           name: viban-linux
           path: result/bin/viban
           if-no-files-found: error
-
-  e2e-prod:
-    name: E2E Tests (Production Build)
-    needs: [build]
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
-
-      - name: Setup Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@main
-
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: viban-linux
-
-      - name: Make binary executable
-        run: chmod +x viban
-
-      - name: Install Playwright browsers
-        run: nix develop --command bash -c "cd frontend && bun install && bunx playwright install chromium"
-
-      - name: Start release and run E2E tests
-        run: nix develop --command just _run-e2e-prod ./viban
-
-      - name: Show server logs on failure
-        if: failure()
-        run: cat /tmp/viban-e2e.log
-
-      - name: Upload Playwright report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: playwright-report-prod
-          path: frontend/playwright-report/
-          retention-days: 7

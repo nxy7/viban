@@ -13,10 +13,8 @@ defmodule VibanWeb.Endpoint do
 
   # Allowed origins for CORS
   @allowed_origins [
-    "http://localhost:7778",
-    "http://127.0.0.1:7778",
-    "https://localhost:7777",
-    "https://127.0.0.1:7777"
+    "http://localhost:7777",
+    "http://127.0.0.1:7777"
   ]
 
   socket "/live", Phoenix.LiveView.Socket,

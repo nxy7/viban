@@ -38,7 +38,7 @@ defmodule VibanWeb do
   def live_view do
     quote do
       use Phoenix.LiveView,
-        layout: {VibanWeb.Layouts, :app}
+        layout: {VibanWeb.Layouts, :lite}
 
       unquote(html_helpers())
     end
