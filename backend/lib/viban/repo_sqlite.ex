@@ -1,14 +1,12 @@
 defmodule Viban.RepoSqlite do
   @moduledoc """
-  SQLite repository for the LiveView-based KanbanLite domain.
+  SQLite repository for the Kanban domain.
 
-  This repo uses SQLite for simplified deployment without external database dependencies.
-  It enables single-binary deployment via Burrito without needing Postgres or Electric SQL.
+  Uses SQLite for simplified deployment without external database dependencies.
+  Enables single-binary deployment via Burrito.
   """
 
-  use Ecto.Repo,
-    otp_app: :viban,
-    adapter: Ecto.Adapters.SQLite3
+  use AshSqlite.Repo, otp_app: :viban
 
   @doc """
   Get the database path for the SQLite database.

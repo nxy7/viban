@@ -1,12 +1,6 @@
 defmodule Viban.Kanban.Task.Changes.SetupSubtask do
   @moduledoc """
-  Ash change that sets up a subtask by inheriting column from parent
-  and calculating position.
-
-  This change:
-  1. Validates the parent task exists
-  2. Inherits the column_id from the parent
-  3. Calculates the next position in the subtask list using an efficient count query
+  Ash change that sets up a subtask by inheriting column from parent (SQLite version).
   """
 
   use Ash.Resource.Change
@@ -14,7 +8,6 @@ defmodule Viban.Kanban.Task.Changes.SetupSubtask do
   require Ash.Query
 
   @impl true
-  @spec change(Ash.Changeset.t(), keyword(), Ash.Resource.Change.context()) :: Ash.Changeset.t()
   def change(changeset, _opts, _context) do
     parent_id = Ash.Changeset.get_argument(changeset, :parent_task_id)
 
@@ -35,8 +28,6 @@ defmodule Viban.Kanban.Task.Changes.SetupSubtask do
     end
   end
 
-  # Uses count aggregate for efficiency - does not load all subtasks into memory
-  @spec calculate_next_position(Ecto.UUID.t()) :: non_neg_integer()
   defp calculate_next_position(parent_id) do
     Viban.Kanban.Task
     |> Ash.Query.filter(parent_task_id == ^parent_id)

@@ -8,7 +8,7 @@ config :ash, :disable_async?, true
 # Ignore missed notifications since tests run in database transactions
 config :ash, :missed_notifications, :ignore
 
-# Suppress Electric Phoenix logging during tests
+# Suppress logging during tests
 config :logger, :console,
   metadata: [:request_id],
   level: :none
@@ -24,24 +24,14 @@ config :phoenix, :plug_init_mode, :runtime
 config :phoenix_live_view,
   enable_expensive_runtime_checks: true
 
-config :phoenix_sync, repo: Viban.Repo
-
 # Disable Oban during tests to prevent DB connection issues
 config :viban, Oban, testing: :inline
 
-config :viban, Viban.Repo,
-  username: "postgres",
-  password: "postgres",
-  hostname: "localhost",
-  database: "viban_test#{System.get_env("MIX_TEST_PARTITION")}",
-  port: 5432,
-  pool: Sandbox,
-  pool_size: System.schedulers_online() * 2
-
+# SQLite test database
 config :viban, Viban.RepoSqlite,
   database: Path.expand("../priv/repo_sqlite_test#{System.get_env("MIX_TEST_PARTITION")}.db", __DIR__),
   pool: Sandbox,
-  pool_size: System.schedulers_online() * 2
+  pool_size: 1
 
 config :viban, VibanWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4002],

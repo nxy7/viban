@@ -104,6 +104,37 @@ defmodule VibanWeb.DeviceAuthController do
     |> json_ok(%{status: "cancelled"})
   end
 
+  @doc """
+  Callback endpoint for LiveView device flow.
+
+  Accepts a signed token containing user_id, sets the session, and redirects to home.
+  The token is short-lived (5 minutes) to prevent replay attacks.
+  """
+  def callback(conn, %{"token" => token}) do
+    case Phoenix.Token.verify(VibanWeb.Endpoint, "device_flow_user", token, max_age: 300) do
+      {:ok, user_id} ->
+        Logger.info("[DeviceAuth] Callback - setting session for user: #{user_id}")
+
+        conn
+        |> put_session(:user_id, user_id)
+        |> configure_session(renew: true)
+        |> redirect(to: "/")
+
+      {:error, reason} ->
+        Logger.warning("[DeviceAuth] Callback - invalid token: #{inspect(reason)}")
+
+        conn
+        |> put_flash(:error, "Authentication failed. Please try again.")
+        |> redirect(to: "/")
+    end
+  end
+
+  def callback(conn, _params) do
+    conn
+    |> put_flash(:error, "Invalid authentication request")
+    |> redirect(to: "/")
+  end
+
   # ============================================================================
   # Private Functions - Token Polling
   # ============================================================================

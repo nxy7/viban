@@ -1,17 +1,17 @@
 defmodule Viban.DeployMode do
   @moduledoc """
-  Handles deploy mode auto-configuration and Docker Postgres management.
+  Handles deploy mode auto-configuration for single-binary deployment.
 
   Deploy mode is detected when running from a Burrito-wrapped binary
   or when VIBAN_DEPLOY_MODE=1 is set.
+
+  In deploy mode:
+  - SQLite database is stored in ~/.viban/
+  - Secrets are auto-generated if not present
+  - App opens in browser on startup
   """
 
   @data_dir Path.expand("~/.viban")
-  @postgres_container "viban-postgres"
-  @postgres_port 17_777
-  @postgres_user "viban"
-  @postgres_password "viban"
-  @postgres_db "viban_prod"
   @app_port 7777
 
   def enabled? do
@@ -40,92 +40,11 @@ defmodule Viban.DeployMode do
   end
 
   def data_dir, do: @data_dir
-
-  def database_url do
-    "postgres://#{@postgres_user}:#{@postgres_password}@localhost:#{@postgres_port}/#{@postgres_db}"
-  end
-
   def app_port, do: @app_port
-  def postgres_port, do: @postgres_port
 
   def ensure_data_dir! do
     log_status("📁", "Data directory: #{@data_dir}")
-    File.mkdir_p!(Path.join(@data_dir, "postgres_data"))
     File.mkdir_p!(Path.join(@data_dir, "logs"))
-  end
-
-  def using_external_database? do
-    Application.get_env(:viban, :using_external_database, false)
-  end
-
-  def configured_database_url do
-    Application.get_env(:viban, :database_url)
-  end
-
-  def ensure_postgres_running! do
-    if using_external_database?() do
-      log_status("🔗", "Using external database: #{configured_database_url()}")
-      log_status("ℹ️ ", "Skipping Docker PostgreSQL container (external database provided)")
-      :ok
-    else
-      ensure_docker_available!()
-
-      case container_status() do
-        :running ->
-          log_success("✅", "PostgreSQL already running on port #{@postgres_port}")
-
-        :stopped ->
-          log_status("🐘", "Starting PostgreSQL container on port #{@postgres_port}...")
-          start_container()
-          wait_for_postgres()
-
-        :not_found ->
-          log_status("🐘", "Creating PostgreSQL container on port #{@postgres_port}...")
-          create_container()
-          wait_for_postgres()
-      end
-    end
-  end
-
-  defp ensure_docker_available! do
-    case System.find_executable("docker") do
-      nil ->
-        log_error("❌", "Docker not found!")
-
-        IO.puts("""
-
-        #{IO.ANSI.red()}Viban requires Docker to run in deploy mode.#{IO.ANSI.reset()}
-
-        Please install Docker:
-          - macOS: https://docs.docker.com/desktop/install/mac-install/
-          - Linux: https://docs.docker.com/engine/install/
-          - Windows: https://docs.docker.com/desktop/install/windows-install/
-
-        After installing Docker, make sure it's running and try again.
-        """)
-
-        System.halt(1)
-
-      _path ->
-        case System.cmd("docker", ["info"], stderr_to_stdout: true) do
-          {_, 0} ->
-            :ok
-
-          {output, _} ->
-            log_error("❌", "Docker is not running!")
-
-            IO.puts("""
-
-            #{IO.ANSI.red()}Docker is installed but not running.#{IO.ANSI.reset()}
-
-            Please start Docker and try again.
-
-            Error: #{String.slice(output, 0, 200)}
-            """)
-
-            System.halt(1)
-        end
-    end
   end
 
   def ensure_secrets! do
@@ -144,106 +63,6 @@ defmodule Viban.DeployMode do
       File.write!(config_path, content)
       load_config_env(config_path)
       log_success("✅", "Secrets generated")
-    end
-  end
-
-  defp container_status do
-    case System.cmd(
-           "docker",
-           ["ps", "-a", "--filter", "name=^#{@postgres_container}$", "--format", "{{.Status}}"],
-           stderr_to_stdout: true
-         ) do
-      {"", 0} ->
-        :not_found
-
-      {status, 0} ->
-        if String.contains?(status, "Up") do
-          :running
-        else
-          :stopped
-        end
-
-      _ ->
-        :not_found
-    end
-  end
-
-  defp create_container do
-    postgres_data = Path.join(@data_dir, "postgres_data")
-
-    {output, exit_code} =
-      System.cmd(
-        "docker",
-        [
-          "run",
-          "-d",
-          "--name",
-          @postgres_container,
-          "-e",
-          "POSTGRES_USER=#{@postgres_user}",
-          "-e",
-          "POSTGRES_PASSWORD=#{@postgres_password}",
-          "-e",
-          "POSTGRES_DB=#{@postgres_db}",
-          "-v",
-          "#{postgres_data}:/var/lib/postgresql/data",
-          "-p",
-          "#{@postgres_port}:5432",
-          "postgres:16-alpine",
-          "-c",
-          "wal_level=logical",
-          "-c",
-          "max_wal_senders=10",
-          "-c",
-          "max_replication_slots=10"
-        ],
-        stderr_to_stdout: true
-      )
-
-    if exit_code != 0 do
-      raise "Failed to create PostgreSQL container: #{output}"
-    end
-  end
-
-  defp start_container do
-    {output, exit_code} =
-      System.cmd("docker", ["start", @postgres_container], stderr_to_stdout: true)
-
-    if exit_code != 0 do
-      raise "Failed to start PostgreSQL container: #{output}"
-    end
-  end
-
-  def stop_postgres do
-    if enabled?() and not using_external_database?() do
-      case container_status() do
-        :running ->
-          log_status("🐘", "Stopping PostgreSQL container...")
-          {_, _} = System.cmd("docker", ["stop", @postgres_container], stderr_to_stdout: true)
-          log_success("✅", "PostgreSQL stopped")
-
-        _ ->
-          :ok
-      end
-    end
-  end
-
-  defp wait_for_postgres(attempts \\ 30) do
-    log_waiting("Waiting for database... (#{31 - attempts}s)")
-
-    case System.cmd("docker", ["exec", @postgres_container, "pg_isready", "-U", @postgres_user], stderr_to_stdout: true) do
-      {_, 0} ->
-        IO.puts("")
-        log_success("✅", "PostgreSQL ready!")
-        :ok
-
-      _ when attempts > 0 ->
-        Process.sleep(1000)
-        wait_for_postgres(attempts - 1)
-
-      _ ->
-        IO.puts("")
-        raise "PostgreSQL failed to start after 30 seconds"
     end
   end
 
@@ -268,13 +87,5 @@ defmodule Viban.DeployMode do
 
   defp log_success(emoji, message) do
     IO.puts("#{emoji}  #{IO.ANSI.green()}#{message}#{IO.ANSI.reset()}")
-  end
-
-  defp log_error(emoji, message) do
-    IO.puts("#{emoji}  #{IO.ANSI.red()}#{message}#{IO.ANSI.reset()}")
-  end
-
-  defp log_waiting(message) do
-    IO.write("\r#{IO.ANSI.yellow()}⏳ #{message}#{IO.ANSI.reset()}")
   end
 end

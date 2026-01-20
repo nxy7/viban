@@ -1,57 +1,26 @@
 defmodule Viban.Kanban.Hook do
   @moduledoc """
-  Hook resource represents reusable automation that runs when tasks enter columns.
-
-  ## Hook Types
-
-  - **Script hooks**: Execute shell commands with shebang support
-  - **Agent hooks**: Run AI agents with custom prompts
-
-  ## Executors
-
-  Agent hooks support multiple executor backends:
-  - `:claude_code` - Anthropic Claude with code execution
-  - `:gemini_cli` - Google Gemini CLI
-  - `:codex` - OpenAI Codex
-  - `:opencode` - OpenCode agent
-  - `:cursor_agent` - Cursor AI agent
-
-  All hooks execute in the task's git worktree directory.
-
-  ## Validation
-
-  Script hooks require a `command`, agent hooks require an `agent_prompt`.
-  These validations are enforced at the action level.
+  Hook resource represents reusable automation (SQLite version).
   """
 
   use Ash.Resource,
     domain: Viban.Kanban,
-    data_layer: AshPostgres.DataLayer,
-    extensions: [AshTypescript.Resource]
+    data_layer: AshSqlite.DataLayer
 
   alias Viban.Kanban.Hook.Validations
 
-  typescript do
-    type_name("Hook")
-  end
-
-  postgres do
+  sqlite do
     table "hooks"
-    repo Viban.Repo
+    repo Viban.RepoSqlite
   end
 
   attributes do
     uuid_primary_key :id
 
-    # ===================
-    # Common Attributes
-    # ===================
-
     attribute :name, :string do
       allow_nil? false
       public? true
       constraints min_length: 1, max_length: 255
-      description "Human-readable name for this hook"
     end
 
     attribute :hook_kind, :atom do
@@ -59,64 +28,42 @@ defmodule Viban.Kanban.Hook do
       constraints one_of: [:script, :agent]
       default :script
       allow_nil? false
-      description "Hook type: :script for shell commands, :agent for AI agents"
     end
-
-    # ===================
-    # Script Hook Attributes
-    # ===================
 
     attribute :command, :string do
       public? true
-      description "Shell command or script path (required for script hooks)"
     end
-
-    # ===================
-    # Agent Hook Attributes
-    # ===================
 
     attribute :agent_prompt, :string do
       public? true
-      description "System prompt for agent hooks (required for agent hooks)"
     end
 
     attribute :agent_executor, :atom do
       public? true
       constraints one_of: [:claude_code, :gemini_cli, :codex, :opencode, :cursor_agent]
       default :claude_code
-      description "Executor backend for agent hooks"
     end
 
     attribute :agent_auto_approve, :boolean do
       public? true
       default false
-      description "Whether agent can auto-approve tool calls"
     end
-
-    # ===================
-    # Default Settings for ColumnHook
-    # These are applied when the hook is added to a column
-    # ===================
 
     attribute :default_execute_once, :boolean do
       public? true
       default false
-      description "Default value for execute_once when adding this hook to a column"
     end
 
     attribute :default_transparent, :boolean do
       public? true
       default false
-      description "Default value for transparent when adding this hook to a column"
     end
 
     timestamps()
   end
 
   identities do
-    identity :unique_name_per_board, [:board_id, :name] do
-      message "A hook with this name already exists for this board"
-    end
+    identity :unique_name_per_board, [:board_id, :name]
   end
 
   relationships do
@@ -124,17 +71,21 @@ defmodule Viban.Kanban.Hook do
       allow_nil? false
       public? true
       attribute_writable? true
-      description "The board this hook belongs to"
     end
 
     has_many :column_hooks, Viban.Kanban.ColumnHook do
       public? true
-      description "Column associations for this hook"
     end
   end
 
   actions do
     defaults [:read]
+
+    read :for_board do
+      argument :board_id, :uuid, allow_nil?: false
+      filter expr(board_id == ^arg(:board_id))
+      prepare build(sort: [name: :asc])
+    end
 
     destroy :destroy do
       primary? true
@@ -144,7 +95,6 @@ defmodule Viban.Kanban.Hook do
     create :create_script_hook do
       accept [:name, :command, :board_id, :default_execute_once, :default_transparent]
       primary? true
-      description "Create a script-based hook (command required)"
       change set_attribute(:hook_kind, :script)
       validate Validations.RequireCommand
     end
@@ -160,14 +110,12 @@ defmodule Viban.Kanban.Hook do
         :default_transparent
       ]
 
-      description "Create an AI agent hook (agent_prompt required)"
       change set_attribute(:hook_kind, :agent)
       validate Validations.RequireAgentPrompt
     end
 
     create :create do
       accept [:name, :command, :board_id, :default_execute_once, :default_transparent]
-      description "Create a script hook (alias for create_script_hook)"
       change set_attribute(:hook_kind, :script)
       validate Validations.RequireCommand
     end
@@ -184,6 +132,7 @@ defmodule Viban.Kanban.Hook do
       ]
 
       primary? true
+      require_atomic? false
       validate Validations.ValidateHookKindAttributes
     end
   end
@@ -196,5 +145,6 @@ defmodule Viban.Kanban.Hook do
     define :update
     define :destroy
     define :get, action: :read, get_by: [:id]
+    define :for_board, args: [:board_id]
   end
 end

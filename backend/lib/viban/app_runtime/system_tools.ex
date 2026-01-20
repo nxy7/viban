@@ -34,8 +34,7 @@ defmodule Viban.AppRuntime.SystemTools do
 
   use Ash.Resource,
     domain: Viban.AppRuntime,
-    data_layer: Ash.DataLayer.Simple,
-    extensions: [AshTypescript.Resource]
+    data_layer: Ash.DataLayer.Simple
 
   alias Ash.Error.Invalid.InvalidAttribute
   alias Ash.Error.Unknown
@@ -52,10 +51,6 @@ defmodule Viban.AppRuntime.SystemTools do
     :aider,
     :goose
   ]
-
-  typescript do
-    type_name("SystemTool")
-  end
 
   resource do
     require_primary_key? false

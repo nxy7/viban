@@ -1,408 +1,152 @@
 defmodule Viban.Kanban.Task.ImageManager do
   @moduledoc """
-  Manages storage of images embedded in task descriptions.
+  Manages task description images.
 
-  Images are stored on the file system in the user's local data directory,
-  organized by task ID. This module handles saving, retrieving, syncing,
-  and deleting images associated with tasks.
-
-  ## Directory Structure
-
-  Images are stored at:
-
-      ~/.local/share/viban/task-images/
-        <task_id>/
-          <image_id>.png
-          <image_id>.jpg
-          ...
-
-  ## Image Format
-
-  Image metadata is stored as maps with the following structure:
-
-      %{
-        "id" => "img-1",
-        "path" => "/path/to/file.png",
-        "name" => "screenshot.png"
-      }
-
-  ## Supported Image Types
-
-  | Format | Extension |
-  |--------|-----------|
-  | PNG    | `.png`    |
-  | JPEG   | `.jpg`    |
-  | GIF    | `.gif`    |
-  | WebP   | `.webp`   |
-
-  ## Usage
-
-      # Save images from base64 data URLs
-      {:ok, metadata} = ImageManager.save_images(task_id, [
-        %{"id" => "img-1", "dataUrl" => "data:image/png;base64,...", "name" => "screenshot.png"}
-      ])
-
-      # Get path to a specific image
-      {:ok, path} = ImageManager.get_image_path(task_id, "img-1")
-
-      # Sync images (add new, keep existing, remove deleted)
-      {:ok, metadata} = ImageManager.sync_images(task_id, new_images, existing_metadata)
-
-      # Delete all images for a task
-      {:ok, _} = ImageManager.delete_task_images(task_id)
+  Images are stored in the filesystem under the task's data directory.
+  Supports saving new images, syncing with existing images, and cleanup.
   """
 
-  require Logger
-
-  # ---------------------------------------------------------------------------
-  # Constants
-  # ---------------------------------------------------------------------------
-
-  @log_prefix "[Task.ImageManager]"
-
-  @images_dir_name "task-images"
-
-  @supported_extensions %{
-    "jpeg" => ".jpg",
-    "jpg" => ".jpg",
-    "png" => ".png",
-    "gif" => ".gif",
-    "webp" => ".webp"
-  }
-
-  @default_extension ".png"
-  @default_image_name "image.png"
-
-  # ---------------------------------------------------------------------------
-  # Type Definitions
-  # ---------------------------------------------------------------------------
-
-  @type image_id :: String.t()
-
-  @type image_metadata :: %{
-          String.t() => String.t()
-        }
-
-  @type image_input :: %{
-          (String.t() | atom()) => String.t()
-        }
-
-  @type save_result :: {:ok, [image_metadata()]} | {:error, term()}
-
-  @type get_path_result :: {:ok, String.t()} | {:error, :not_found | term()}
-
-  # ---------------------------------------------------------------------------
-  # Public API - Directory Helpers
-  # ---------------------------------------------------------------------------
+  @images_dir Path.expand("~/.viban/images")
 
   @doc """
-  Returns the base directory for task images.
-
-  This is typically `~/.local/share/viban/task-images`.
+  Save images for a task.
+  Returns {:ok, [image_info]} or {:error, reason}
   """
-  @spec base_dir() :: String.t()
-  def base_dir do
-    Path.join([System.user_home!(), ".local", "share", "viban", @images_dir_name])
-  end
-
-  @doc """
-  Returns the directory for a specific task's images.
-
-  ## Examples
-
-      ImageManager.task_images_dir("550e8400-e29b-41d4-a716-446655440000")
-      #=> "/home/user/.local/share/viban/task-images/550e8400-e29b-41d4-a716-446655440000"
-  """
-  @spec task_images_dir(String.t()) :: String.t()
-  def task_images_dir(task_id) do
-    Path.join(base_dir(), task_id)
-  end
-
-  # ---------------------------------------------------------------------------
-  # Public API - Save Operations
-  # ---------------------------------------------------------------------------
-
-  @doc """
-  Saves images for a task from base64 data URLs.
-
-  Creates the task's image directory if it doesn't exist, then saves each
-  image from its base64 data URL.
-
-  ## Parameters
-
-  - `task_id` - The UUID of the task
-  - `images` - List of image maps with `id`, `dataUrl`, and optional `name`
-
-  ## Returns
-
-  - `{:ok, [metadata]}` - List of saved image metadata with file paths
-  - `{:error, reason}` - If saving failed
-
-  ## Examples
-
-      {:ok, metadata} = ImageManager.save_images(task_id, [
-        %{"id" => "img-1", "dataUrl" => "data:image/png;base64,iVBOR...", "name" => "screenshot.png"}
-      ])
-  """
-  @spec save_images(String.t(), [image_input()] | nil) :: save_result()
-  def save_images(_task_id, nil), do: {:ok, []}
-  def save_images(_task_id, []), do: {:ok, []}
-
   def save_images(task_id, images) when is_list(images) do
     task_dir = task_images_dir(task_id)
+    File.mkdir_p!(task_dir)
 
-    case File.mkdir_p(task_dir) do
-      :ok ->
-        process_image_saves(task_dir, images)
+    saved =
+      Enum.map(images, fn image ->
+        save_single_image(task_dir, image)
+      end)
 
-      {:error, reason} ->
-        Logger.error("#{@log_prefix} Failed to create task images directory: #{inspect(reason)}")
-        {:error, {:directory_creation_failed, reason}}
-    end
+    {:ok, Enum.filter(saved, &is_map/1)}
   end
 
-  # ---------------------------------------------------------------------------
-  # Public API - Retrieval Operations
-  # ---------------------------------------------------------------------------
+  def save_images(_task_id, _images), do: {:ok, []}
 
   @doc """
-  Gets the file path for a specific image by ID.
-
-  Searches the task's image directory for a file starting with the image ID.
-
-  ## Parameters
-
-  - `task_id` - The task UUID
-  - `image_id` - The image ID
-
-  ## Returns
-
-  - `{:ok, path}` - Full path to the image file
-  - `{:error, :not_found}` - Image not found
-  - `{:error, reason}` - Other error
+  Sync images - keep existing ones that are still referenced, add new ones.
+  Returns {:ok, [image_info]} or {:error, reason}
   """
-  @spec get_image_path(String.t(), image_id()) :: get_path_result()
-  def get_image_path(task_id, image_id) do
+  def sync_images(task_id, new_images, existing_images) when is_list(new_images) do
     task_dir = task_images_dir(task_id)
+    File.mkdir_p!(task_dir)
 
-    case File.ls(task_dir) do
-      {:ok, files} ->
-        find_image_file(task_dir, files, image_id)
+    existing_urls = MapSet.new(Enum.map(existing_images || [], & &1["url"]))
+    new_urls = MapSet.new(Enum.map(new_images, & &1["url"]))
 
-      {:error, :enoent} ->
-        {:error, :not_found}
+    to_delete = MapSet.difference(existing_urls, new_urls)
 
-      {:error, reason} ->
-        {:error, reason}
+    Enum.each(to_delete, fn url ->
+      if String.contains?(url, "/uploads/") do
+        path = url_to_path(task_id, url)
+        File.rm(path)
+      end
+    end)
+
+    saved =
+      Enum.map(new_images, fn image ->
+        if is_base64_image?(image) do
+          save_single_image(task_dir, image)
+        else
+          image
+        end
+      end)
+
+    {:ok, Enum.filter(saved, &is_map/1)}
+  end
+
+  def sync_images(_task_id, _new_images, _existing_images), do: {:ok, []}
+
+  @doc """
+  Get the filesystem path for a specific image.
+  Returns {:ok, path} or {:error, :not_found}
+  """
+  def get_image_path(task_id, image_id) do
+    path = Path.join(task_images_dir(task_id), image_id)
+
+    if File.exists?(path) do
+      {:ok, path}
+    else
+      {:error, :not_found}
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Public API - Delete Operations
-  # ---------------------------------------------------------------------------
-
   @doc """
-  Deletes all images for a task.
-
-  Removes the entire task images directory and all its contents.
-
-  ## Returns
-
-  - `{:ok, deleted_files}` - List of deleted file paths
-  - `{:error, reason, file}` - If deletion failed
+  Delete all images for a task.
   """
-  @spec delete_task_images(String.t()) :: {:ok, [String.t()]} | {:error, term(), term()}
   def delete_task_images(task_id) do
     task_dir = task_images_dir(task_id)
 
-    if File.exists?(task_dir) do
-      File.rm_rf(task_dir)
-    else
-      {:ok, []}
+    if File.dir?(task_dir) do
+      File.rm_rf!(task_dir)
     end
+
+    {:ok, :deleted}
   end
 
-  # ---------------------------------------------------------------------------
-  # Public API - Sync Operations
-  # ---------------------------------------------------------------------------
+  # ============================================================================
+  # Private Functions
+  # ============================================================================
 
-  @doc """
-  Syncs images for a task - saves new ones, keeps existing, removes deleted.
-
-  This handles the common case of updating a task description where some
-  images are kept, some are removed, and new ones are added.
-
-  ## Parameters
-
-  - `task_id` - The task UUID
-  - `new_images` - List of images (may include new data URLs or existing references)
-  - `existing_metadata` - Current saved image metadata
-
-  ## Returns
-
-  - `{:ok, [metadata]}` - Combined metadata of kept and newly saved images
-  - `{:error, reason}` - If saving failed
-  """
-  @spec sync_images(String.t(), [image_input()] | nil, [image_metadata()] | nil) :: save_result()
-  def sync_images(_task_id, nil, existing), do: {:ok, existing || []}
-  def sync_images(_task_id, [], _existing), do: {:ok, []}
-
-  def sync_images(task_id, new_images, existing_metadata) when is_list(new_images) do
-    task_dir = task_images_dir(task_id)
-    File.mkdir_p(task_dir)
-
-    {to_save, existing} = partition_images(new_images)
-    keep_ids = build_keep_ids(existing, to_save)
-
-    delete_removed_images(task_dir, existing_metadata, keep_ids, to_save)
-
-    case save_images(task_id, to_save) do
-      {:ok, saved_metadata} ->
-        kept_metadata = filter_kept_metadata(existing_metadata, keep_ids, to_save)
-        {:ok, kept_metadata ++ saved_metadata}
-
-      error ->
-        error
-    end
+  defp task_images_dir(task_id) do
+    Path.join(@images_dir, to_string(task_id))
   end
 
-  # ---------------------------------------------------------------------------
-  # Private Functions - Image Saving
-  # ---------------------------------------------------------------------------
+  defp url_to_path(task_id, url) do
+    filename = Path.basename(url)
+    Path.join(task_images_dir(task_id), filename)
+  end
 
-  defp process_image_saves(task_dir, images) do
-    results = Enum.map(images, &save_single_image(task_dir, &1))
-    errors = Enum.filter(results, fn {status, _} -> status == :error end)
-
-    if Enum.empty?(errors) do
-      {:ok, Enum.map(results, fn {:ok, meta} -> meta end)}
-    else
-      {:error, {:partial_save_failure, errors}}
-    end
+  defp is_base64_image?(image) do
+    url = image["url"] || image[:url]
+    is_binary(url) and String.starts_with?(url, "data:")
   end
 
   defp save_single_image(task_dir, image) do
-    id = get_image_field(image, :id)
-    data_url = get_image_field(image, :dataUrl)
-    name = get_image_field(image, :name) || @default_image_name
+    url = image["url"] || image[:url]
 
-    case parse_data_url(data_url) do
-      {:ok, binary, extension} ->
-        write_image_file(task_dir, id, name, binary, extension)
+    cond do
+      is_nil(url) ->
+        nil
 
-      {:error, reason} ->
-        Logger.error("#{@log_prefix} Failed to parse data URL for image #{id}: #{inspect(reason)}")
+      String.starts_with?(url, "data:") ->
+        save_base64_image(task_dir, url, image)
 
-        {:error, {id, reason}}
+      true ->
+        image
     end
   end
 
-  defp write_image_file(task_dir, id, name, binary, extension) do
-    filename = "#{id}#{extension}"
-    filepath = Path.join(task_dir, filename)
+  defp save_base64_image(task_dir, data_url, image) do
+    case decode_data_url(data_url) do
+      {:ok, data, extension} ->
+        filename = "#{Ash.UUID.generate()}.#{extension}"
+        path = Path.join(task_dir, filename)
+        File.write!(path, data)
 
-    case File.write(filepath, binary) do
-      :ok ->
-        {:ok, %{"id" => id, "path" => filepath, "name" => name}}
+        %{
+          "url" => "/uploads/images/#{Path.basename(task_dir)}/#{filename}",
+          "alt" => image["alt"] || image[:alt] || ""
+        }
 
-      {:error, reason} ->
-        Logger.error("#{@log_prefix} Failed to write image #{id}: #{inspect(reason)}")
-        {:error, {id, reason}}
+      :error ->
+        nil
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Private Functions - Image Retrieval
-  # ---------------------------------------------------------------------------
-
-  defp find_image_file(task_dir, files, image_id) do
-    prefix = "#{image_id}."
-
-    case Enum.find(files, &String.starts_with?(&1, prefix)) do
-      nil -> {:error, :not_found}
-      filename -> {:ok, Path.join(task_dir, filename)}
-    end
-  end
-
-  # ---------------------------------------------------------------------------
-  # Private Functions - Image Sync
-  # ---------------------------------------------------------------------------
-
-  defp partition_images(images) do
-    Enum.split_with(images, fn img ->
-      Map.has_key?(img, "dataUrl") or Map.has_key?(img, :dataUrl)
-    end)
-  end
-
-  defp build_keep_ids(existing, to_save) do
-    MapSet.new(existing ++ to_save, &get_image_field(&1, :id))
-  end
-
-  defp delete_removed_images(task_dir, existing_metadata, keep_ids, _to_save) do
-    existing_ids = MapSet.new(existing_metadata || [], &get_image_field(&1, :id))
-
-    to_delete = MapSet.difference(existing_ids, keep_ids)
-
-    Enum.each(to_delete, fn id ->
-      delete_single_image(task_dir, id)
-    end)
-  end
-
-  defp filter_kept_metadata(existing_metadata, keep_ids, to_save) do
-    to_save_ids = MapSet.new(to_save, &get_image_field(&1, :id))
-
-    Enum.filter(existing_metadata || [], fn img ->
-      id = get_image_field(img, :id)
-      id in keep_ids and id not in to_save_ids
-    end)
-  end
-
-  defp delete_single_image(task_dir, image_id) do
-    case File.ls(task_dir) do
-      {:ok, files} ->
-        prefix = "#{image_id}."
-
-        Enum.each(files, fn f ->
-          if String.starts_with?(f, prefix) do
-            File.rm(Path.join(task_dir, f))
-          end
-        end)
+  defp decode_data_url(data_url) do
+    case Regex.run(~r/^data:image\/(\w+);base64,(.+)$/, data_url) do
+      [_, ext, base64] ->
+        case Base.decode64(base64) do
+          {:ok, data} -> {:ok, data, ext}
+          :error -> :error
+        end
 
       _ ->
-        :ok
+        :error
     end
-  end
-
-  # ---------------------------------------------------------------------------
-  # Private Functions - Data URL Parsing
-  # ---------------------------------------------------------------------------
-
-  defp parse_data_url(data_url) when is_binary(data_url) do
-    case Regex.run(~r/^data:image\/(\w+);base64,(.+)$/, data_url) do
-      [_, type, base64_data] ->
-        decode_base64_image(type, base64_data)
-
-      nil ->
-        {:error, :invalid_data_url_format}
-    end
-  end
-
-  defp parse_data_url(_), do: {:error, :invalid_data_url}
-
-  defp decode_base64_image(type, base64_data) do
-    extension = Map.get(@supported_extensions, type, @default_extension)
-
-    case Base.decode64(base64_data) do
-      {:ok, binary} -> {:ok, binary, extension}
-      :error -> {:error, :invalid_base64_encoding}
-    end
-  end
-
-  # ---------------------------------------------------------------------------
-  # Private Functions - Helpers
-  # ---------------------------------------------------------------------------
-
-  defp get_image_field(image, field) when is_atom(field) do
-    Map.get(image, Atom.to_string(field)) || Map.get(image, field)
   end
 end

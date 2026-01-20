@@ -3,17 +3,16 @@ defmodule VibanWeb.TaskChannel do
   Phoenix Channel for task RPC commands.
 
   This channel is used for sending commands to the backend (RPC-style).
-  All data synchronization (messages, sessions, output) is handled via
-  Electric SQL sync - this channel does NOT broadcast any data.
+  Data synchronization is handled via PubSub broadcasts to LiveView.
 
   ## AI Execution Flow
 
   When a user sends a message via `send_message`:
-  1. Message is saved to database (synced to frontend via Electric SQL)
+  1. Message is saved to database and broadcast via PubSub
   2. Message is queued on the task's `message_queue`
   3. Task is moved to "In Progress" column (if not already there)
   4. Execute AI hook processes queued messages until queue is empty
-  5. Output is saved to database (synced to frontend via Electric SQL)
+  5. Output is saved to database and broadcast via PubSub
 
   ## Events (Incoming only - client -> server)
 
@@ -28,7 +27,7 @@ defmodule VibanWeb.TaskChannel do
   use Phoenix.Channel
 
   alias Viban.Executors.Executor
-  alias Viban.Executors.ExecutorSession
+  alias Viban.Kanban.ExecutorSession
   alias Viban.Kanban.Task
 
   require Logger

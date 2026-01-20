@@ -25,13 +25,13 @@ defmodule Viban.Accounts.User do
 
   use Ash.Resource,
     domain: Viban.Accounts,
-    data_layer: AshPostgres.DataLayer
+    data_layer: AshSqlite.DataLayer
 
   @type provider :: :github | :gitlab
 
-  postgres do
+  sqlite do
     table "users"
-    repo Viban.Repo
+    repo Viban.RepoSqlite
   end
 
   attributes do

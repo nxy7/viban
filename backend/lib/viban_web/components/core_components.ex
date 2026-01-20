@@ -227,7 +227,7 @@ defmodule VibanWeb.CoreComponents do
   end
 
   # ============================================================================
-  # Modal Components
+  # Modal Components (Native <dialog>)
   # ============================================================================
 
   attr :id, :string, required: true
@@ -238,68 +238,34 @@ defmodule VibanWeb.CoreComponents do
 
   def modal(assigns) do
     ~H"""
-    <div
+    <dialog
       id={@id}
-      phx-mounted={@show && show_modal(@id)}
-      phx-remove={hide_modal(@id)}
-      data-cancel={JS.exec(@on_cancel, "phx-remove")}
-      class="relative z-50 hidden"
+      data-cancel={@on_cancel}
+      data-show={to_string(@show)}
+      phx-hook="Dialog"
+      class="backdrop:bg-black/80 bg-transparent p-0 max-w-lg w-full open:flex open:items-center open:justify-center"
     >
-      <div id={"#{@id}-bg"} class="fixed inset-0 bg-black/80 transition-opacity" aria-hidden="true" />
-      <div
-        class="fixed inset-0 overflow-y-auto"
-        aria-labelledby={"#{@id}-title"}
-        aria-describedby={"#{@id}-description"}
-        role="dialog"
-        aria-modal="true"
-        tabindex="0"
-      >
-        <div class="flex min-h-full items-center justify-center p-4">
-          <div
-            id={"#{@id}-container"}
-            phx-window-keydown={JS.exec("data-cancel", to: "##{@id}")}
-            phx-key="escape"
-            phx-click-away={JS.exec("data-cancel", to: "##{@id}")}
-            class="relative w-full max-w-lg rounded-xl bg-gray-900 border border-gray-800 shadow-xl p-6 transition"
-          >
-            <button
-              phx-click={JS.exec("data-cancel", to: "##{@id}")}
-              type="button"
-              class="absolute top-4 right-4 text-gray-400 hover:text-white"
-              aria-label="close"
-            >
-              <.icon name="hero-x-mark-solid" class="h-5 w-5" />
-            </button>
-            {render_slot(@inner_block)}
-          </div>
-        </div>
+      <div class="relative w-full rounded-xl bg-gray-900 border border-gray-800 shadow-xl p-6">
+        <button
+          phx-click={@on_cancel}
+          type="button"
+          class="absolute top-4 right-4 text-gray-400 hover:text-white"
+          aria-label="close"
+        >
+          <.icon name="hero-x-mark-solid" class="h-5 w-5" />
+        </button>
+        {render_slot(@inner_block)}
       </div>
-    </div>
+    </dialog>
     """
   end
 
   def show_modal(js \\ %JS{}, id) when is_binary(id) do
-    js
-    |> JS.show(to: "##{id}")
-    |> JS.show(to: "##{id}-bg", transition: {"ease-out duration-200", "opacity-0", "opacity-100"})
-    |> JS.show(
-      to: "##{id}-container",
-      transition: {"ease-out duration-200", "opacity-0 scale-95", "opacity-100 scale-100"}
-    )
-    |> JS.add_class("overflow-hidden", to: "body")
-    |> JS.focus_first(to: "##{id}-container")
+    JS.dispatch(js, "phx:show-modal", to: "##{id}")
   end
 
   def hide_modal(js \\ %JS{}, id) do
-    js
-    |> JS.hide(to: "##{id}-bg", transition: {"ease-in duration-100", "opacity-100", "opacity-0"})
-    |> JS.hide(
-      to: "##{id}-container",
-      transition: {"ease-in duration-100", "opacity-100 scale-100", "opacity-0 scale-95"}
-    )
-    |> JS.hide(to: "##{id}", transition: {"block", "block", "hidden"})
-    |> JS.remove_class("overflow-hidden", to: "body")
-    |> JS.pop_focus()
+    JS.dispatch(js, "phx:hide-modal", to: "##{id}")
   end
 
   # ============================================================================

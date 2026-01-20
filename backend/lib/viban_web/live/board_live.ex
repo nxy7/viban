@@ -13,15 +13,15 @@ defmodule VibanWeb.Live.BoardLive do
   import VibanWeb.Live.BoardLive.Components.Modals
 
   alias Viban.AppRuntime.SystemTools
+  alias Viban.Kanban.Board
+  alias Viban.Kanban.Column
+  alias Viban.Kanban.ColumnHook
+  alias Viban.Kanban.Hook
+  alias Viban.Kanban.PeriodicalTask
+  alias Viban.Kanban.Repository
   alias Viban.Kanban.SystemHooks.Registry, as: SystemHooks
-  alias Viban.KanbanLite.Board
-  alias Viban.KanbanLite.Column
-  alias Viban.KanbanLite.ColumnHook
-  alias Viban.KanbanLite.Hook
-  alias Viban.KanbanLite.PeriodicalTask
-  alias Viban.KanbanLite.Repository
-  alias Viban.KanbanLite.Task
-  alias Viban.KanbanLite.TaskTemplate
+  alias Viban.Kanban.Task
+  alias Viban.Kanban.TaskTemplate
   alias VibanWeb.Live.BoardLive.TaskPanelComponent
 
   require Logger
@@ -57,6 +57,8 @@ defmodule VibanWeb.Live.BoardLive do
           |> assign(:show_delete_confirm, false)
           |> assign(:delete_task_id, nil)
           |> assign(:form, to_form(%{"title" => "", "description" => ""}))
+          |> assign(:create_modal_templates, [])
+          |> assign(:is_refining, false)
           |> assign(:show_pr_modal, false)
           |> assign(:pr_form, to_form(%{"title" => "", "body" => "", "base_branch" => "main"}))
           |> assign(:show_settings, false)
@@ -169,6 +171,9 @@ defmodule VibanWeb.Live.BoardLive do
         form={@form}
         column_id={@create_column_id}
         column_name={get_column_name(@columns, @create_column_id)}
+        templates={@create_modal_templates}
+        columns={@columns}
+        is_refining={@is_refining}
       />
 
       <.live_component
@@ -1125,10 +1130,14 @@ defmodule VibanWeb.Live.BoardLive do
 
   def handle_event("show_create_modal", %{"column_id" => column_id}, socket)
       when is_binary(column_id) and column_id != "" do
+    templates = load_templates(socket.assigns.board.id)
+
     {:noreply,
      socket
      |> assign(:show_create_modal, true)
      |> assign(:create_column_id, column_id)
+     |> assign(:create_modal_templates, templates)
+     |> assign(:is_refining, false)
      |> assign(:form, to_form(%{"title" => "", "description" => ""}))}
   end
 
@@ -1136,10 +1145,14 @@ defmodule VibanWeb.Live.BoardLive do
     todo_column = Enum.find(socket.assigns.columns, fn c -> String.upcase(c.name) == "TODO" end)
 
     if todo_column do
+      templates = load_templates(socket.assigns.board.id)
+
       {:noreply,
        socket
        |> assign(:show_create_modal, true)
        |> assign(:create_column_id, todo_column.id)
+       |> assign(:create_modal_templates, templates)
+       |> assign(:is_refining, false)
        |> assign(:form, to_form(%{"title" => "", "description" => ""}))}
     else
       {:noreply, put_flash(socket, :error, "No TODO column found")}
@@ -1147,16 +1160,69 @@ defmodule VibanWeb.Live.BoardLive do
   end
 
   def handle_event("hide_create_modal", _, socket) do
-    {:noreply, assign(socket, :show_create_modal, false)}
+    {:noreply,
+     socket
+     |> assign(:show_create_modal, false)
+     |> assign(:is_refining, false)}
   end
 
-  def handle_event("create_task", %{"title" => title, "description" => description, "column_id" => column_id}, socket) do
+  def handle_event("select_template", %{"template_id" => ""}, socket) do
+    {:noreply, socket}
+  end
+
+  def handle_event("select_template", %{"template_id" => template_id}, socket) do
+    template = Enum.find(socket.assigns.create_modal_templates, &(&1.id == template_id))
+
+    if template && template.description_template do
+      current_form = socket.assigns.form.source
+      new_form = to_form(Map.put(current_form, "description", template.description_template))
+      {:noreply, assign(socket, :form, new_form)}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  def handle_event("refine_preview", _, socket) do
+    form_data = socket.assigns.form.source
+    title = form_data["title"] || ""
+    description = form_data["description"]
+
+    if String.trim(title) == "" do
+      {:noreply, put_flash(socket, :error, "Title is required for refinement")}
+    else
+      send(self(), {:do_refine_preview, title, description})
+      {:noreply, assign(socket, :is_refining, true)}
+    end
+  end
+
+  def handle_event("create_task", params, socket) do
+    title = params["title"]
+    description = params["description"]
+    column_id = params["column_id"]
+    autostart = params["autostart"] == "true"
+
     case Task.create(%{
            title: title,
            description: if(description == "", do: nil, else: description),
            column_id: column_id
          }) do
       {:ok, task} ->
+        task =
+          if autostart do
+            in_progress_column = find_in_progress_column(socket.assigns.columns)
+
+            if in_progress_column do
+              case Task.update(task, %{column_id: in_progress_column.id}) do
+                {:ok, moved_task} -> moved_task
+                _ -> task
+              end
+            else
+              task
+            end
+          else
+            task
+          end
+
         tasks = Map.put(socket.assigns.tasks, task.id, task)
         broadcast_update(socket.assigns.board.id, {:task_created, task})
 
@@ -1164,6 +1230,7 @@ defmodule VibanWeb.Live.BoardLive do
          socket
          |> assign(:tasks, tasks)
          |> assign(:show_create_modal, false)
+         |> assign(:is_refining, false)
          |> put_flash(:info, "Task created!")}
 
       {:error, _changeset} ->
@@ -1583,11 +1650,38 @@ defmodule VibanWeb.Live.BoardLive do
     {:noreply, push_event(socket, "play_sound", %{sound: sound})}
   end
 
+  # ============================================================================
+  # Refine Preview Handler
+  # ============================================================================
+
+  def handle_info({:do_refine_preview, title, description}, socket) do
+    case Task.refine_preview(title, description) do
+      {:ok, %{refined_description: refined_description}} ->
+        current_form = socket.assigns.form.source
+        new_form = to_form(Map.put(current_form, "description", refined_description))
+
+        {:noreply,
+         socket
+         |> assign(:form, new_form)
+         |> assign(:is_refining, false)}
+
+      {:error, _} ->
+        {:noreply,
+         socket
+         |> assign(:is_refining, false)
+         |> put_flash(:error, "Failed to refine description")}
+    end
+  end
+
   def handle_info(_, socket), do: {:noreply, socket}
 
   # ============================================================================
   # Private Helper Functions
   # ============================================================================
+
+  defp find_in_progress_column(columns) do
+    Enum.find(columns, fn c -> String.downcase(c.name) == "in progress" end)
+  end
 
   defp load_templates(board_id) do
     case TaskTemplate.for_board(board_id) do

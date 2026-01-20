@@ -9,16 +9,12 @@ defmodule Viban.AppRuntime.AppUpdates do
   use Ash.Resource,
     domain: Viban.AppRuntime,
     data_layer: Ash.DataLayer.Simple,
-    extensions: [AshTypescript.Resource, AshOban]
+    extensions: [AshOban]
 
   alias Viban.AppRuntime.AppUpdates.Github
   alias Viban.AppRuntime.AppUpdates.State
 
   require Logger
-
-  typescript do
-    type_name("AppUpdates")
-  end
 
   resource do
     require_primary_key? false

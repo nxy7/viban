@@ -3,7 +3,7 @@ defmodule Viban.StateServer.ActorState do
   Persists GenServer state for StateServer instances.
 
   Allows stateful GenServers to survive restarts by storing their
-  serializable state in PostgreSQL as JSONB.
+  serializable state in SQLite as JSON.
 
   ## Status Lifecycle
 
@@ -16,16 +16,11 @@ defmodule Viban.StateServer.ActorState do
 
   use Ash.Resource,
     domain: Viban.StateServer,
-    data_layer: AshPostgres.DataLayer,
-    extensions: [AshTypescript.Resource]
+    data_layer: AshSqlite.DataLayer
 
-  typescript do
-    type_name("ActorState")
-  end
-
-  postgres do
+  sqlite do
     table "actor_states"
-    repo Viban.Repo
+    repo Viban.RepoSqlite
   end
 
   attributes do

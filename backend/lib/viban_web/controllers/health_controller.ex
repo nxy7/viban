@@ -6,7 +6,7 @@ defmodule VibanWeb.HealthController do
   use VibanWeb, :controller
 
   def check(conn, _params) do
-    case Ecto.Adapters.SQL.query(Viban.Repo, "SELECT 1", []) do
+    case Ecto.Adapters.SQL.query(Viban.RepoSqlite, "SELECT 1", []) do
       {:ok, _} ->
         json(conn, %{status: "ok", database: "connected"})
 

@@ -7,8 +7,12 @@ defmodule VibanWeb.Live.HomeLive do
   use VibanWeb, :live_view
 
   alias Viban.Accounts.User
-  alias Viban.KanbanLite.Board
+  alias Viban.Auth.DeviceFlow
+  alias Viban.BoardNameGenerator
+  alias Viban.Kanban.Board
   alias Viban.VCS
+
+  require Logger
 
   @impl true
   def mount(_params, session, socket) do
@@ -27,7 +31,15 @@ defmodule VibanWeb.Live.HomeLive do
      |> assign(:repo_search, "")
      |> assign(:form, to_form(%{"name" => "", "description" => ""}))
      |> assign(:create_error, nil)
-     |> assign(:is_submitting, false)}
+     |> assign(:is_submitting, false)
+     # Device flow state
+     |> assign(:show_device_flow, false)
+     |> assign(:device_code, nil)
+     |> assign(:user_code, nil)
+     |> assign(:verification_uri, nil)
+     |> assign(:poll_interval, 5000)
+     |> assign(:device_flow_error, nil)
+     |> assign(:device_flow_expired, false)}
   end
 
   defp load_user_from_session(%{"user_id" => user_id}) when is_binary(user_id) do
@@ -70,6 +82,14 @@ defmodule VibanWeb.Live.HomeLive do
         />
 
         <.boards_list boards={@boards} user={@user} />
+
+        <.device_flow_modal
+          :if={@show_device_flow}
+          user_code={@user_code}
+          verification_uri={@verification_uri}
+          error={@device_flow_error}
+          expired={@device_flow_expired}
+        />
 
         <footer class="mt-16 pt-8 border-t border-gray-800 text-center text-gray-500 text-sm">
           <p>Powered by Elixir + Ash Framework + Phoenix LiveView + SQLite</p>
@@ -114,6 +134,76 @@ defmodule VibanWeb.Live.HomeLive do
     <svg class={@class} fill="currentColor" viewBox="0 0 24 24">
       <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
     </svg>
+    """
+  end
+
+  attr :user_code, :string, required: true
+  attr :verification_uri, :string, required: true
+  attr :error, :string, default: nil
+  attr :expired, :boolean, default: false
+
+  defp device_flow_modal(assigns) do
+    ~H"""
+    <.modal id="device-flow-modal" show on_cancel={JS.push("cancel_device_flow")}>
+      <div class="text-center">
+        <.github_icon class="w-12 h-12 mx-auto mb-4 text-white" />
+        <h2 class="text-xl font-bold text-white mb-2">Sign in with GitHub</h2>
+
+        <div
+          :if={@error}
+          class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400"
+        >
+          {@error}
+        </div>
+
+        <div
+          :if={@expired}
+          class="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-400"
+        >
+          Code expired. Please try again.
+        </div>
+
+        <div :if={!@error && !@expired && @user_code}>
+          <p class="text-gray-400 mb-4">
+            Enter this code at GitHub:
+          </p>
+
+          <button
+            type="button"
+            phx-hook="CopyToClipboard"
+            id="copy-code-btn"
+            data-copy-text={@user_code}
+            class="bg-gray-800 border border-gray-700 hover:border-gray-600 hover:bg-gray-750 rounded-lg p-4 mb-4 cursor-pointer transition-colors group w-full"
+            title="Click to copy"
+          >
+            <code class="text-3xl font-mono font-bold text-brand-400 tracking-widest group-hover:text-brand-300">
+              {@user_code}
+            </code>
+            <p data-copy-hint class="text-xs text-gray-500 mt-2 group-hover:text-gray-400">
+              Click to copy
+            </p>
+          </button>
+
+          <a
+            href={@verification_uri}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex items-center gap-2 px-6 py-3 bg-brand-600 hover:bg-brand-700 text-white rounded-lg transition-colors mb-4"
+          >
+            Open GitHub <.icon name="hero-arrow-top-right-on-square" class="w-4 h-4" />
+          </a>
+
+          <p class="text-sm text-gray-500 flex items-center justify-center gap-2">
+            Waiting for authorization... <.spinner class="w-4 h-4" />
+          </p>
+        </div>
+
+        <div :if={!@error && !@expired && !@user_code} class="py-8">
+          <.spinner class="w-8 h-8 mx-auto mb-4" />
+          <p class="text-gray-400">Requesting authorization code...</p>
+        </div>
+      </div>
+    </.modal>
     """
   end
 
@@ -171,13 +261,13 @@ defmodule VibanWeb.Live.HomeLive do
           >
             <div class="flex items-center gap-2">
               <img
-                src={@selected_repo["owner"]["avatar_url"]}
-                alt={@selected_repo["owner"]["login"]}
+                src={@selected_repo.owner.avatar_url}
+                alt={@selected_repo.owner.login}
                 class="w-5 h-5 rounded-full"
               />
-              <span class="font-medium text-white">{@selected_repo["full_name"]}</span>
+              <span class="font-medium text-white">{@selected_repo.full_name}</span>
               <span
-                :if={@selected_repo["private"]}
+                :if={@selected_repo.private}
                 class="px-1.5 py-0.5 text-xs bg-amber-500/20 text-amber-400 rounded"
               >
                 Private
@@ -218,28 +308,28 @@ defmodule VibanWeb.Live.HomeLive do
                 :for={repo <- filter_repos(@repos, @repo_search)}
                 type="button"
                 phx-click="select_repo"
-                phx-value-repo_id={repo["id"]}
+                phx-value-repo_id={repo.id}
                 class="w-full p-3 text-left hover:bg-gray-700 border-b border-gray-700 last:border-b-0 transition-colors"
               >
                 <div class="flex items-center gap-2">
                   <img
-                    src={repo["owner"]["avatar_url"]}
-                    alt={repo["owner"]["login"]}
+                    src={repo.owner.avatar_url}
+                    alt={repo.owner.login}
                     class="w-5 h-5 rounded-full"
                   />
-                  <span class="font-medium text-white">{repo["full_name"]}</span>
+                  <span class="font-medium text-white">{repo.full_name}</span>
                   <span
-                    :if={repo["private"]}
+                    :if={repo.private}
                     class="px-1.5 py-0.5 text-xs bg-amber-500/20 text-amber-400 rounded"
                   >
                     Private
                   </span>
                 </div>
-                <p :if={repo["description"]} class="text-sm text-gray-400 mt-1 line-clamp-1">
-                  {repo["description"]}
+                <p :if={repo.description} class="text-sm text-gray-400 mt-1 line-clamp-1">
+                  {repo.description}
                 </p>
                 <p class="text-xs text-gray-500 mt-1">
-                  Default branch: {repo["default_branch"]}
+                  Default branch: {repo.default_branch}
                 </p>
               </button>
             </div>
@@ -325,9 +415,9 @@ defmodule VibanWeb.Live.HomeLive do
     search_lower = String.downcase(search)
 
     Enum.filter(repos, fn repo ->
-      String.contains?(String.downcase(repo["name"] || ""), search_lower) ||
-        String.contains?(String.downcase(repo["full_name"] || ""), search_lower) ||
-        String.contains?(String.downcase(repo["description"] || ""), search_lower)
+      String.contains?(String.downcase(repo.name || ""), search_lower) ||
+        String.contains?(String.downcase(repo.full_name || ""), search_lower) ||
+        String.contains?(String.downcase(repo.description || ""), search_lower)
     end)
   end
 
@@ -341,7 +431,19 @@ defmodule VibanWeb.Live.HomeLive do
 
   @impl true
   def handle_event("login", _params, socket) do
-    {:noreply, redirect(socket, external: "/api/auth/device/start")}
+    send(self(), :start_device_flow)
+    {:noreply, assign(socket, :show_device_flow, true)}
+  end
+
+  def handle_event("cancel_device_flow", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:show_device_flow, false)
+     |> assign(:device_code, nil)
+     |> assign(:user_code, nil)
+     |> assign(:verification_uri, nil)
+     |> assign(:device_flow_error, nil)
+     |> assign(:device_flow_expired, false)}
   end
 
   def handle_event("logout", _params, socket) do
@@ -361,7 +463,8 @@ defmodule VibanWeb.Live.HomeLive do
        |> assign(:repos_loading, true)
        |> assign(:repos_error, nil)}
     else
-      {:noreply, redirect(socket, external: "/api/auth/device/start")}
+      send(self(), :start_device_flow)
+      {:noreply, assign(socket, :show_device_flow, true)}
     end
   end
 
@@ -380,8 +483,14 @@ defmodule VibanWeb.Live.HomeLive do
   end
 
   def handle_event("select_repo", %{"repo_id" => repo_id}, socket) do
-    repo = Enum.find(socket.assigns.repos, fn r -> to_string(r["id"]) == repo_id end)
-    {:noreply, assign(socket, :selected_repo, repo)}
+    repo = Enum.find(socket.assigns.repos, fn r -> r.id == repo_id end)
+    default_name = BoardNameGenerator.from_repo_name(repo.full_name)
+    form = to_form(%{"name" => default_name, "description" => socket.assigns.form[:description].value || ""})
+
+    {:noreply,
+     socket
+     |> assign(:selected_repo, repo)
+     |> assign(:form, form)}
   end
 
   def handle_event("clear_repo", _params, socket) do
@@ -392,25 +501,30 @@ defmodule VibanWeb.Live.HomeLive do
     if socket.assigns.selected_repo do
       repo = socket.assigns.selected_repo
 
-      {:noreply, assign(socket, :is_submitting, true)}
+      socket = assign(socket, :is_submitting, true)
 
-      case Board.create(%{
-             name: name,
-             description: if(description == "", do: nil, else: description),
-             user_id: socket.assigns.user.id,
-             repository_id: repo["id"],
-             repository_full_name: repo["full_name"],
-             repository_name: repo["name"],
-             repository_clone_url: repo["clone_url"],
-             repository_html_url: repo["html_url"],
-             repository_default_branch: repo["default_branch"]
-           }) do
-        {:ok, board} ->
-          {:noreply,
-           socket
-           |> put_flash(:info, "Board created!")
-           |> push_navigate(to: ~p"/board/#{board.id}")}
-
+      with {:ok, board} <-
+             Board.create(%{
+               name: name,
+               description: if(description == "", do: nil, else: description),
+               user_id: socket.assigns.user.id
+             }),
+           {:ok, _repository} <-
+             Viban.Kanban.Repository.create(%{
+               board_id: board.id,
+               provider: :github,
+               provider_repo_id: repo.id,
+               name: repo.name,
+               full_name: repo.full_name,
+               clone_url: repo.clone_url,
+               html_url: repo.html_url,
+               default_branch: repo.default_branch
+             }) do
+        {:noreply,
+         socket
+         |> put_flash(:info, "Board created!")
+         |> push_navigate(to: ~p"/board/#{board.id}")}
+      else
         {:error, _changeset} ->
           {:noreply,
            socket
@@ -438,6 +552,91 @@ defmodule VibanWeb.Live.HomeLive do
          socket
          |> assign(:repos_loading, false)
          |> assign(:repos_error, "Failed to load repositories: #{inspect(reason)}")}
+    end
+  end
+
+  def handle_info(:start_device_flow, socket) do
+    case DeviceFlow.request_device_code() do
+      {:ok, %{device_code: device_code, user_code: user_code, verification_uri: uri, interval: interval}} ->
+        poll_interval = (interval || 5) * 1000
+        Process.send_after(self(), :poll_device_flow, poll_interval)
+
+        {:noreply,
+         socket
+         |> assign(:device_code, device_code)
+         |> assign(:user_code, user_code)
+         |> assign(:verification_uri, uri)
+         |> assign(:poll_interval, poll_interval)
+         |> assign(:device_flow_error, nil)}
+
+      {:error, reason} ->
+        {:noreply, assign(socket, :device_flow_error, reason)}
+    end
+  end
+
+  def handle_info(:poll_device_flow, socket) do
+    if socket.assigns.show_device_flow && socket.assigns.device_code do
+      case DeviceFlow.poll_for_token(socket.assigns.device_code) do
+        {:ok, access_token} ->
+          handle_device_flow_success(socket, access_token)
+
+        :pending ->
+          Process.send_after(self(), :poll_device_flow, socket.assigns.poll_interval)
+          {:noreply, socket}
+
+        :slow_down ->
+          new_interval = socket.assigns.poll_interval + 5000
+          Process.send_after(self(), :poll_device_flow, new_interval)
+          {:noreply, assign(socket, :poll_interval, new_interval)}
+
+        {:error, reason} ->
+          expired = String.contains?(reason, "expired")
+
+          {:noreply,
+           socket
+           |> assign(:device_flow_error, if(expired, do: nil, else: reason))
+           |> assign(:device_flow_expired, expired)}
+      end
+    else
+      {:noreply, socket}
+    end
+  end
+
+  defp handle_device_flow_success(socket, access_token) do
+    case DeviceFlow.get_user_info(access_token) do
+      {:ok, user_info} ->
+        case find_or_create_user(Map.put(user_info, :access_token, access_token)) do
+          {:ok, user} ->
+            token = Phoenix.Token.sign(VibanWeb.Endpoint, "device_flow_user", user.id)
+            {:noreply, redirect(socket, to: "/api/auth/device/callback?token=#{token}")}
+
+          {:error, _} ->
+            {:noreply, assign(socket, :device_flow_error, "Failed to create user account")}
+        end
+
+      {:error, reason} ->
+        {:noreply, assign(socket, :device_flow_error, reason)}
+    end
+  end
+
+  defp find_or_create_user(%{provider: provider, provider_uid: provider_uid} = params) do
+    case User.by_provider_uid(provider, provider_uid) do
+      {:ok, nil} ->
+        User.create(params)
+
+      {:ok, user} ->
+        update_params = Map.drop(params, [:provider, :provider_uid])
+        User.update(user, update_params)
+
+      {:error, %Ash.Error.Invalid{errors: errors}} ->
+        if Enum.any?(errors, &match?(%Ash.Error.Query.NotFound{}, &1)) do
+          User.create(params)
+        else
+          {:error, errors}
+        end
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 end

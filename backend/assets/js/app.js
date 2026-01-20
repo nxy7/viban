@@ -291,6 +291,90 @@ Hooks.SoundSystem = {
 }
 
 // ============================================================================
+// Native Dialog Hook
+// ============================================================================
+
+Hooks.Dialog = {
+  mounted() {
+    const dialog = this.el
+    this.isClosing = false
+    this.justOpened = false
+
+    this.openDialog = () => {
+      if (dialog.open) return
+      this.justOpened = true
+      dialog.showModal()
+      requestAnimationFrame(() => {
+        this.justOpened = false
+      })
+    }
+
+    if (dialog.dataset.show === "true") {
+      this.openDialog()
+    }
+
+    dialog.addEventListener("phx:show-modal", () => {
+      this.openDialog()
+    })
+
+    dialog.addEventListener("phx:hide-modal", () => {
+      this.isClosing = true
+      dialog.close()
+    })
+
+    dialog.addEventListener("close", () => {
+      if (!this.isClosing) {
+        const cancelAttr = dialog.dataset.cancel
+        if (cancelAttr) {
+          window.liveSocket.execJS(dialog, cancelAttr)
+        }
+      }
+      this.isClosing = false
+    })
+
+    dialog.addEventListener("click", (e) => {
+      if (this.justOpened) return
+      if (e.target === dialog) {
+        dialog.close()
+      }
+    })
+  },
+
+  updated() {
+    const dialog = this.el
+    if (dialog.dataset.show === "true" && !dialog.open) {
+      this.openDialog()
+    }
+  }
+}
+
+// ============================================================================
+// Copy To Clipboard Hook
+// ============================================================================
+
+Hooks.CopyToClipboard = {
+  mounted() {
+    this.el.addEventListener("click", () => {
+      const text = this.el.dataset.copyText
+      if (text) {
+        navigator.clipboard.writeText(text).then(() => {
+          const hint = this.el.querySelector('[data-copy-hint]')
+          if (hint) {
+            const originalText = hint.textContent
+            hint.textContent = 'Copied!'
+            hint.classList.add('text-green-400')
+            setTimeout(() => {
+              hint.textContent = originalText
+              hint.classList.remove('text-green-400')
+            }, 2000)
+          }
+        })
+      }
+    })
+  }
+}
+
+// ============================================================================
 // Scroll To Bottom Hook
 // ============================================================================
 

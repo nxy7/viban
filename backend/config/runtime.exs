@@ -56,46 +56,20 @@ if config_env() == :prod do
     end
   end
 
-  external_database_url = System.get_env("VB_DATABASE_URL") || System.get_env("DATABASE_URL")
-  using_external_database? = external_database_url != nil
-
-  database_url =
-    external_database_url ||
-      if(deploy_mode?, do: "postgres://viban:viban@localhost:17777/viban_prod")
-
-  if is_nil(database_url) do
-    raise "DATABASE_URL or VB_DATABASE_URL must be set for non-deploy-mode releases"
-  end
-
-  maybe_ipv6 = if System.get_env("ECTO_IPV6") in ~w(true 1), do: [:inet6], else: []
-
   secret_key_base =
     System.get_env("SECRET_KEY_BASE") || 64 |> :crypto.strong_rand_bytes() |> Base.encode64()
 
   host = System.get_env("PHX_HOST") || "localhost"
-  port = String.to_integer(System.get_env("PORT") || if(deploy_mode?, do: "7777", else: "4000"))
+  port = String.to_integer(System.get_env("PORT") || "7777")
 
   # In deploy mode, always start the server (no need for PHX_SERVER env var)
   server_enabled? = deploy_mode? or System.get_env("PHX_SERVER") != nil
-  db_uri = URI.parse(database_url)
-  [db_username, db_password] = String.split(db_uri.userinfo || "postgres:postgres", ":")
-  db_name = String.trim_leading(db_uri.path || "/postgres", "/")
-  db_port = db_uri.port || 5432
 
-  config :phoenix_sync,
-    env: :prod,
-    mode: :embedded,
-    repo: Viban.Repo
+  # SQLite database path - uses ~/.viban/viban.db in deploy mode
+  sqlite_db_path =
+    System.get_env("VIBAN_DB_PATH") || Path.expand("~/.viban/viban.db")
 
-  config :viban, Viban.Repo,
-    url: database_url,
-    hostname: db_uri.host,
-    port: db_port,
-    database: db_name,
-    username: db_username,
-    password: db_password,
-    pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
-    socket_options: maybe_ipv6
+  config :viban, Viban.RepoSqlite, database: sqlite_db_path
 
   config :viban, VibanWeb.Endpoint,
     server: server_enabled?,
@@ -106,7 +80,5 @@ if config_env() == :prod do
     ],
     secret_key_base: secret_key_base
 
-  config :viban, :database_url, database_url
   config :viban, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
-  config :viban, :using_external_database, using_external_database?
 end

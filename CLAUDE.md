@@ -15,12 +15,11 @@ This document defines the coding standards and practices for this project when w
 ## Starting Development
 
 ```bash
-# Start all services (database + backend)
+# Start backend in development mode (SQLite, no external dependencies)
 just dev
 
 # Or manually:
-docker compose up db &
-cd backend && mix phx.server
+cd backend && mix deps.get && mix ash.setup && mix phx.server
 ```
 
 ## Comment Policy

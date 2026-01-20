@@ -1,21 +1,17 @@
 defmodule Viban.Kanban.Repository.Changes.AutoCloneLocalRepo do
   @moduledoc """
-  Ash change that marks local repositories as already cloned.
-
-  For repositories with `provider: :local`, the `clone_status` is
-  automatically set to `:cloned` since there is no remote to clone from.
-  The repository already exists on the local filesystem.
+  Auto-marks local repositories as cloned (SQLite version).
   """
 
   use Ash.Resource.Change
 
   @impl true
-  @spec change(Ash.Changeset.t(), keyword(), Ash.Resource.Change.context()) :: Ash.Changeset.t()
   def change(changeset, _opts, _context) do
     provider = Ash.Changeset.get_attribute(changeset, :provider)
+    local_path = Ash.Changeset.get_attribute(changeset, :local_path)
 
-    if provider == :local do
-      Ash.Changeset.force_change_attribute(changeset, :clone_status, :cloned)
+    if provider == :local and not is_nil(local_path) and File.dir?(local_path) do
+      Ash.Changeset.change_attribute(changeset, :clone_status, :cloned)
     else
       changeset
     end

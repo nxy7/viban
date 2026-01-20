@@ -1,20 +1,15 @@
 defmodule Viban.Kanban.TaskTemplate do
   @moduledoc """
-  Task templates for quick task creation with predefined titles and descriptions.
+  Task templates for quick task creation (SQLite version).
   """
 
   use Ash.Resource,
     domain: Viban.Kanban,
-    data_layer: AshPostgres.DataLayer,
-    extensions: [AshTypescript.Resource]
+    data_layer: AshSqlite.DataLayer
 
-  typescript do
-    type_name("TaskTemplate")
-  end
-
-  postgres do
+  sqlite do
     table "task_templates"
-    repo Viban.Repo
+    repo Viban.RepoSqlite
   end
 
   attributes do
@@ -51,6 +46,12 @@ defmodule Viban.Kanban.TaskTemplate do
   actions do
     defaults [:read]
 
+    read :for_board do
+      argument :board_id, :uuid, allow_nil?: false
+      filter expr(board_id == ^arg(:board_id))
+      prepare build(sort: [position: :asc])
+    end
+
     create :create do
       accept [:name, :description_template, :position, :board_id]
       primary? true
@@ -72,5 +73,6 @@ defmodule Viban.Kanban.TaskTemplate do
     define :update
     define :destroy
     define :get, action: :read, get_by: [:id]
+    define :for_board, args: [:board_id]
   end
 end

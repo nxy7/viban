@@ -410,6 +410,9 @@ defmodule Viban.Kanban.Actors.HookSystemComprehensiveTest do
       assert {:ok, _} = wait_for_hook_status(task.id, "Slow Hook", :cancelled),
              "Slow Hook should have been cancelled"
 
+      assert {:ok, _executions} = wait_for_all_hooks_terminal(task.id),
+             "All hooks should reach terminal state"
+
       {:ok, executions} = HookExecution.history_for_task(task.id)
       slow_hook_exec = Enum.find(executions, &(&1.hook_name == "Slow Hook"))
       second_hook_exec = Enum.find(executions, &(&1.hook_name == "Second Hook"))

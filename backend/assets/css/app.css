@@ -11,6 +11,26 @@ body {
   min-height: 100vh;
 }
 
+/* Native dialog styling */
+dialog {
+  margin: auto;
+  border: none;
+  padding: 0;
+  max-height: calc(100vh - 2rem);
+  overflow: visible;
+}
+
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(2px);
+}
+
+dialog[open] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 @keyframes slide-in-right {
   from {
     transform: translateX(100%);

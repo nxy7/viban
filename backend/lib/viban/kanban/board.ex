@@ -1,52 +1,20 @@
 defmodule Viban.Kanban.Board do
   @moduledoc """
-  Board resource representing a Kanban board.
+  Board resource representing a Kanban board (SQLite version).
 
   Each board belongs to a user and contains columns, hooks, repositories, and templates.
   When a board is created, default columns and task templates are automatically generated.
-
-  ## Uniqueness
-
-  Board names must be unique per user - a user cannot have two boards with
-  the same name.
-
-  ## Default Columns
-
-  When created, boards automatically get these columns:
-  - TODO (position 0)
-  - In Progress (position 1)
-  - To Review (position 2)
-  - Done (position 3)
-  - Cancelled (position 4)
-
-  ## Default Task Templates
-
-  When created, boards automatically get these templates:
-  - Feature - For new feature implementation
-  - Bugfix - For bug fixes with reproduction steps
-  - Refactor - For code refactoring tasks
-  - Research - For research and exploration tasks
-
-  ## Cascade Deletion
-
-  When a board is deleted, all associated columns, hooks, repositories, and templates
-  are automatically deleted.
   """
 
   use Ash.Resource,
     domain: Viban.Kanban,
-    data_layer: AshPostgres.DataLayer,
-    extensions: [AshTypescript.Resource]
+    data_layer: AshSqlite.DataLayer
 
   alias Viban.Kanban.Board.Changes
 
-  typescript do
-    type_name("Board")
-  end
-
-  postgres do
+  sqlite do
     table "boards"
-    repo Viban.Repo
+    repo Viban.RepoSqlite
   end
 
   attributes do
@@ -56,52 +24,46 @@ defmodule Viban.Kanban.Board do
       allow_nil? false
       public? true
       constraints min_length: 1, max_length: 255
-      description "Board name (unique per user)"
     end
 
     attribute :description, :string do
       public? true
       constraints max_length: 2000
-      description "Optional board description"
+    end
+
+    attribute :user_id, :uuid do
+      allow_nil? false
+      public? true
     end
 
     timestamps()
   end
 
   identities do
-    identity :unique_name_per_user, [:user_id, :name] do
-      message "A board with this name already exists for this user"
-    end
+    identity :unique_name_per_user, [:user_id, :name]
   end
 
   relationships do
-    belongs_to :user, Viban.Accounts.User do
-      allow_nil? false
-      public? true
-      attribute_writable? true
-      description "The user who owns this board"
-    end
-
     has_many :columns, Viban.Kanban.Column do
       public? true
       sort position: :asc
-      description "Columns in this board, ordered by position"
     end
 
     has_many :hooks, Viban.Kanban.Hook do
       public? true
-      description "Automation hooks defined for this board"
     end
 
     has_many :repositories, Viban.Kanban.Repository do
       public? true
-      description "Git repositories associated with this board"
     end
 
     has_many :task_templates, Viban.Kanban.TaskTemplate do
       public? true
       sort position: :asc
-      description "Task templates for this board, ordered by position"
+    end
+
+    has_many :periodical_tasks, Viban.Kanban.PeriodicalTask do
+      public? true
     end
   end
 
@@ -109,8 +71,6 @@ defmodule Viban.Kanban.Board do
     defaults [:read]
 
     create :create do
-      description "Create a new board with default columns and templates"
-
       accept [:name, :description, :user_id]
       primary? true
 
@@ -119,33 +79,27 @@ defmodule Viban.Kanban.Board do
     end
 
     update :update do
-      description "Update board name or description"
-
       accept [:name, :description]
       primary? true
     end
 
     destroy :destroy do
-      description "Delete board and all associated data"
-
       primary? true
 
-      # Cascade delete in order of dependencies
       change cascade_destroy(:columns)
       change cascade_destroy(:hooks)
       change cascade_destroy(:repositories)
       change cascade_destroy(:task_templates)
+      change cascade_destroy(:periodical_tasks)
     end
 
     read :for_user do
-      description "List all boards owned by a specific user"
-
-      argument :user_id, :uuid do
-        allow_nil? false
-        description "The user's ID"
-      end
-
+      argument :user_id, :uuid, allow_nil?: false
       filter expr(user_id == ^arg(:user_id))
+      prepare build(sort: [inserted_at: :desc])
+    end
+
+    read :list_all do
       prepare build(sort: [inserted_at: :desc])
     end
   end
@@ -156,6 +110,7 @@ defmodule Viban.Kanban.Board do
     define :update
     define :destroy
     define :for_user, args: [:user_id]
+    define :list_all
     define :get, action: :read, get_by: [:id]
   end
 end

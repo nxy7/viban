@@ -1,7 +1,7 @@
 defmodule Viban.StateServer.DemoAgent do
   @moduledoc """
   A simple demo agent that holds text state.
-  Used to demonstrate StateServer persistence and Electric sync.
+  Used to demonstrate StateServer persistence.
   """
 
   use Viban.StateServer.Core, restart: :permanent

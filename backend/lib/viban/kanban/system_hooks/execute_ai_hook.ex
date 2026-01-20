@@ -25,7 +25,7 @@ defmodule Viban.Kanban.SystemHooks.ExecuteAIHook do
   @behaviour Viban.Kanban.SystemHooks.Behaviour
 
   alias Viban.Executors.Executor
-  alias Viban.Executors.ExecutorSession
+  alias Viban.Kanban.ExecutorSession
   alias Viban.Kanban.Task
 
   require Logger

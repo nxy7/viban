@@ -26,7 +26,7 @@ defmodule Viban.DataCase do
       import Ecto.Query
       import Viban.DataCase
 
-      alias Viban.Repo
+      alias Viban.RepoSqlite
 
       # Import Ash.Test helpers for better assertions
     end
@@ -45,11 +45,8 @@ defmodule Viban.DataCase do
   can be explicitly allowed to share the test's database connection.
   """
   def setup_sandbox(tags) do
-    pid = Sandbox.start_owner!(Viban.Repo, shared: not tags[:async])
+    pid = Sandbox.start_owner!(Viban.RepoSqlite, shared: not tags[:async])
     on_exit(fn -> Sandbox.stop_owner(pid) end)
-
-    sqlite_pid = Sandbox.start_owner!(Viban.RepoSqlite, shared: not tags[:async])
-    on_exit(fn -> Sandbox.stop_owner(sqlite_pid) end)
 
     # For async integration tests, set up automatic sandbox allowances
     if tags[:async] do
@@ -71,7 +68,6 @@ defmodule Viban.DataCase do
   """
   def allow_sandbox_access(pid) when is_pid(pid) do
     test_pid = Process.get(:test_pid) || self()
-    Sandbox.allow(Viban.Repo, test_pid, pid)
     Sandbox.allow(Viban.RepoSqlite, test_pid, pid)
   end
 
@@ -81,7 +77,6 @@ defmodule Viban.DataCase do
   """
   def allow_sandbox_access_to_supervisor(supervisor_pid) when is_pid(supervisor_pid) do
     test_pid = Process.get(:test_pid) || self()
-    Sandbox.allow(Viban.Repo, test_pid, supervisor_pid)
     Sandbox.allow(Viban.RepoSqlite, test_pid, supervisor_pid)
 
     # Allow all children recursively
@@ -89,7 +84,6 @@ defmodule Viban.DataCase do
       children when is_list(children) ->
         Enum.each(children, fn
           {_id, pid, :worker, _modules} when is_pid(pid) ->
-            Sandbox.allow(Viban.Repo, test_pid, pid)
             Sandbox.allow(Viban.RepoSqlite, test_pid, pid)
 
           {_id, pid, :supervisor, _modules} when is_pid(pid) ->
@@ -157,19 +151,23 @@ defmodule Viban.DataCase do
   end
 
   @doc """
-  Creates a test user with default values.
-  """
-  def create_test_user(attrs \\ %{}) do
-    default_attrs = %{
-      provider: :github,
-      provider_uid: "test-uid-#{System.unique_integer([:positive])}",
-      provider_login: "testuser",
-      name: "Test User",
-      email: "test@example.com",
-      access_token: "test-token"
-    }
+  Generates a test user ID.
 
-    Viban.Accounts.User.create(Map.merge(default_attrs, attrs))
+  Since KanbanLite doesn't require a User record (just a UUID), we generate
+  a random UUID for testing purposes.
+  """
+  def create_test_user(_attrs \\ %{}) do
+    user_id = Ash.UUID.generate()
+
+    {:ok,
+     %{
+       id: user_id,
+       provider: :github,
+       provider_uid: "test-uid-#{System.unique_integer([:positive])}",
+       provider_login: "testuser",
+       name: "Test User",
+       email: "test@example.com"
+     }}
   end
 
   # ============================================================================
@@ -236,7 +234,7 @@ defmodule Viban.DataCase do
 
     Viban.Kanban.ColumnHook
     |> where([ch], ch.column_id in ^column_ids)
-    |> Viban.Repo.delete_all()
+    |> Viban.RepoSqlite.delete_all()
   end
 
   # ============================================================================

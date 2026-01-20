@@ -16,10 +16,6 @@ defmodule VibanWeb.Router do
     plug VibanWeb.Plugs.LoadUserFromSession
   end
 
-  pipeline :sync do
-    plug :accepts, ["json"]
-  end
-
   # Test endpoints (only available when sandbox_enabled)
   scope "/api/test", VibanWeb do
     pipe_through :api
@@ -46,6 +42,7 @@ defmodule VibanWeb.Router do
     post "/auth/device/code", DeviceAuthController, :request_code
     post "/auth/device/poll", DeviceAuthController, :poll
     post "/auth/device/cancel", DeviceAuthController, :cancel
+    get "/auth/device/callback", DeviceAuthController, :callback
 
     # VCS API endpoints (provider-agnostic)
     get "/vcs/repos", VCSController, :list_repos
@@ -68,22 +65,11 @@ defmodule VibanWeb.Router do
     get "/boards/:board_id/hooks", HookController, :index
     get "/hooks/system", HookController, :system_hooks
 
-    # Task actions (only image serving - other actions via RPC)
+    # Task actions
     get "/tasks/:task_id/images/:image_id", TaskController, :get_image
 
-    post "/rpc/run", RpcController, :run
-    post "/rpc/validate", RpcController, :validate
-    post "/messages/randomize", MessagesController, :randomize
     post "/editor/open", EditorController, :open
     post "/folder/open", FolderController, :open
-  end
-
-  # AshSync routes for Electric SQL sync with Ash
-  # All sync queries are handled through a single endpoint with ?query=<query_name> parameter
-  scope "/api", VibanWeb do
-    pipe_through :sync
-
-    get "/sync", AshSyncController, :sync
   end
 
   # MCP Server for AI agents

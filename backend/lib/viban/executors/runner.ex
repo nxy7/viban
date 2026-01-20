@@ -4,7 +4,7 @@ defmodule Viban.Executors.Runner do
 
   This module handles:
   - Spawning the executor process (CLI tools like Claude Code, Gemini, etc.)
-  - Streaming stdout/stderr and saving to database (for Electric SQL sync)
+  - Streaming stdout/stderr and saving to database
   - Process termination and cleanup
   - Storing logs for later review
 
@@ -13,7 +13,7 @@ defmodule Viban.Executors.Runner do
   Each runner is started via DynamicSupervisor and manages a single executor
   subprocess. The runner uses Erlang ports to communicate with the subprocess.
   All output is saved to the database as `ExecutorMessage` records, which are
-  synced to the frontend via Electric SQL.
+  broadcast to LiveView via PubSub.
 
   ## Registry
 
@@ -25,7 +25,7 @@ defmodule Viban.Executors.Runner do
 
   1. Runner starts and creates an `ExecutorSession` in the database
   2. Executor process is spawned via Erlang port
-  3. Output is saved to database (synced to frontend via Electric SQL)
+  3. Output is saved to database and broadcast via PubSub
   4. On completion/failure, session and task status are updated
   5. Runner process terminates
 
@@ -48,10 +48,10 @@ defmodule Viban.Executors.Runner do
 
   use GenServer
 
-  alias Viban.Executors.ExecutorMessage
-  alias Viban.Executors.ExecutorSession
   alias Viban.Executors.ImageHandler
   alias Viban.Executors.Registry
+  alias Viban.Kanban.ExecutorMessage
+  alias Viban.Kanban.ExecutorSession
   alias Viban.VCS.GitHub.PRDetector
 
   require Logger

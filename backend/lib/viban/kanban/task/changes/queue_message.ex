@@ -1,15 +1,11 @@
 defmodule Viban.Kanban.Task.Changes.QueueMessage do
   @moduledoc """
-  Ash change that appends a message to the task's message queue.
-
-  Messages are queued for processing by the Execute AI hook. Each message
-  includes the prompt, executor type, and optional image attachments.
+  Ash change that appends a message to the task's message queue (SQLite version).
   """
 
   use Ash.Resource.Change
 
   @impl true
-  @spec change(Ash.Changeset.t(), keyword(), Ash.Resource.Change.context()) :: Ash.Changeset.t()
   def change(changeset, _opts, _context) do
     prompt = Ash.Changeset.get_argument(changeset, :prompt)
     executor_type = Ash.Changeset.get_argument(changeset, :executor_type) || :claude_code

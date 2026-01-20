@@ -16,21 +16,71 @@ defmodule VibanWeb.Live.BoardLive.Components.Modals do
   attr :form, :any, required: true
   attr :column_id, :string, required: true
   attr :column_name, :string, required: true
+  attr :templates, :list, default: []
+  attr :columns, :list, default: []
+  attr :is_refining, :boolean, default: false
 
   def create_task_modal(assigns) do
+    assigns = assign(assigns, :has_in_progress_column, has_in_progress_column?(assigns.columns))
+
     ~H"""
     <.modal id="create-task-modal" show on_cancel={JS.push("hide_create_modal")}>
-      <h2 class="text-xl font-semibold mb-4">Create Task in {@column_name}</h2>
+      <h2 class="text-xl font-semibold mb-4 text-white">Create Task in {@column_name}</h2>
       <.form for={@form} phx-submit="create_task" class="space-y-4">
         <input type="hidden" name="column_id" value={@column_id} />
         <.input field={@form[:title]} label="Title" placeholder="Task title..." required autofocus />
-        <.input
-          field={@form[:description]}
-          type="textarea"
-          label="Description (optional)"
-          placeholder="Describe the task..."
-          rows="4"
-        />
+
+        <div :if={@templates != []}>
+          <label class="block text-sm font-medium text-gray-300 mb-1">Template</label>
+          <select
+            name="template_id"
+            phx-change="select_template"
+            class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+          >
+            <option value="">No template</option>
+            <option :for={template <- @templates} value={template.id}>{template.name}</option>
+          </select>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-sm font-medium text-gray-300">Description (optional)</label>
+            <button
+              type="button"
+              phx-click="refine_preview"
+              disabled={@is_refining}
+              class="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-brand-400 hover:text-brand-300 disabled:text-gray-500 disabled:cursor-not-allowed transition-colors"
+            >
+              <.icon :if={!@is_refining} name="hero-bolt" class="w-3.5 h-3.5" />
+              <.spinner :if={@is_refining} class="w-3.5 h-3.5" />
+              {if @is_refining, do: "Refining...", else: "Refine with AI"}
+            </button>
+          </div>
+          <.input
+            field={@form[:description]}
+            type="textarea"
+            placeholder="Describe the task..."
+            rows="4"
+          />
+        </div>
+
+        <div :if={@has_in_progress_column} class="flex items-center gap-3 p-3 bg-gray-800/50 border border-gray-700 rounded-lg">
+          <input
+            type="checkbox"
+            id="autostart"
+            name="autostart"
+            value="true"
+            class="w-4 h-4 rounded border-gray-600 bg-gray-700 text-brand-500 focus:ring-brand-500 focus:ring-offset-gray-900"
+          />
+          <div class="flex-1">
+            <label for="autostart" class="text-sm font-medium text-gray-300 cursor-pointer">
+              Start immediately
+            </label>
+            <p class="text-xs text-gray-500">Move to "In Progress" after creation</p>
+          </div>
+          <.icon name="hero-play" class="w-5 h-5 text-brand-400" />
+        </div>
+
         <div class="flex justify-end gap-3 pt-2">
           <.button type="button" variant="ghost" phx-click="hide_create_modal">
             Cancel
@@ -40,6 +90,10 @@ defmodule VibanWeb.Live.BoardLive.Components.Modals do
       </.form>
     </.modal>
     """
+  end
+
+  defp has_in_progress_column?(columns) do
+    Enum.any?(columns, fn c -> String.downcase(c.name) == "in progress" end)
   end
 
   # ============================================================================
@@ -52,7 +106,7 @@ defmodule VibanWeb.Live.BoardLive.Components.Modals do
   def create_pr_modal(assigns) do
     ~H"""
     <.modal id="create-pr-modal" show on_cancel={JS.push("hide_pr_modal")}>
-      <h2 class="text-xl font-semibold mb-4">Create Pull Request</h2>
+      <h2 class="text-xl font-semibold mb-4 text-white">Create Pull Request</h2>
       <.form for={@form} phx-submit="create_pr" class="space-y-4">
         <input type="hidden" name="task_id" value={@task.id} />
         <.input
@@ -92,7 +146,7 @@ defmodule VibanWeb.Live.BoardLive.Components.Modals do
         <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-500/20 mb-4">
           <.icon name="hero-exclamation-triangle" class="h-6 w-6 text-red-400" />
         </div>
-        <h2 class="text-xl font-semibold mb-2">Delete Task</h2>
+        <h2 class="text-xl font-semibold mb-2 text-white">Delete Task</h2>
         <p class="text-gray-400 mb-6">
           Are you sure you want to delete this task? This action cannot be undone.
         </p>
@@ -118,7 +172,7 @@ defmodule VibanWeb.Live.BoardLive.Components.Modals do
   def shortcuts_help_modal(assigns) do
     ~H"""
     <.modal id="shortcuts-help-modal" show on_cancel={JS.push("hide_shortcuts_help")}>
-      <h2 class="text-xl font-semibold mb-4">Keyboard Shortcuts</h2>
+      <h2 class="text-xl font-semibold mb-4 text-white">Keyboard Shortcuts</h2>
       <div class="space-y-2">
         <.shortcut_row key="Shift + ?" description="Show keyboard shortcuts" />
         <.shortcut_row key="n" description="Create new task" />

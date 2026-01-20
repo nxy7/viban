@@ -8,24 +8,6 @@ config :ash,
   # Hook.id is UUID but ColumnHook.hook_id is String (to support system hooks like "system:refine-prompt")
   compatible_foreign_key_types: [{Ash.Type.UUID, Ash.Type.String}]
 
-config :ash_sync,
-  skip: [:query, :ingest],
-  output_dir: "../frontend/src/lib/generated/sync"
-
-config :ash_typescript,
-  output_file: "../frontend/src/lib/generated/ash.ts",
-  run_endpoint: "/api/rpc/run",
-  validate_endpoint: "/api/rpc/validate",
-  output_field_formatter: :snake_case,
-  input_field_formatter: :snake_case,
-  rpc_action_after_request_hook: "RpcHooks.afterActionRequest",
-  import_into_generated: [
-    %{
-      import_name: "RpcHooks",
-      file: "../rpcHooks"
-    }
-  ]
-
 config :esbuild,
   version: "0.17.11",
   viban: [
@@ -39,10 +21,6 @@ config :logger, :console,
   metadata: [:request_id, :task_id]
 
 config :phoenix, :json_library, Jason
-
-config :phoenix_sync,
-  env: Mix.env(),
-  mode: :embedded
 
 # Disable swoosh API client (we don't need email for now)
 config :swoosh, :api_client, false
@@ -58,9 +36,11 @@ config :tailwind,
     cd: Path.expand("../assets", __DIR__)
   ]
 
-# Oban job queue configuration
+# Oban job queue configuration (uses SQLite)
 config :viban, Oban,
-  repo: Viban.Repo,
+  engine: Oban.Engines.Lite,
+  notifier: Oban.Notifiers.PG,
+  repo: Viban.RepoSqlite,
   queues: [
     default: 10,
     generate_subtasks: 3
@@ -74,10 +54,6 @@ config :viban, Oban,
        {"* * * * *", Viban.Workers.PRSyncWorker}
      ]}
   ]
-
-config :viban, Viban.Repo,
-  migration_primary_key: [type: :uuid],
-  migration_timestamps: [type: :utc_datetime_usec]
 
 config :viban, Viban.RepoSqlite,
   database: Path.expand("~/.viban/viban.db"),
@@ -103,16 +79,14 @@ config :viban, VibanWeb.Endpoint,
 config :viban, :github_client_id, nil
 
 config :viban,
-  ecto_repos: [Viban.Repo, Viban.RepoSqlite],
+  ecto_repos: [Viban.RepoSqlite],
   generators: [timestamp_type: :utc_datetime],
   ash_domains: [
-    Viban.Messages,
     Viban.Kanban,
-    Viban.KanbanLite,
     Viban.Accounts,
-    Viban.Executors,
     Viban.AppRuntime,
-    Viban.StateServer
+    Viban.StateServer,
+    Viban.Executors
   ],
   # Store cloned repos in ~/.local/share/viban/repos
   repos_base_path: Path.expand("~/.local/share/viban/repos"),

@@ -1,19 +1,9 @@
 defmodule Viban.Kanban.Hook.Validations.ValidateHookKindAttributes do
   @moduledoc """
-  Ash validation that ensures hook attributes are valid based on hook_kind.
-
-  For updates, this validates that:
-  - Script hooks maintain a non-empty command
-  - Agent hooks maintain a non-empty agent_prompt
+  Validates that hook has correct attributes for its kind (SQLite version).
   """
 
   use Ash.Resource.Validation
-
-  @impl true
-  def atomic(_changeset, _opts, _context) do
-    # Return :ok to skip atomic validation - will run non-atomic validate/3
-    :ok
-  end
 
   @impl true
   def validate(changeset, _opts, _context) do
@@ -24,14 +14,14 @@ defmodule Viban.Kanban.Hook.Validations.ValidateHookKindAttributes do
     case hook_kind do
       :script ->
         if is_nil(command) or command == "" do
-          {:error, field: :command, message: "is required for script hooks"}
+          {:error, field: :command, message: "Command is required for script hooks"}
         else
           :ok
         end
 
       :agent ->
         if is_nil(agent_prompt) or agent_prompt == "" do
-          {:error, field: :agent_prompt, message: "is required for agent hooks"}
+          {:error, field: :agent_prompt, message: "Agent prompt is required for agent hooks"}
         else
           :ok
         end

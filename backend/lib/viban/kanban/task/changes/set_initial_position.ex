@@ -1,9 +1,6 @@
 defmodule Viban.Kanban.Task.Changes.SetInitialPosition do
   @moduledoc """
-  Ash change that sets the initial position for a new task.
-
-  If position is not explicitly provided, generates a position at the end
-  of the column using fractional indexing.
+  Ash change that sets the initial position for a new task (SQLite version).
   """
 
   use Ash.Resource.Change
@@ -11,15 +8,12 @@ defmodule Viban.Kanban.Task.Changes.SetInitialPosition do
   require Logger
 
   @impl true
-  @spec change(Ash.Changeset.t(), keyword(), Ash.Resource.Change.context()) :: Ash.Changeset.t()
   def change(changeset, _opts, _context) do
-    # Only set position if not already provided
     case Ash.Changeset.get_attribute(changeset, :position) do
       nil ->
         set_end_position(changeset)
 
       _position ->
-        # Position was explicitly provided, keep it
         changeset
     end
   end
@@ -29,7 +23,6 @@ defmodule Viban.Kanban.Task.Changes.SetInitialPosition do
 
     case get_last_task_position(column_id) do
       nil ->
-        # Empty column, use default initial key
         case FractionalIndex.generate_key_between(nil, nil) do
           {:ok, position} ->
             Ash.Changeset.change_attribute(changeset, :position, position)
@@ -40,7 +33,6 @@ defmodule Viban.Kanban.Task.Changes.SetInitialPosition do
         end
 
       last_position ->
-        # Insert after the last task
         case FractionalIndex.generate_key_between(last_position, nil) do
           {:ok, position} ->
             Ash.Changeset.change_attribute(changeset, :position, position)
@@ -57,7 +49,7 @@ defmodule Viban.Kanban.Task.Changes.SetInitialPosition do
   defp get_last_task_position(column_id) do
     import Ecto.Query
 
-    Viban.Repo.one(
+    Viban.RepoSqlite.one(
       from(t in "tasks",
         where: t.column_id == ^column_id,
         order_by: [desc: t.position],

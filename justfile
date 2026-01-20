@@ -1,34 +1,24 @@
 # Viban Justfile - Development commands
 #
 # App runs at: http://localhost:7777 (Phoenix HTTP)
+# Database: SQLite (~/.viban/viban.db or backend/viban_lite.db in dev)
 
 # Default recipe - show available commands
 default:
     @just --list
 
-# Start all services (database, backend)
+# Start backend in development mode
 dev:
     #!/usr/bin/env bash
-    set -a && source .env && set +a
-    trap 'kill 0' EXIT
-    docker compose up db &
-    sleep 3
-    (cd backend && mix deps.get && mix ash.setup && elixir --sname viban --cookie viban -S mix phx.server) &
-    wait
+    set -e
+    [ -f .env ] && set -a && source .env && set +a
+    cd backend && mix deps.get && mix ash.setup && elixir --sname viban --cookie viban -S mix phx.server
 
 credo:
     cd backend; mix credo --strict
 
-# Start only the database
-db:
-    docker compose up -d db
-
-# Stop all docker services
-db-stop:
-    docker compose down
-
 # Setup backend (deps, migrations)
-backend-setup:
+setup:
     cd backend && mix deps.get && mix ash.setup
 
 # Start backend server
@@ -36,22 +26,12 @@ backend:
     cd backend && mix phx.server
 
 # Connect to running backend IEx (when started via 'just dev')
-backend-connect:
+connect:
     iex --sname console --cookie viban --remsh viban
 
 # Run backend tests
 test:
     cd backend && mix test
-
-# Start services for E2E testing (with E2E_TEST=true)
-dev-e2e:
-    #!/usr/bin/env bash
-    set -a && source .env && set +a
-    trap 'kill 0' EXIT
-    docker compose up db &
-    sleep 3
-    (cd backend && E2E_TEST=true mix phx.server) &
-    wait
 
 # Generate new Ash migration
 migrate name:
@@ -61,19 +41,15 @@ migrate name:
 db-migrate:
     cd backend && mix ash.migrate
 
-# Reset database
+# Reset SQLite database
 db-reset:
-    cd backend && mix ash.reset
-
-# Open pgweb database UI
-pgweb:
-    docker compose up -d pgweb
-    @echo "PGWeb available at http://localhost:8082"
+    rm -f backend/viban_lite.db backend/viban_lite.db-shm backend/viban_lite.db-wal
+    cd backend && mix ash.setup
 
 # Clean all build artifacts
 clean:
     rm -rf backend/_build backend/deps
-    docker compose down -v
+    rm -f backend/viban_lite.db backend/viban_lite.db-shm backend/viban_lite.db-wal
 
 # Format all code
 format:
@@ -150,8 +126,4 @@ build target="" burrito="false":
         echo "Release at: backend/_build/prod/rel/viban/"
         echo ""
         echo "To run: _build/prod/rel/viban/bin/viban start"
-        echo ""
-        echo "Deploy mode ports:"
-        echo "  App:      http://localhost:7777"
-        echo "  Postgres: localhost:17777"
     fi

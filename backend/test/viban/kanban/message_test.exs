@@ -121,7 +121,7 @@ defmodule Viban.Kanban.MessageTest do
 
       {:ok, failed} =
         Message.fail(message, %{
-          metadata: %{error: "API error"}
+          metadata: %{"error" => "API error"}
         })
 
       assert failed.status == :failed

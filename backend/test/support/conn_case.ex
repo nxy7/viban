@@ -50,13 +50,13 @@ defmodule VibanWeb.ConnCase do
       user_id: user.id
     }
 
-    {:ok, board} = Viban.KanbanLite.Board.create(Map.merge(default_attrs, attrs))
+    {:ok, board} = Viban.Kanban.Board.create(Map.merge(default_attrs, attrs))
     board
   end
 
   def create_board_with_columns(user) do
     board = create_board(user)
-    columns = Viban.KanbanLite.Column.for_board!(board.id)
+    columns = Viban.Kanban.Column.for_board!(board.id)
 
     todo = Enum.find(columns, &(&1.name == "TODO"))
     in_progress = Enum.find(columns, &(&1.name == "In Progress"))
@@ -79,7 +79,7 @@ defmodule VibanWeb.ConnCase do
       column_id: column.id
     }
 
-    {:ok, task} = Viban.KanbanLite.Task.create(Map.merge(default_attrs, attrs))
+    {:ok, task} = Viban.Kanban.Task.create(Map.merge(default_attrs, attrs))
     task
   end
 end

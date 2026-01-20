@@ -7,10 +7,10 @@ defmodule VibanWeb.Live.BoardLive.TaskPanelComponent do
   use VibanWeb, :live_component
 
   alias Viban.Executors.Executor
-  alias Viban.KanbanLite.ExecutorSession
-  alias Viban.KanbanLite.HookExecution
-  alias Viban.KanbanLite.Message
-  alias Viban.KanbanLite.Task
+  alias Viban.Kanban.ExecutorSession
+  alias Viban.Kanban.HookExecution
+  alias Viban.Kanban.Message
+  alias Viban.Kanban.Task
 
   @impl true
   def mount(socket) do

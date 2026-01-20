@@ -1,20 +1,11 @@
 defmodule Viban.Kanban.Task.Changes.AddExecutedHook do
   @moduledoc """
-  Ash change that adds a hook ID to the executed_hooks list.
-
-  This is used for execute_once tracking - once a hook is in this list,
-  it won't be executed again for this task.
-
-  ## Idempotency
-
-  This change is idempotent - adding the same hook ID multiple times
-  will only store it once in the list.
+  Ash change that adds a hook ID to the executed_hooks list (SQLite version).
   """
 
   use Ash.Resource.Change
 
   @impl true
-  @spec change(Ash.Changeset.t(), keyword(), Ash.Resource.Change.context()) :: Ash.Changeset.t()
   def change(changeset, _opts, _context) do
     column_hook_id = Ash.Changeset.get_argument(changeset, :column_hook_id)
     current_hooks = Ash.Changeset.get_data(changeset, :executed_hooks) || []

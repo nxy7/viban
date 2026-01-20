@@ -10,19 +10,7 @@ config :phoenix_live_view,
   debug_heex_annotations: true,
   enable_expensive_runtime_checks: true
 
-config :phoenix_sync, repo: Viban.Repo
-
-config :viban, Viban.Repo,
-  username: "postgres",
-  password: "postgres",
-  hostname: "localhost",
-  database: "viban_dev",
-  port: 5432,
-  stacktrace: true,
-  show_sensitive_data_on_connection_error: true,
-  pool_size: 10
-
-# In dev, Phoenix runs on HTTP directly on port 7777
+# Phoenix runs on HTTP on port 7777
 config :viban, VibanWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 7777],
   check_origin: false,
@@ -43,10 +31,9 @@ config :viban, VibanWeb.Endpoint,
     ]
   ]
 
+# Enable test endpoints when E2E_TEST=true
 config :viban, :env, :dev
 
-# Import secrets if they exist (GitHub OAuth credentials)
-# Disable Bandit compression for E2E tests to avoid Playwright decompression issues
 config :viban, dev_routes: true
 
 if System.get_env("E2E_TEST") == "true" do

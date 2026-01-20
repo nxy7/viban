@@ -10,7 +10,10 @@ defmodule Viban.MixProject do
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
-      releases: releases()
+      releases: releases(),
+      elixirc_options: [
+        warnings_as_errors: true
+      ]
     ]
   end
 
@@ -87,26 +90,15 @@ defmodule Viban.MixProject do
       {:jason, "~> 1.2"},
       {:bandit, "~> 1.5"},
 
-      # Database
+      # Database (SQLite only)
       {:ecto_sql, "~> 3.10"},
-      {:postgrex, ">= 0.0.0"},
       {:ecto_sqlite3, "~> 0.17"},
 
       # Ash Framework
       {:ash, "~> 3.0"},
-      {:ash_postgres, "~> 2.0"},
       {:ash_sqlite, "~> 0.2"},
       {:ash_phoenix, "~> 2.0"},
-      {:ash_typescript, "~> 0.2"},
       {:ash_ai, "~> 0.3"},
-
-      # Phoenix Sync (Electric)
-      {:electric, "~> 1.0"},
-      {:phoenix_sync, "~> 0.6.0"},
-
-      # Ash Sync (Electric integration for Ash read queries)
-      {:ash_sync, github: "nxy7/ash_sync"},
-      # {:ash_sync, path: "/Users/dawiddanieluk/ash_sync"},
 
       # Utilities
       {:cors_plug, "~> 3.0"},
