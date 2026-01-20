@@ -371,7 +371,7 @@ defmodule VibanWeb.CoreComponents do
   # ============================================================================
 
   attr :name, :string, required: true
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
 
   def icon(%{name: "hero-" <> _} = assigns) do
     ~H"""
@@ -432,7 +432,7 @@ defmodule VibanWeb.CoreComponents do
   # Helper Functions
   # ============================================================================
 
-  defp hide(js \\ %JS{}, selector) do
+  defp hide(js, selector) do
     JS.hide(js,
       to: selector,
       time: 200,

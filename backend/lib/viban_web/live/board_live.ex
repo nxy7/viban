@@ -320,34 +320,6 @@ defmodule VibanWeb.Live.BoardLive do
      |> assign(:system_tools, system_tools)}
   end
 
-  defp load_templates(board_id) do
-    case TaskTemplate.for_board(board_id) do
-      {:ok, templates} -> templates
-      _ -> []
-    end
-  end
-
-  defp load_hooks(board_id) do
-    case Hook.for_board(board_id) do
-      {:ok, hooks} -> hooks
-      _ -> []
-    end
-  end
-
-  defp load_periodical_tasks(board_id) do
-    case PeriodicalTask.for_board(board_id) do
-      {:ok, tasks} -> tasks
-      _ -> []
-    end
-  end
-
-  defp load_system_tools do
-    case SystemTools.list_tools() do
-      {:ok, tools} -> tools
-      _ -> []
-    end
-  end
-
   def handle_event("hide_settings", _, socket) do
     {:noreply,
      socket
@@ -828,29 +800,6 @@ defmodule VibanWeb.Live.BoardLive do
     else
       {:noreply, socket}
     end
-  end
-
-  defp load_column_hooks(column_id) do
-    case ColumnHook.for_column(column_id) do
-      {:ok, hooks} -> hooks
-      _ -> []
-    end
-  end
-
-  defp build_available_hooks(custom_hooks, system_hooks, assigned_hooks) do
-    assigned_ids = Enum.map(assigned_hooks, & &1.hook_id)
-
-    custom =
-      custom_hooks
-      |> Enum.reject(&(&1.id in assigned_ids))
-      |> Enum.map(&%{id: &1.id, name: &1.name, is_system: false, hook_kind: &1.hook_kind})
-
-    system =
-      system_hooks
-      |> Enum.reject(&(&1.id in assigned_ids))
-      |> Enum.map(&%{id: &1.id, name: &1.name, is_system: true, hook_kind: :system})
-
-    system ++ custom
   end
 
   def handle_event("hide_column_settings", _, socket) do
@@ -1635,4 +1584,59 @@ defmodule VibanWeb.Live.BoardLive do
   end
 
   def handle_info(_, socket), do: {:noreply, socket}
+
+  # ============================================================================
+  # Private Helper Functions
+  # ============================================================================
+
+  defp load_templates(board_id) do
+    case TaskTemplate.for_board(board_id) do
+      {:ok, templates} -> templates
+      _ -> []
+    end
+  end
+
+  defp load_hooks(board_id) do
+    case Hook.for_board(board_id) do
+      {:ok, hooks} -> hooks
+      _ -> []
+    end
+  end
+
+  defp load_periodical_tasks(board_id) do
+    case PeriodicalTask.for_board(board_id) do
+      {:ok, tasks} -> tasks
+      _ -> []
+    end
+  end
+
+  defp load_system_tools do
+    case SystemTools.list_tools() do
+      {:ok, tools} -> tools
+      _ -> []
+    end
+  end
+
+  defp load_column_hooks(column_id) do
+    case ColumnHook.for_column(column_id) do
+      {:ok, hooks} -> hooks
+      _ -> []
+    end
+  end
+
+  defp build_available_hooks(custom_hooks, system_hooks, assigned_hooks) do
+    assigned_ids = Enum.map(assigned_hooks, & &1.hook_id)
+
+    custom =
+      custom_hooks
+      |> Enum.reject(&(&1.id in assigned_ids))
+      |> Enum.map(&%{id: &1.id, name: &1.name, is_system: false, hook_kind: &1.hook_kind})
+
+    system =
+      system_hooks
+      |> Enum.reject(&(&1.id in assigned_ids))
+      |> Enum.map(&%{id: &1.id, name: &1.name, is_system: true, hook_kind: :system})
+
+    system ++ custom
+  end
 end
