@@ -282,7 +282,7 @@ defmodule Viban.Kanban.Task do
     # =========================================================================
 
     update :move do
-      accept [:column_id]
+      accept [:column_id, :position]
       require_atomic? false
 
       argument :before_task_id, :uuid do

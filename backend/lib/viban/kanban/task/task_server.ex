@@ -568,7 +568,10 @@ defmodule Viban.Kanban.Task.TaskServer do
         %{state | worktree_path: worktree_path, worktree_branch: branch_name}
 
       {:error, reason} ->
-        Logger.warning("Failed to create worktree: #{inspect(reason)}")
+        Logger.warning(
+          "[TaskServer] Failed to create worktree for task #{state.task_id} on board #{state.board_id}: #{inspect(reason)}"
+        )
+
         state
     end
   end

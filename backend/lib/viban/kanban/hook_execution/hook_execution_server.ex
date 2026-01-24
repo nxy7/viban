@@ -263,7 +263,8 @@ defmodule Viban.Kanban.HookExecution.HookExecutionServer do
 
         hook_opts = [
           board_id: state.board_id,
-          hook_settings: execution.hook_settings || %{}
+          hook_settings: execution.hook_settings || %{},
+          execution: execution
         ]
 
         if hook.hook_kind == :script do

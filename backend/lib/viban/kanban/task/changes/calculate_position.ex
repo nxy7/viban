@@ -17,10 +17,16 @@ defmodule Viban.Kanban.Task.Changes.CalculatePosition do
         Ash.Changeset.get_data(changeset, :column_id)
 
     task_id = Ash.Changeset.get_data(changeset, :id)
+    current_position = Ash.Changeset.get_data(changeset, :position)
+
+    Logger.info(
+      "[CalculatePosition] task=#{task_id} before=#{inspect(before_task_id)} after=#{inspect(after_task_id)} column=#{target_column_id} current_pos=#{current_position}"
+    )
 
     case calculate_position(before_task_id, after_task_id, target_column_id, task_id) do
       {:ok, position} ->
-        Ash.Changeset.change_attribute(changeset, :position, position)
+        Logger.info("[CalculatePosition] task=#{task_id} new_position=#{position}")
+        Ash.Changeset.force_change_attribute(changeset, :position, position)
 
       {:error, reason} ->
         Logger.error("CalculatePosition failed: #{inspect(reason)}")

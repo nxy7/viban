@@ -4,7 +4,6 @@ defmodule VibanWeb.Router do
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
-    plug :fetch_live_flash
     plug :put_root_layout, html: {VibanWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
@@ -32,6 +31,7 @@ defmodule VibanWeb.Router do
 
     # Health check (no auth required)
     get "/health", HealthController, :check
+    get "/health2", HealthController, :ping
     get "/ping", HealthController, :ping
 
     # Auth endpoints
@@ -83,22 +83,12 @@ defmodule VibanWeb.Router do
 
   if Application.compile_env(:viban, :dev_routes) do
     import Oban.Web.Router
-    import Phoenix.LiveDashboard.Router
 
     scope "/dev" do
       pipe_through :browser
 
-      live_dashboard "/dashboard", metrics: VibanWeb.Telemetry
       oban_dashboard("/oban")
     end
   end
 
-  # LiveView routes (main app)
-  scope "/", VibanWeb.Live do
-    pipe_through :browser
-
-    live "/", HomeLive, :index
-    live "/board/:board_id", BoardLive, :show
-    live "/board/:board_id/task/:task_id", BoardLive, :task
-  end
 end

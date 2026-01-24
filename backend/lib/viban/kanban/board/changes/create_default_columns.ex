@@ -21,6 +21,7 @@ defmodule Viban.Kanban.Board.Changes.CreateDefaultColumns do
   @auto_start_hook_id "system:auto-start"
   @execute_ai_hook_id "system:execute-ai"
   @move_task_hook_id "system:move-task"
+  @play_sound_hook_id "system:play-sound"
 
   @impl true
   def change(changeset, _opts, _context) do
@@ -51,6 +52,7 @@ defmodule Viban.Kanban.Board.Changes.CreateDefaultColumns do
   defp add_default_hooks(columns) do
     todo_column = Enum.find(columns, fn col -> col.name == "TODO" end)
     in_progress_column = Enum.find(columns, fn col -> col.name == "In Progress" end)
+    to_review_column = Enum.find(columns, fn col -> col.name == "To Review" end)
 
     if todo_column do
       ColumnHook.create(%{
@@ -81,6 +83,18 @@ defmodule Viban.Kanban.Board.Changes.CreateDefaultColumns do
         transparent: true,
         removable: false,
         hook_settings: %{target_column: "To Review"}
+      })
+    end
+
+    if to_review_column do
+      ColumnHook.create(%{
+        column_id: to_review_column.id,
+        hook_id: @play_sound_hook_id,
+        position: 0,
+        execute_once: false,
+        transparent: false,
+        removable: true,
+        hook_settings: %{sound: "ding"}
       })
     end
   end

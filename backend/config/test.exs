@@ -21,9 +21,6 @@ config :logger, level: :none
 
 config :phoenix, :plug_init_mode, :runtime
 
-config :phoenix_live_view,
-  enable_expensive_runtime_checks: true
-
 # Disable Oban during tests to prevent DB connection issues
 config :viban, Oban, testing: :inline
 

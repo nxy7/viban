@@ -309,7 +309,17 @@ defmodule Viban.Kanban.Task.WorktreeManager do
         {:ok, worktree_path, branch_name}
 
       {output, code} ->
-        Logger.error("#{@log_prefix} Failed to create worktree (exit code #{code}): #{output}")
+        Logger.error("""
+        #{@log_prefix} Failed to create worktree (exit code #{code})
+          Repository: #{repo.url}
+          Local path: #{repo.local_path}
+          Board ID: #{repo.board_id}
+          Default branch: #{repo.default_branch}
+          Target branch: #{branch_name}
+          Worktree path: #{worktree_path}
+          Git output: #{String.trim(output)}
+        """)
+
         {:error, {:git_error, code, output}}
     end
   end

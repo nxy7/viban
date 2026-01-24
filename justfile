@@ -62,7 +62,6 @@ fmt: format
 kill:
     @echo "Killing dangling Elixir/Phoenix processes..."
     -lsof -ti:7777 | xargs kill -9 2>/dev/null
-    -pkill -9 -f "viban.*phx.server" 2>/dev/null
     @sleep 1
     @echo "Done. Ports should be free now."
 

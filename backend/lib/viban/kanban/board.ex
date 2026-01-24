@@ -10,6 +10,7 @@ defmodule Viban.Kanban.Board do
     domain: Viban.Kanban,
     data_layer: AshSqlite.DataLayer
 
+  alias Viban.Kanban.Board.Actions
   alias Viban.Kanban.Board.Changes
 
   sqlite do
@@ -102,6 +103,30 @@ defmodule Viban.Kanban.Board do
     read :list_all do
       prepare build(sort: [inserted_at: :desc])
     end
+
+    action :create_with_repository, :struct do
+      constraints instance_of: __MODULE__
+
+      argument :name, :string do
+        allow_nil? false
+        constraints min_length: 1, max_length: 255
+      end
+
+      argument :description, :string do
+        allow_nil? true
+        constraints max_length: 2000
+      end
+
+      argument :user_id, :uuid do
+        allow_nil? false
+      end
+
+      argument :repo, :map do
+        allow_nil? false
+      end
+
+      run Actions.CreateWithRepository
+    end
   end
 
   code_interface do
@@ -112,5 +137,6 @@ defmodule Viban.Kanban.Board do
     define :for_user, args: [:user_id]
     define :list_all
     define :get, action: :read, get_by: [:id]
+    define :create_with_repository, args: [:name, :description, :user_id, :repo]
   end
 end

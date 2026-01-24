@@ -6,10 +6,6 @@ config :logger, level: :info
 config :phoenix, :plug_init_mode, :runtime
 config :phoenix, :stacktrace_depth, 20
 
-config :phoenix_live_view,
-  debug_heex_annotations: true,
-  enable_expensive_runtime_checks: true
-
 # Phoenix runs on HTTP on port 7777
 config :viban, VibanWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 7777],
@@ -22,14 +18,6 @@ config :viban, VibanWeb.Endpoint,
     tailwind: {Tailwind, :install_and_run, [:viban, ~w(--watch)]}
   ]
 
-config :viban, VibanWeb.Endpoint,
-  live_reload: [
-    patterns: [
-      ~r"priv/static/(?!uploads/).*(js|css|png|jpeg|jpg|gif|svg)$",
-      ~r"priv/gettext/.*(po)$",
-      ~r"lib/viban_web/(controllers|live|components)/.*(ex|heex)$"
-    ]
-  ]
 
 # Enable test endpoints when E2E_TEST=true
 config :viban, :env, :dev

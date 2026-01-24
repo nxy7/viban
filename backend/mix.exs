@@ -7,6 +7,7 @@ defmodule Viban.MixProject do
       version: "0.1.0",
       elixir: "~> 1.17",
       elixirc_paths: elixirc_paths(Mix.env()),
+      compilers: [:hologram] ++ Mix.compilers(),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
@@ -83,10 +84,10 @@ defmodule Viban.MixProject do
       {:phoenix, "~> 1.7.18"},
       {:phoenix_ecto, "~> 4.5"},
       {:phoenix_html, "~> 4.1"},
-      {:phoenix_live_reload, "~> 1.2", only: :dev},
-      {:phoenix_live_view, "~> 1.0.0"},
-      {:phoenix_live_dashboard, "~> 0.8.3"},
       {:plug_cowboy, "~> 2.5"},
+
+      # Hologram (full-stack Elixir frontend)
+      {:hologram, "~> 0.6.6"},
       {:jason, "~> 1.2"},
       {:bandit, "~> 1.5"},
 

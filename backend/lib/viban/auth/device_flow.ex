@@ -96,7 +96,10 @@ defmodule Viban.Auth.DeviceFlow do
       {"Content-Type", "application/x-www-form-urlencoded"}
     ]
 
-    case Req.post(@github_token_url, body: body, headers: headers) do
+    result = Req.post(@github_token_url, body: body, headers: headers)
+    Logger.info("[DeviceFlow] Poll result for #{String.slice(device_code, 0, 8)}...: #{inspect(result)}")
+
+    case result do
       {:ok, %{status: 200, body: %{"access_token" => access_token}}} ->
         {:ok, access_token}
 

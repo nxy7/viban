@@ -104,6 +104,7 @@ defmodule Viban.Kanban.ColumnHook do
     update :update do
       accept [:position, :execute_once, :hook_settings, :transparent]
       primary? true
+      require_atomic? false
     end
   end
 

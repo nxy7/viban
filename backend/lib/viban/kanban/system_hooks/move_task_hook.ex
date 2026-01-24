@@ -42,8 +42,15 @@ defmodule Viban.Kanban.SystemHooks.MoveTaskHook do
     case resolve_target_column(target, column, board_id) do
       {:ok, target_column_id} when target_column_id != task.column_id ->
         case Task.move(task, %{column_id: target_column_id}) do
-          {:ok, _} ->
+          {:ok, updated_task} ->
             Logger.info("[MoveTaskHook] Successfully moved task #{task.id} to column #{target_column_id}")
+
+            # Manually broadcast task_changed since the notifier might not fire in hook context
+            Phoenix.PubSub.broadcast(
+              Viban.PubSub,
+              "kanban_lite:board:#{board_id}",
+              {:task_changed, %{task: updated_task, action: :move}}
+            )
 
             :ok
 

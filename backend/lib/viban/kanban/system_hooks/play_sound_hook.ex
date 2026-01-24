@@ -2,8 +2,9 @@ defmodule Viban.Kanban.SystemHooks.PlaySoundHook do
   @moduledoc """
   System hook that triggers browser sound playback when a task enters a column.
 
-  When executed, broadcasts a client_action event to the board channel. The frontend
-  receives this event and plays the configured sound.
+  When executed, broadcasts a hook_executed event with play_sound effect to all
+  clients via Phoenix PubSub. The frontend receives this event and plays the
+  configured sound.
 
   ## Settings
 
@@ -13,7 +14,7 @@ defmodule Viban.Kanban.SystemHooks.PlaySoundHook do
 
   @behaviour Viban.Kanban.SystemHooks.Behaviour
 
-  alias VibanWeb.BoardChannel
+  alias Viban.Kanban.HookExecution.HookNotifier
 
   require Logger
 
@@ -35,17 +36,16 @@ defmodule Viban.Kanban.SystemHooks.PlaySoundHook do
   def execute(_task, _column, opts) do
     board_id = Keyword.get(opts, :board_id)
     hook_settings = Keyword.get(opts, :hook_settings, %{})
+    execution = Keyword.get(opts, :execution)
 
     sound = get_sound_from_settings(hook_settings)
 
     Logger.info("[PlaySoundHook] Broadcasting play-sound to board #{board_id}, sound: #{sound}")
 
-    if board_id do
-      BoardChannel.broadcast_client_action(board_id, "play-sound", %{sound: sound})
-
-      Phoenix.PubSub.broadcast(Viban.PubSub, "board:#{board_id}", {:play_sound, sound})
+    if board_id && execution do
+      HookNotifier.broadcast_play_sound(board_id, execution, sound)
     else
-      Logger.warning("[PlaySoundHook] No board_id provided, cannot broadcast")
+      Logger.warning("[PlaySoundHook] Missing board_id or execution, cannot broadcast")
     end
 
     :ok
