@@ -22,11 +22,9 @@ defmodule VibanWeb.Endpoint do
     websocket: true,
     longpoll: false
 
-  # Hologram static assets (must be before regular static plug)
-  plug Plug.Static,
-    at: "/hologram",
-    from: {:viban, "priv/static/hologram"},
-    gzip: true
+  # LiveView socket
+  socket "/live", Phoenix.LiveView.Socket,
+    websocket: [connect_info: [session: @session_options]]
 
   plug Plug.Static,
     at: "/",
@@ -56,10 +54,6 @@ defmodule VibanWeb.Endpoint do
   plug Plug.Head
   plug Plug.Session, @session_options
   plug :cors
-
-  # Hologram router (before Phoenix router for Hologram pages)
-  plug Hologram.Router, otp_app: :viban
-
   plug VibanWeb.Router
 
   # Custom CORS plug that properly handles credentials

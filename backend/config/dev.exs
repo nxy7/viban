@@ -14,9 +14,13 @@ config :viban, VibanWeb.Endpoint,
   debug_errors: true,
   secret_key_base: "dev_secret_key_base_that_is_at_least_64_bytes_long_for_development_purposes_only",
   watchers: [
-    esbuild: {Esbuild, :install_and_run, [:viban, ~w(--sourcemap=inline --watch)]},
-    tailwind: {Tailwind, :install_and_run, [:viban, ~w(--watch)]}
+    npm: ["run", "dev", cd: Path.expand("../assets", __DIR__)]
   ]
+
+# LiveVue configuration (SSR disabled for single-binary deployment)
+config :live_vue,
+  vite_host: "http://localhost:5173",
+  ssr: false
 
 
 # Enable test endpoints when E2E_TEST=true

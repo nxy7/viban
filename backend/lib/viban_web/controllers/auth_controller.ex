@@ -16,13 +16,23 @@ defmodule VibanWeb.AuthController do
   import VibanWeb.ControllerHelpers, only: [json_ok: 2, get_user_from_session: 1]
 
   @doc """
-  Logs out the user by dropping the session.
+  Logs out the user by dropping the session (API endpoint).
   """
   @spec logout(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def logout(conn, _params) do
     conn
     |> configure_session(drop: true)
     |> json_ok(%{})
+  end
+
+  @doc """
+  Logs out the user and redirects to home (browser endpoint).
+  """
+  @spec logout_redirect(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  def logout_redirect(conn, _params) do
+    conn
+    |> configure_session(drop: true)
+    |> Phoenix.Controller.redirect(to: "/")
   end
 
   @doc """

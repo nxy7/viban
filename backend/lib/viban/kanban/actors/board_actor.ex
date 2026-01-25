@@ -30,6 +30,7 @@ defmodule Viban.Kanban.Actors.BoardActor do
 
   alias Viban.CallerTracking
   alias Viban.Kanban.Task
+  alias Viban.Kanban.Task.TaskServer
   alias Viban.Kanban.Task.TaskSupervisor
 
   require Logger
@@ -133,7 +134,9 @@ defmodule Viban.Kanban.Actors.BoardActor do
     # Load and cache column information
     state = refresh_column_cache(state)
 
-    Logger.info("BoardActor: Cached #{MapSet.size(state.column_ids)} columns for board #{board_id}")
+    Logger.info(
+      "BoardActor: Cached #{MapSet.size(state.column_ids)} columns for board #{board_id}"
+    )
 
     # Subscribe to PubSub for task changes
     Phoenix.PubSub.subscribe(Viban.PubSub, @task_updates_topic)
@@ -244,7 +247,9 @@ defmodule Viban.Kanban.Actors.BoardActor do
       {:ok, columns} ->
         column_ids = MapSet.new(columns, & &1.id)
 
-        Logger.debug("BoardActor #{state.board_id}: Loaded column IDs: #{inspect(MapSet.to_list(column_ids))}")
+        Logger.debug(
+          "BoardActor #{state.board_id}: Loaded column IDs: #{inspect(MapSet.to_list(column_ids))}"
+        )
 
         %{state | column_ids: column_ids}
 
@@ -265,7 +270,9 @@ defmodule Viban.Kanban.Actors.BoardActor do
   defp spawn_existing_task_actors(state) do
     case get_board_tasks(state) do
       {:ok, tasks} ->
-        Logger.info("BoardActor #{state.board_id}: Spawning actors for #{length(tasks)} existing tasks")
+        Logger.info(
+          "BoardActor #{state.board_id}: Spawning actors for #{length(tasks)} existing tasks"
+        )
 
         Enum.reduce(tasks, state, &spawn_task_actor(&2, &1))
 
@@ -349,7 +356,18 @@ defmodule Viban.Kanban.Actors.BoardActor do
   end
 
   @spec notify_task_actor(Task.t()) :: :ok
-  defp notify_task_actor(_task) do
+  defp notify_task_actor(task) do
+    case TaskServer.move(task.id, task.column_id, task.position || "a0") do
+      :ok ->
+        Logger.info("BoardActor: TaskServer.move completed for task #{task.id}")
+
+      {:error, :not_found} ->
+        Logger.debug("BoardActor: No TaskServer found for task #{task.id}")
+
+      {:error, reason} ->
+        Logger.error("BoardActor: TaskServer.move failed: #{inspect(reason)}")
+    end
+
     :ok
   end
 

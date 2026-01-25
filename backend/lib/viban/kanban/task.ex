@@ -51,12 +51,6 @@ defmodule Viban.Kanban.Task do
       default "a0"
     end
 
-    attribute :priority, :atom do
-      public? true
-      constraints one_of: [:low, :medium, :high]
-      default :medium
-    end
-
     attribute :description_images, {:array, :map} do
       public? true
       default []
@@ -241,7 +235,6 @@ defmodule Viban.Kanban.Task do
       accept [
         :title,
         :description,
-        :priority,
         :column_id,
         :custom_branch_name,
         :description_images,
@@ -259,7 +252,6 @@ defmodule Viban.Kanban.Task do
       accept [
         :title,
         :description,
-        :priority,
         :custom_branch_name,
         :description_images
       ]
@@ -404,7 +396,7 @@ defmodule Viban.Kanban.Task do
     # =========================================================================
 
     create :create_subtask do
-      accept [:title, :description, :priority]
+      accept [:title, :description]
 
       argument :parent_task_id, :uuid do
         allow_nil? false

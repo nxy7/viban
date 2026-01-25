@@ -30,7 +30,11 @@ defmodule Viban.Kanban.Task.Changes.CalculatePosition do
 
       {:error, reason} ->
         Logger.error("CalculatePosition failed: #{inspect(reason)}")
-        Ash.Changeset.add_error(changeset, field: :position, message: "Failed to calculate position")
+
+        Ash.Changeset.add_error(changeset,
+          field: :position,
+          message: "Failed to calculate position"
+        )
     end
   end
 
@@ -55,7 +59,7 @@ defmodule Viban.Kanban.Task.Changes.CalculatePosition do
         FractionalIndex.generate_key_between(before_pos, nil)
 
       {before_pos, after_pos} ->
-        FractionalIndex.generate_key_between(after_pos, before_pos)
+        FractionalIndex.generate_key_between(before_pos, after_pos)
     end
   end
 

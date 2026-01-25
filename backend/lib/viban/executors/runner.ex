@@ -305,7 +305,9 @@ defmodule Viban.Executors.Runner do
       last_error: current_error
     } = state
 
-    Logger.info("#{@log_prefix} [#{task_id}] Received data (#{byte_size(data)} bytes): #{String.slice(data, 0, 200)}")
+    Logger.info(
+      "#{@log_prefix} [#{task_id}] Received data (#{byte_size(data)} bytes): #{String.slice(data, 0, 200)}"
+    )
 
     last_error =
       data
@@ -323,7 +325,8 @@ defmodule Viban.Executors.Runner do
 
   @impl true
   def handle_info({port, {:exit_status, exit_code}}, %{port: port} = state) do
-    %{task_id: task_id, session_id: session_id, output_buffer: buffer, last_error: last_error} = state
+    %{task_id: task_id, session_id: session_id, output_buffer: buffer, last_error: last_error} =
+      state
 
     total_output_size = buffer |> Enum.map(fn {_, data} -> byte_size(data) end) |> Enum.sum()
 
@@ -386,7 +389,15 @@ defmodule Viban.Executors.Runner do
     {:via, Elixir.Registry, {@runner_registry, task_id}}
   end
 
-  defp init_with_executor(executor_module, task_id, executor_type, prompt, working_directory, images, resume_session_id) do
+  defp init_with_executor(
+         executor_module,
+         task_id,
+         executor_type,
+         prompt,
+         working_directory,
+         images,
+         resume_session_id
+       ) do
     if executor_module.available?() do
       image_paths = ImageHandler.save_to_directory(images, working_directory)
 
@@ -454,11 +465,25 @@ defmodule Viban.Executors.Runner do
   end
 
   defp build_environment(executor_module) do
-    if function_exported?(executor_module, :env, 0) do
-      Enum.map(executor_module.env(), fn {k, v} -> {String.to_charlist(k), String.to_charlist(v)} end)
-    else
-      []
-    end
+    base_env = [
+      {~c"HOME", String.to_charlist(System.get_env("HOME") || "")},
+      {~c"PATH", String.to_charlist(System.get_env("PATH") || "")},
+      {~c"USER", String.to_charlist(System.get_env("USER") || "")},
+      {~c"SHELL", String.to_charlist(System.get_env("SHELL") || "/bin/sh")},
+      {~c"TERM", ~c"xterm-256color"},
+      {~c"LANG", String.to_charlist(System.get_env("LANG") || "en_US.UTF-8")}
+    ]
+
+    executor_env =
+      if function_exported?(executor_module, :env, 0) do
+        Enum.map(executor_module.env(), fn {k, v} ->
+          {String.to_charlist(k), String.to_charlist(v)}
+        end)
+      else
+        []
+      end
+
+    base_env ++ executor_env
   end
 
   defp find_executable(executable) do
@@ -509,7 +534,11 @@ defmodule Viban.Executors.Runner do
     end
   end
 
-  defp handle_parsed_output({:ok, %{type: :assistant_message, content: content}}, task_id, session_id) do
+  defp handle_parsed_output(
+         {:ok, %{type: :assistant_message, content: content}},
+         task_id,
+         session_id
+       ) do
     save_message(task_id, session_id, :assistant, content)
     PRDetector.process_output(task_id, content)
   end
@@ -605,6 +634,16 @@ defmodule Viban.Executors.Runner do
     executor_done = status in [:completed, :failed]
 
     if executor_done do
+      agent_status = if status == :completed, do: :idle, else: :error
+
+      agent_message =
+        case {status, error_message} do
+          {:completed, _} -> nil
+          {:failed, msg} when is_binary(msg) and msg != "" -> msg
+          {:failed, _} -> "Failed with exit code #{exit_code}"
+        end
+
+      update_task_agent_status(task_id, agent_status, agent_message)
       handle_executor_completion(task_id, exit_code, error_message)
     end
   end

@@ -29,8 +29,28 @@ defmodule Viban.Kanban.Task.TaskNotifier do
         "kanban_lite:board:#{board_id}",
         {:task_changed, %{task: task, action: action}}
       )
+
+      broadcast_to_actors(task, action)
     end
   end
+
+  defp broadcast_to_actors(task, :create) do
+    Phoenix.PubSub.broadcast(Viban.PubSub, "task:updates", {:task_created, task})
+  end
+
+  defp broadcast_to_actors(task, :move) do
+    Phoenix.PubSub.broadcast(Viban.PubSub, "task:updates", {:task_updated, task})
+  end
+
+  defp broadcast_to_actors(task, :update) do
+    Phoenix.PubSub.broadcast(Viban.PubSub, "task:updates", {:task_updated, task})
+  end
+
+  defp broadcast_to_actors(task, :destroy) do
+    Phoenix.PubSub.broadcast(Viban.PubSub, "task:updates", {:task_deleted, task.id})
+  end
+
+  defp broadcast_to_actors(_task, _action), do: :ok
 
   defp get_column(nil), do: nil
 

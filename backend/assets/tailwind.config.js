@@ -7,7 +7,7 @@ const path = require("path")
 
 module.exports = {
   content: [
-    "./js/**/*.js",
+    "./js/**/*.{js,ts,vue}",
     "../lib/viban_web.ex",
     "../lib/viban_web/**/*.*ex"
   ],

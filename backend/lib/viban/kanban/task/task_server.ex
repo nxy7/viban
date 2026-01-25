@@ -171,7 +171,9 @@ defmodule Viban.Kanban.Task.TaskServer do
     state = maybe_create_worktree(state)
     self_heal(state)
     # On restart, only queue hooks that don't already have executions
-    queue_column_hooks(state.task_id, state.current_column_id, state.board_id, restart_recovery: true)
+    queue_column_hooks(state.task_id, state.current_column_id, state.board_id,
+      restart_recovery: true
+    )
 
     schedule_next_hook(state.task_id)
 

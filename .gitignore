@@ -37,6 +37,7 @@ frontend/.output/
 frontend/test-results/
 frontend/playwright-report/
 npm-wrapper/node_modules/
+backend/assets/node_modules/
 
 # Docs
 docs/node_modules/

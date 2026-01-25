@@ -36,7 +36,7 @@ defmodule VibanWeb.CoreComponents do
       }
       role="alert"
       class={[
-        "fixed top-4 right-4 z-50 w-80 rounded-lg border shadow-lg backdrop-blur-sm overflow-hidden cursor-pointer",
+        "fixed top-4 right-4 z-[100] w-80 rounded-lg border shadow-lg backdrop-blur-sm overflow-hidden cursor-pointer",
         flash_bg_classes(@kind)
       ]}
     >
@@ -404,5 +404,38 @@ defmodule VibanWeb.CoreComponents do
       time: 200,
       transition: {"transition-all ease-in duration-200", "opacity-100", "opacity-0 translate-y-1"}
     )
+  end
+
+  # ============================================================================
+  # Vue Component Integration
+  # ============================================================================
+
+  @doc """
+  Renders a Vue component with LiveView integration.
+
+  The component is mounted using the VueHook and receives props from LiveView assigns.
+  All events are forwarded to LiveView via pushEvent.
+
+  ## Examples
+
+      <.vue id="kanban" component="KanbanBoard" props={%{columns: @columns, tasks: @tasks}} />
+  """
+  attr :id, :string, required: true
+  attr :component, :string, required: true
+  attr :props, :map, default: %{}
+  attr :class, :string, default: nil
+
+  def vue(assigns) do
+    ~H"""
+    <div
+      id={@id}
+      phx-hook="VueHook"
+      phx-update="ignore"
+      data-component={@component}
+      data-props={Jason.encode!(@props)}
+      class={@class}
+    >
+    </div>
+    """
   end
 end

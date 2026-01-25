@@ -161,4 +161,9 @@
   } else {
     this.topbar = topbar;
   }
-}.call(this, window, document));
+
+  // ESM export
+  window.__topbar = topbar;
+}.call(window, window, document));
+
+export default window.__topbar;

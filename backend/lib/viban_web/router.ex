@@ -4,6 +4,7 @@ defmodule VibanWeb.Router do
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
+    plug :fetch_flash
     plug :put_root_layout, html: {VibanWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
@@ -91,4 +92,15 @@ defmodule VibanWeb.Router do
     end
   end
 
+  # LiveView routes
+  scope "/", VibanWeb do
+    pipe_through :browser
+
+    get "/logout", AuthController, :logout_redirect
+    get "/auth/callback", DeviceAuthController, :callback
+
+    live "/", HomeLive
+    live "/boards/:id", BoardLive
+    live "/boards/:board_id/tasks/:task_id", BoardLive
+  end
 end

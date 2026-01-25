@@ -118,6 +118,7 @@ defmodule VibanWeb.DeviceAuthController do
         conn
         |> put_session(:user_id, user_id)
         |> configure_session(renew: true)
+        |> put_flash(:info, "Signed in successfully!")
         |> redirect(to: "/")
 
       {:error, reason} ->

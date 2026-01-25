@@ -8,7 +8,8 @@ defmodule Viban.Kanban.Board do
 
   use Ash.Resource,
     domain: Viban.Kanban,
-    data_layer: AshSqlite.DataLayer
+    data_layer: AshSqlite.DataLayer,
+    notifiers: [Viban.Kanban.Board.BoardNotifier]
 
   alias Viban.Kanban.Board.Actions
   alias Viban.Kanban.Board.Changes
