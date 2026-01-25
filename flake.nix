@@ -24,12 +24,14 @@
           elixir = beamPackages.elixir_1_18;
 
           # Map Nix system to Burrito target
-          burritoTarget = {
-            "x86_64-linux" = "linux_intel";
-            "aarch64-linux" = "linux_arm";
-            "x86_64-darwin" = "macos_intel";
-            "aarch64-darwin" = "macos_arm";
-          }.${system} or (throw "Unsupported system: ${system}");
+          burritoTarget =
+            {
+              "x86_64-linux" = "linux_intel";
+              "aarch64-linux" = "linux_arm";
+              "x86_64-darwin" = "macos_intel";
+              "aarch64-darwin" = "macos_arm";
+            }
+            .${system} or (throw "Unsupported system: ${system}");
         in
         {
           packages.default = pkgs.stdenv.mkDerivation {
@@ -70,7 +72,7 @@
               runHook preInstall
 
               mkdir -p $out/bin
-              cp backend/burrito_out/viban_${burritoTarget} $out/bin/viban
+              cp burrito_out/viban_${burritoTarget} $out/bin/viban
 
               runHook postInstall
             '';

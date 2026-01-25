@@ -17,14 +17,12 @@ npx @nxy7/viban
 
 This will:
 1. Download the appropriate binary for your platform
-2. Start a PostgreSQL container automatically
-3. Open your browser to the app
+2. Open your browser to the app
 
 ### Requirements for Quick Install
 
 | Tool | Required | Installation |
 |------|----------|--------------|
-| Docker | **Yes** | [Get Docker](https://docs.docker.com/get-docker/) |
 | Node.js | **Yes** | [Get Node.js](https://nodejs.org/) |
 
 ## Direct Binary Download
@@ -57,7 +55,6 @@ chmod +x viban
 
 | Tool | Required | Purpose |
 |------|----------|---------|
-| Docker | **Yes** | PostgreSQL database (auto-managed) |
 | Git | **Yes** | Version control, worktree management |
 
 ## HTTPS Certificate Note
@@ -108,15 +105,15 @@ This section is for contributors who want to run Viban from source.
 
 ### Tech Stack
 
-- **Backend**: Elixir + Ash Framework + AshSync
-- **Database**: PostgreSQL
-- **Frontend**: SolidJS + TanStack DB + Bun
-- **Real-time**: Electric SQL (via AshSync codegen)
+- **Backend**: Elixir + Ash Framework + Phoenix LiveView
+- **Database**: SQLite (via AshSqlite)
+- **Frontend**: LiveVue (Vue 3 components in LiveView)
+- **Real-time**: Phoenix PubSub
 
 ### Prerequisites
 
 - [Nix](https://nixos.org/download.html) with flakes enabled (recommended)
-- Or manually: Docker, Elixir 1.17+, Bun
+- Or manually: Elixir 1.18+, Erlang 27+
 
 ### Running from Source
 
@@ -132,39 +129,22 @@ nix develop
 just dev
 ```
 
-This runs all services in parallel:
-- Docker Compose (PostgreSQL)
-- Backend (Elixir/Phoenix with HTTPS on port 7777)
-- Frontend (SolidJS dev server on port 7778, proxied through Phoenix)
-
-The app will be available at:
-- **Application**: https://localhost:7777
+The app will be available at http://localhost:7777
 
 ### Manual Setup (without Nix)
 
 ```bash
-# Start the database
-docker compose up -d db
-
-# In one terminal - backend
-cd backend && mix deps.get && mix ash.setup && mix phx.server
-
-# In another terminal - frontend
-cd frontend && bun i && bun dev
+# Install dependencies and start the server
+mix deps.get && mix ash.setup && mix phx.server
 ```
 
 ### Development Commands
 
 ```bash
 just              # Show all available commands
-just dev          # Start all services (db, backend, frontend)
+just dev          # Start development server
 
-just backend      # Start only backend
-just frontend     # Start only frontend
-just db           # Start only database
-
-just test-backend # Run backend tests
-just test-e2e     # Run Playwright e2e tests
+just test         # Run tests
 
 just migrate name # Generate a new Ash migration
 just db-reset     # Reset database

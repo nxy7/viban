@@ -1,43 +1,40 @@
+# Nix
 .direnv
 result
 
 # Elixir/Phoenix
-backend/_build/
-backend/deps/
-backend/cover/
-backend/.fetch
-backend/*.ez
-backend/tmp/
-backend/viban-*.tar
-backend/priv/static/*
-!backend/priv/static/.gitkeep
-backend/burrito_out/
+/_build/
+/deps/
+/cover/
+/.fetch
+*.ez
+/tmp/
+viban-*.tar
+/priv/static/assets/
+/priv/static/_build/
+/priv/static/index.html
+/priv/static/sounds/
+/priv/static/favicon.ico
+/priv/static/cache_manifest.json
+/priv/cert/
+/burrito_out/
+/doc/
 
 # SQLite databases (development/test)
-backend/*.db
-backend/*.db-shm
-backend/*.db-wal
-backend/priv/*.db
-backend/priv/*.db-shm
-backend/priv/*.db-wal
+*.db
+*.db-shm
+*.db-wal
+/priv/*.db
+/priv/*.db-shm
+/priv/*.db-wal
 
-# Crash dumps (can appear at root or in backend)
+# Crash dumps
 erl_crash.dump
-backend/erl_crash.dump
-
-# Ash resource snapshots (auto-generated, optional to track)
-# Uncomment the next line to stop tracking snapshots:
-# backend/priv/resource_snapshots/
 
 # Node.js
-frontend/node_modules/
-frontend/dist/
-frontend/.vinxi/
-frontend/.output/
-frontend/test-results/
-frontend/playwright-report/
+/assets/node_modules/
 npm-wrapper/node_modules/
-backend/assets/node_modules/
+npm-debug.log
 
 # Docs
 docs/node_modules/
@@ -49,10 +46,19 @@ docs/.output/
 .env.local
 *.log
 
+# Secret config files
+config/dev.secret.exs
+config/prod.secret.exs
+
+# Runtime data
+/persistent/
+/test-results/
+
 # IDE
 .idea/
 .vscode/
 *.swp
 *.swo
+
+# Playwright MCP
 .playwright-mcp
-persistent

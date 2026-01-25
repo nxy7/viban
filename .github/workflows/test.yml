@@ -7,8 +7,8 @@ on:
     branches: [master, main]
 
 jobs:
-  backend-test:
-    name: Backend Tests
+  test:
+    name: Tests
     runs-on: ubuntu-latest
 
     steps:
@@ -22,27 +22,27 @@ jobs:
         uses: DeterminateSystems/magic-nix-cache-action@main
 
       - name: Install dependencies
-        run: nix develop --command bash -c "cd backend && mix deps.get"
+        run: nix develop --command mix deps.get
 
       - name: Check formatting
-        run: nix develop --command bash -c "cd backend && mix format --check-formatted"
+        run: nix develop --command mix format --check-formatted
 
       - name: Compile (warnings as errors)
-        run: nix develop --command bash -c "cd backend && mix compile --warnings-as-errors"
+        run: nix develop --command mix compile --warnings-as-errors
 
       - name: Setup database
-        run: nix develop --command bash -c "cd backend && mix ash.setup"
+        run: nix develop --command mix ash.setup
         env:
           MIX_ENV: test
 
       - name: Run tests
-        run: nix develop --command bash -c "cd backend && mix test"
+        run: nix develop --command mix test
         env:
           MIX_ENV: test
 
   build:
     name: Build Binary
-    needs: [backend-test]
+    needs: [test]
     runs-on: ubuntu-latest
 
     steps:

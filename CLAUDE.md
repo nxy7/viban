@@ -4,7 +4,13 @@ This document defines the coding standards and practices for this project when w
 
 ## Project Structure
 
-- `backend/` - Elixir/Ash backend application with Phoenix LiveView frontend
+This is an Elixir/Ash application with Phoenix LiveView frontend.
+
+- `lib/` - Elixir source code
+- `assets/` - Frontend assets (Vue components, CSS, JS)
+- `config/` - Configuration files
+- `priv/` - Static assets and migrations
+- `test/` - Test files
 - `.claude/agents/` - Custom Claude agents for specialized tasks
 
 ## Frontend Stack
@@ -25,11 +31,11 @@ This document defines the coding standards and practices for this project when w
 ## Starting Development
 
 ```bash
-# Start backend in development mode (SQLite, no external dependencies)
+# Start in development mode (SQLite, no external dependencies)
 just dev
 
 # Or manually:
-cd backend && mix deps.get && mix ash.setup && mix phx.server
+mix deps.get && mix ash.setup && mix phx.server
 ```
 
 ## Comment Policy
@@ -186,7 +192,7 @@ This ensures:
 - Hook metadata is always available (which column triggered it, which task, etc.)
 - Easy to add new hook types without changing client code structure
 
-### Ash Framework (Backend)
+### Ash Framework
 
 - Resources in `lib/viban/kanban/` (SQLite-backed)
 - Domain in `lib/viban/kanban.ex`

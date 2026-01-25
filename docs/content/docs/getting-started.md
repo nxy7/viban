@@ -11,7 +11,6 @@ Get up and running with Viban in minutes. This guide will walk you through setti
 
 | Tool | Required | Installation |
 |------|----------|--------------|
-| Docker | **Yes** | [Get Docker](https://docs.docker.com/get-docker/) |
 | Node.js | For npx install | [Get Node.js](https://nodejs.org/) |
 
 ## Install & Run
@@ -22,8 +21,7 @@ npx @nxy7/viban
 
 That's it! Viban will:
 1. Download the appropriate binary for your platform
-2. Start a PostgreSQL container automatically
-3. Open your browser to the app
+2. Open your browser to the app
 
 > **Note**: Viban uses HTTPS with a self-signed certificate for HTTP/2 support. Your browser may show a security warning on first visit - this is expected. Click "Advanced" → "Proceed" to continue.
 

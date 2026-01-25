@@ -46,10 +46,10 @@ Viban supports multiple AI executors:
 
 ## Architecture
 
-Viban consists of three main components:
+Viban is a single Elixir application:
 
-1. **Frontend**: SolidJS application with real-time sync via Electric SQL
-2. **Backend**: Elixir/Phoenix server with Ash Framework for data management
+1. **Server**: Elixir/Phoenix with Ash Framework for data management and LiveView for the UI
+2. **Database**: SQLite for simple, file-based persistence
 3. **AI Workers**: Background processes that execute tasks using AI agents
 
 ## Getting Started

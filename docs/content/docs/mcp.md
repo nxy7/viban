@@ -22,7 +22,7 @@ This enables scenarios where an AI can autonomously manage its own workload thro
 The MCP server is available at:
 
 ```
-http://localhost:7771/mcp
+http://localhost:7777/mcp
 ```
 
 (In production, use your configured domain and port)
@@ -35,7 +35,7 @@ Add to your Claude Code MCP configuration (`~/.claude/claude_desktop_config.json
 {
   "mcpServers": {
     "viban": {
-      "url": "http://localhost:7771/mcp",
+      "url": "http://localhost:7777/mcp",
       "transport": "streamable-http"
     }
   }
@@ -147,7 +147,7 @@ end
 Test the MCP endpoint:
 
 ```bash
-curl http://localhost:7771/mcp
+curl http://localhost:7777/mcp
 ```
 
 ### Tool Not Found
