@@ -33,8 +33,9 @@ defmodule Viban.Kanban.Board.Changes.CreateDefaultColumns do
   @board_config [
     %{
       name: "TODO",
-      position: 0,
+      position: "A",
       color: "#6366f1",
+      system: true,
       hooks: [
         %{
           hook_id: "system:auto-start",
@@ -46,8 +47,9 @@ defmodule Viban.Kanban.Board.Changes.CreateDefaultColumns do
     },
     %{
       name: "In Progress",
-      position: 1,
+      position: "E",
       color: "#f59e0b",
+      system: true,
       hooks: [
         %{
           hook_id: "system:execute-ai",
@@ -65,8 +67,9 @@ defmodule Viban.Kanban.Board.Changes.CreateDefaultColumns do
     },
     %{
       name: "To Review",
-      position: 2,
+      position: "I",
       color: "#8b5cf6",
+      system: true,
       hooks: [
         %{
           hook_id: "system:play-sound",
@@ -78,14 +81,16 @@ defmodule Viban.Kanban.Board.Changes.CreateDefaultColumns do
     },
     %{
       name: "Done",
-      position: 3,
+      position: "M",
       color: "#10b981",
+      system: true,
       hooks: []
     },
     %{
       name: "Cancelled",
-      position: 4,
+      position: "Q",
       color: "#ef4444",
+      system: true,
       hooks: []
     }
   ]
@@ -99,7 +104,7 @@ defmodule Viban.Kanban.Board.Changes.CreateDefaultColumns do
     column_inputs =
       Enum.map(@board_config, fn config ->
         config
-        |> Map.take([:name, :position, :color])
+        |> Map.take([:name, :position, :color, :system])
         |> Map.put(:board_id, board.id)
       end)
 

@@ -24,17 +24,21 @@ defmodule Viban.Kanban.Column do
       constraints min_length: 1, max_length: 100
     end
 
-    attribute :position, :integer do
+    attribute :position, :string do
       allow_nil? false
       public? true
-      default 0
-      constraints min: 0
+      default "a0"
     end
 
     attribute :color, :string do
       public? true
       default "#6366f1"
       constraints match: ~r/^#[0-9A-Fa-f]{6}$/
+    end
+
+    attribute :system, :boolean do
+      public? true
+      default false
     end
 
     attribute :settings, :map do
@@ -47,7 +51,6 @@ defmodule Viban.Kanban.Column do
 
   identities do
     identity :unique_name_per_board, [:board_id, :name]
-    identity :unique_position_per_board, [:board_id, :position]
   end
 
   relationships do
@@ -71,13 +74,17 @@ defmodule Viban.Kanban.Column do
     defaults [:read]
 
     create :create do
-      accept [:name, :position, :color, :settings, :board_id]
+      accept [:name, :position, :color, :settings, :board_id, :system]
       primary? true
     end
 
     update :update do
       accept [:name, :position, :color, :settings]
       primary? true
+    end
+
+    update :reorder do
+      accept [:position]
     end
 
     update :update_settings do
@@ -117,6 +124,7 @@ defmodule Viban.Kanban.Column do
     define :create
     define :read
     define :update
+    define :reorder
     define :destroy
     define :update_settings, args: [:settings]
     define :for_board, args: [:board_id]

@@ -77,6 +77,8 @@ defmodule VibanWeb.BoardLive do
           |> assign(:is_creating_template, false)
           |> assign(:editing_template_id, nil)
           |> assign(:template_form, %{name: "", description_template: ""})
+          |> assign(:is_creating_column, false)
+          |> assign(:column_form, %{name: "", color: "#6366f1"})
           |> assign(:show_create_pr_modal, false)
           |> assign(:pr_form, %{title: "", body: ""})
           |> assign(:show_keyboard_shortcuts, false)
@@ -326,6 +328,8 @@ defmodule VibanWeb.BoardLive do
           is_creating_template={@is_creating_template}
           editing_template_id={@editing_template_id}
           template_form={@template_form}
+          is_creating_column={@is_creating_column}
+          column_form={@column_form}
         />
       <% end %>
 
@@ -755,6 +759,8 @@ defmodule VibanWeb.BoardLive do
   attr :is_creating_template, :boolean, required: true
   attr :editing_template_id, :string, default: nil
   attr :template_form, :map, required: true
+  attr :is_creating_column, :boolean, default: false
+  attr :column_form, :map, default: %{name: "", color: "#6366f1"}
 
   defp settings_panel(assigns) do
     ~H"""
@@ -805,7 +811,7 @@ defmodule VibanWeb.BoardLive do
             phx-value-tab="columns"
             class={"px-3 py-2 text-sm font-medium border-b-2 transition-colors #{if @active_tab == "columns", do: "border-brand-500 text-brand-400", else: "border-transparent text-gray-400 hover:text-white"}"}
           >
-            Column Hooks
+            Columns
           </button>
         </div>
 
@@ -829,7 +835,11 @@ defmodule VibanWeb.BoardLive do
                   hook_form={@hook_form}
                 />
               <% else %>
-                <.settings_columns_tab columns={@columns} />
+                <.settings_columns_tab
+                columns={@columns}
+                is_creating_column={@is_creating_column}
+                column_form={@column_form}
+              />
               <% end %>
             <% end %>
           <% end %>
@@ -1344,26 +1354,150 @@ defmodule VibanWeb.BoardLive do
   end
 
   attr :columns, :list, required: true
+  attr :is_creating_column, :boolean, default: false
+  attr :column_form, :map, default: %{name: "", color: "#6366f1"}
 
   defp settings_columns_tab(assigns) do
     ~H"""
-    <div class="space-y-4">
-      <p class="text-sm text-gray-400">
-        Configure which hooks run when tasks enter each column.
-      </p>
-
-      <%= for column <- @columns do %>
-        <div class="p-4 bg-gray-800/50 border border-gray-700 rounded-lg">
-          <div class="flex items-center gap-2 mb-3">
-            <div class="w-3 h-3 rounded-full" style={"background-color: #{column.color}"}></div>
-            <h4 class="font-medium text-white">{column.name}</h4>
-          </div>
-          <p class="text-xs text-gray-500">Hook configuration coming soon...</p>
+    <div class="space-y-6">
+      <div class="flex justify-between items-center">
+        <div>
+          <h3 class="text-lg font-semibold text-white">Columns</h3>
+          <p class="text-sm text-gray-400">
+            Manage board columns. System columns cannot be reordered.
+          </p>
         </div>
+        <%= if !@is_creating_column do %>
+          <button
+            phx-click="start_create_column"
+            class="px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            Add Column
+          </button>
+        <% end %>
+      </div>
+
+      <%= if @is_creating_column do %>
+        <form phx-change="update_column_form" phx-submit="save_column" class="p-4 bg-gray-800 border border-gray-700 rounded-lg space-y-4">
+          <h4 class="text-sm font-medium text-gray-300">Create Column</h4>
+
+          <div>
+            <label class="block text-sm text-gray-400 mb-1">Name</label>
+            <input
+              type="text"
+              name="name"
+              value={@column_form.name}
+              class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500"
+              placeholder="e.g., QA, Testing, Blocked"
+              phx-debounce="100"
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm text-gray-400 mb-1">Color</label>
+            <div class="flex items-center gap-2">
+              <input
+                type="color"
+                name="color"
+                value={@column_form.color}
+                class="w-10 h-10 rounded border border-gray-700 cursor-pointer"
+              />
+              <span class="text-sm text-gray-400 font-mono">{@column_form.color}</span>
+            </div>
+          </div>
+
+          <div class="flex gap-2">
+            <button
+              type="button"
+              phx-click="cancel_column_edit"
+              class="flex-1 px-4 py-2 text-gray-300 hover:text-white bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="flex-1 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-lg transition-colors"
+            >
+              Create
+            </button>
+          </div>
+        </form>
       <% end %>
 
+      <div class="space-y-2">
+        <h4 class="text-sm font-medium text-gray-400 uppercase tracking-wider">Board Columns</h4>
+        <p class="text-xs text-gray-500 mb-3">
+          Drag custom columns to reorder. System columns (locked) stay in fixed positions.
+        </p>
+
+        <div id="columns-list" class="space-y-2" phx-hook="ColumnReorder">
+          <%= for column <- @columns do %>
+            <div
+              id={"column-item-#{column.id}"}
+              data-column-id={column.id}
+              data-system={to_string(column.system)}
+              data-position={column.position}
+              class={"p-3 bg-gray-800/50 border border-gray-700 rounded-lg flex items-center justify-between #{if !column.system, do: "cursor-move", else: ""}"}
+            >
+              <div class="flex items-center gap-3">
+                <%= if !column.system do %>
+                  <svg
+                    class="w-4 h-4 text-gray-500 drag-handle"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M4 8h16M4 16h16"
+                    />
+                  </svg>
+                <% else %>
+                  <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                    />
+                  </svg>
+                <% end %>
+
+                <div class="w-3 h-3 rounded-full" style={"background-color: #{column.color}"}></div>
+                <span class="text-white font-medium">{column.name}</span>
+
+                <%= if column.system do %>
+                  <span class="px-1.5 py-0.5 text-xs bg-gray-700 text-gray-400 rounded">System</span>
+                <% end %>
+              </div>
+
+              <%= if !column.system do %>
+                <button
+                  phx-click="delete_column"
+                  phx-value-column-id={column.id}
+                  data-confirm="Are you sure you want to delete this column? All tasks in this column will be moved to the first column."
+                  class="p-1.5 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded transition-colors"
+                  title="Delete column"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                </button>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+
       <%= if @columns == [] do %>
-        <div class="text-gray-500 text-sm text-center py-4">
+        <div class="text-gray-500 text-sm text-center py-8">
           No columns found for this board.
         </div>
       <% end %>
@@ -2690,6 +2824,118 @@ defmodule VibanWeb.BoardLive do
   end
 
   @impl true
+  def handle_event("start_create_column", _params, socket) do
+    socket =
+      socket
+      |> assign(:is_creating_column, true)
+      |> assign(:column_form, %{name: "", color: "#6366f1"})
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("cancel_column_edit", _params, socket) do
+    socket =
+      socket
+      |> assign(:is_creating_column, false)
+      |> assign(:column_form, %{name: "", color: "#6366f1"})
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("update_column_form", params, socket) do
+    column_form =
+      socket.assigns.column_form
+      |> Map.put(:name, params["name"] || socket.assigns.column_form.name)
+      |> Map.put(:color, params["color"] || socket.assigns.column_form.color)
+
+    {:noreply, assign(socket, :column_form, column_form)}
+  end
+
+  @impl true
+  def handle_event("save_column", _params, socket) do
+    form = socket.assigns.column_form
+    board_id = socket.assigns.board.id
+
+    position = calculate_new_column_position(socket.assigns.columns)
+
+    case Column.create(%{
+           name: form.name,
+           color: form.color,
+           position: position,
+           board_id: board_id,
+           system: false
+         }) do
+      {:ok, _column} ->
+        columns = reload_columns(board_id)
+
+        socket =
+          socket
+          |> assign(:columns, columns)
+          |> assign(:is_creating_column, false)
+          |> assign(:column_form, %{name: "", color: "#6366f1"})
+
+        {:noreply, socket}
+
+      {:error, error} ->
+        Logger.error("[BoardLive] Failed to create column: #{inspect(error)}")
+        {:noreply, put_flash(socket, :error, "Failed to create column")}
+    end
+  end
+
+  @impl true
+  def handle_event("delete_column", %{"column-id" => column_id}, socket) do
+    board_id = socket.assigns.board.id
+    first_column = List.first(socket.assigns.columns)
+
+    case Column.get(column_id) do
+      {:ok, column} ->
+        if column.system do
+          {:noreply, put_flash(socket, :error, "Cannot delete system columns")}
+        else
+          move_tasks_to_column(column_id, first_column && first_column.id)
+
+          case Column.destroy(column) do
+            :ok ->
+              columns = reload_columns(board_id)
+              {:noreply, assign(socket, :columns, columns)}
+
+            {:error, error} ->
+              Logger.error("[BoardLive] Failed to delete column: #{inspect(error)}")
+              {:noreply, put_flash(socket, :error, "Failed to delete column")}
+          end
+        end
+
+      {:error, _} ->
+        {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_event("reorder_column", %{"column_id" => column_id, "new_position" => new_position}, socket) do
+    case Column.get(column_id) do
+      {:ok, column} ->
+        if column.system do
+          {:noreply, put_flash(socket, :error, "Cannot reorder system columns")}
+        else
+          case Column.reorder(column, %{position: new_position}) do
+            {:ok, _updated} ->
+              columns = reload_columns(socket.assigns.board.id)
+              {:noreply, assign(socket, :columns, columns)}
+
+            {:error, error} ->
+              Logger.error("[BoardLive] Failed to reorder column: #{inspect(error)}")
+              {:noreply, put_flash(socket, :error, "Failed to reorder column")}
+          end
+        end
+
+      {:error, _} ->
+        {:noreply, socket}
+    end
+  end
+
+  @impl true
   def handle_event("show_create_pr_modal", %{"task-id" => _task_id}, socket) do
     task = socket.assigns.selected_task
     pr_title = (task && task.title) || ""
@@ -2978,6 +3224,61 @@ defmodule VibanWeb.BoardLive do
     load_columns_with_tasks(board_id)
   end
 
+  defp calculate_new_column_position(columns) do
+    if Enum.empty?(columns) do
+      "a0"
+    else
+      last_column = List.last(columns)
+      generate_position_after(last_column.position)
+    end
+  end
+
+  defp generate_position_after(position) do
+    last_char = String.last(position)
+
+    cond do
+      last_char >= "0" and last_char <= "8" ->
+        String.slice(position, 0..-2//1) <> <<String.to_charlist(last_char) |> hd |> Kernel.+(1)>>
+
+      last_char == "9" ->
+        position <> "0"
+
+      last_char >= "a" and last_char <= "y" ->
+        String.slice(position, 0..-2//1) <> <<String.to_charlist(last_char) |> hd |> Kernel.+(1)>>
+
+      last_char == "z" ->
+        position <> "a"
+
+      true ->
+        position <> "0"
+    end
+  end
+
+  defp move_tasks_to_column(from_column_id, nil) do
+    Logger.warning("[BoardLive] No target column to move tasks to from #{from_column_id}")
+    :ok
+  end
+
+  defp move_tasks_to_column(from_column_id, to_column_id) when from_column_id == to_column_id do
+    :ok
+  end
+
+  defp move_tasks_to_column(from_column_id, to_column_id) do
+    case Column.get(from_column_id) do
+      {:ok, column} ->
+        tasks = column.tasks || []
+
+        Enum.each(tasks, fn task ->
+          Task.move(task, %{column_id: to_column_id})
+        end)
+
+        :ok
+
+      {:error, _} ->
+        :ok
+    end
+  end
+
   defp load_selected_task(nil), do: nil
 
   defp load_selected_task(task_id) do
@@ -3149,7 +3450,8 @@ defmodule VibanWeb.BoardLive do
       id: column.id,
       name: column.name,
       position: column.position,
-      color: column.color
+      color: column.color,
+      system: column.system || false
     }
   end
 

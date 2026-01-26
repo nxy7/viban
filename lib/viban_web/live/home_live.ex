@@ -35,7 +35,6 @@ defmodule VibanWeb.HomeLive do
       |> assign(:repos_error, nil)
       |> assign(:selected_repo, nil)
       |> assign(:repo_search, "")
-      |> assign(:local_path, "")
 
     {:ok, socket}
   end
@@ -129,7 +128,6 @@ defmodule VibanWeb.HomeLive do
           repos_error={@repos_error}
           selected_repo={@selected_repo}
           repo_search={@repo_search}
-          local_path={@local_path}
         />
       <% end %>
     </div>
@@ -282,7 +280,6 @@ defmodule VibanWeb.HomeLive do
   attr :repos_error, :string, default: nil
   attr :selected_repo, :map, default: nil
   attr :repo_search, :string, required: true
-  attr :local_path, :string, required: true
 
   defp create_board_modal(assigns) do
     ~H"""
@@ -333,26 +330,6 @@ defmodule VibanWeb.HomeLive do
                 class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent resize-none"
                 placeholder="Enter board description..."
               ></textarea>
-            </div>
-
-            <div>
-              <label for="local_path" class="block text-sm font-medium text-gray-300 mb-1">
-                Local Repository Path *
-              </label>
-              <input
-                type="text"
-                id="local_path"
-                name="local_path"
-                value={@local_path}
-                phx-keyup="update_local_path"
-                phx-debounce="100"
-                required
-                class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent font-mono text-sm"
-                placeholder="~/Projects/my-repo"
-              />
-              <p class="text-xs text-gray-500 mt-1">
-                Path to an existing git repository on your filesystem
-              </p>
             </div>
 
             <div>
@@ -555,7 +532,6 @@ defmodule VibanWeb.HomeLive do
       |> assign(:repos, [])
       |> assign(:selected_repo, nil)
       |> assign(:repo_search, "")
-      |> assign(:local_path, "")
 
     {:noreply, socket}
   end
@@ -567,7 +543,6 @@ defmodule VibanWeb.HomeLive do
       |> assign(:show_create_modal, false)
       |> assign(:selected_repo, nil)
       |> assign(:repo_search, "")
-      |> assign(:local_path, "")
 
     {:noreply, socket}
   end
@@ -575,11 +550,6 @@ defmodule VibanWeb.HomeLive do
   @impl true
   def handle_event("search_repos", %{"value" => value}, socket) do
     {:noreply, assign(socket, :repo_search, value)}
-  end
-
-  @impl true
-  def handle_event("update_local_path", %{"value" => value}, socket) do
-    {:noreply, assign(socket, :local_path, value)}
   end
 
   @impl true
@@ -601,53 +571,39 @@ defmodule VibanWeb.HomeLive do
   end
 
   @impl true
-  def handle_event("create_board", %{"name" => name, "description" => description, "local_path" => local_path}, socket) do
+  def handle_event("create_board", %{"name" => name, "description" => description}, socket) do
     user = socket.assigns.user
     selected_repo = socket.assigns.selected_repo
-    expanded_path = Path.expand(local_path)
 
-    cond do
-      selected_repo == nil ->
-        {:noreply, put_flash(socket, :error, "Please select a repository")}
+    if selected_repo == nil do
+      {:noreply, put_flash(socket, :error, "Please select a repository")}
+    else
+      repo = %{
+        id: selected_repo.id,
+        full_name: selected_repo.full_name,
+        clone_url: selected_repo.clone_url,
+        html_url: selected_repo.html_url,
+        default_branch: selected_repo.default_branch
+      }
 
-      local_path == "" ->
-        {:noreply, put_flash(socket, :error, "Please enter the local repository path")}
+      case Board.create_with_repository(name, description, user.id, repo) do
+        {:ok, board} ->
+          boards = [serialize_board(board) | socket.assigns.boards]
 
-      not File.dir?(expanded_path) ->
-        {:noreply, put_flash(socket, :error, "Local path does not exist: #{expanded_path}")}
+          socket =
+            socket
+            |> assign(:boards, boards)
+            |> assign(:show_create_modal, false)
+            |> assign(:selected_repo, nil)
+            |> assign(:repo_search, "")
+            |> put_flash(:info, "Board created successfully!")
 
-      not File.dir?(Path.join(expanded_path, ".git")) ->
-        {:noreply, put_flash(socket, :error, "Not a git repository: #{expanded_path}")}
+          {:noreply, socket}
 
-      true ->
-        repo = %{
-          id: selected_repo.id,
-          full_name: selected_repo.full_name,
-          clone_url: selected_repo.clone_url,
-          html_url: selected_repo.html_url,
-          default_branch: selected_repo.default_branch,
-          local_path: expanded_path
-        }
-
-        case Board.create_with_repository(name, description, user.id, repo) do
-          {:ok, board} ->
-            boards = [serialize_board(board) | socket.assigns.boards]
-
-            socket =
-              socket
-              |> assign(:boards, boards)
-              |> assign(:show_create_modal, false)
-              |> assign(:selected_repo, nil)
-              |> assign(:repo_search, "")
-              |> assign(:local_path, "")
-              |> put_flash(:info, "Board created successfully!")
-
-            {:noreply, socket}
-
-          {:error, error} ->
-            Logger.error("Failed to create board: #{inspect(error)}")
-            {:noreply, put_flash(socket, :error, "Failed to create board")}
-        end
+        {:error, error} ->
+          Logger.error("Failed to create board: #{inspect(error)}")
+          {:noreply, put_flash(socket, :error, "Failed to create board")}
+      end
     end
   end
 

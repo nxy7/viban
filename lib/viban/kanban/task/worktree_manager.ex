@@ -8,12 +8,18 @@ defmodule Viban.Kanban.Task.WorktreeManager do
 
   ## Features
 
-  - Create worktrees directly from user's existing local repository
+  - Auto-clones repositories from GitHub when needed (no local repo required)
   - Uses remote tracking branch (origin/<default_branch>) as base
   - Automatic cleanup of expired worktrees
   - Custom branch name support
 
   ## Directory Structure
+
+  Managed repositories are cloned to:
+
+      ~/.local/share/viban/repos/
+        <board_id>/
+          ... (bare git repository)
 
   Worktrees are organized as:
 
@@ -28,6 +34,7 @@ defmodule Viban.Kanban.Task.WorktreeManager do
 
       config :viban,
         worktree_base_path: "~/.local/share/viban/worktrees",
+        repos_base_path: "~/.local/share/viban/repos",
         worktree_ttl_days: 7
 
   ## Usage
@@ -54,7 +61,8 @@ defmodule Viban.Kanban.Task.WorktreeManager do
 
   @log_prefix "[Task.WorktreeManager]"
 
-  @default_base_path "~/.local/share/viban/worktrees"
+  @default_worktree_base_path "~/.local/share/viban/worktrees"
+  @default_repos_base_path "~/.local/share/viban/repos"
   @default_ttl_days 7
 
   @terminal_columns ["done", "cancelled"]
@@ -63,14 +71,19 @@ defmodule Viban.Kanban.Task.WorktreeManager do
 
   @type worktree_error ::
           :no_repository
-          | :no_local_path
-          | :local_path_not_found
-          | :not_a_git_repo
+          | :no_clone_url
+          | {:clone_failed, integer(), String.t()}
           | {:git_error, integer(), String.t()}
 
   defp worktree_base_path do
     :viban
-    |> Application.get_env(:worktree_base_path, @default_base_path)
+    |> Application.get_env(:worktree_base_path, @default_worktree_base_path)
+    |> Path.expand()
+  end
+
+  defp repos_base_path do
+    :viban
+    |> Application.get_env(:repos_base_path, @default_repos_base_path)
     |> Path.expand()
   end
 
@@ -89,6 +102,8 @@ defmodule Viban.Kanban.Task.WorktreeManager do
   based on the remote tracking branch (origin/<default_branch>).
   If the worktree already exists, returns its path without recreating.
 
+  The repository is automatically cloned from GitHub if not already present.
+
   ## Parameters
 
   - `board_id` - The board UUID
@@ -99,19 +114,18 @@ defmodule Viban.Kanban.Task.WorktreeManager do
 
   - `{:ok, worktree_path, branch_name}` - On success
   - `{:error, :no_repository}` - No repository configured for the board
-  - `{:error, :no_local_path}` - Repository has no local_path configured
-  - `{:error, :local_path_not_found}` - local_path doesn't exist
-  - `{:error, :not_a_git_repo}` - local_path is not a git repository
+  - `{:error, :no_clone_url}` - Repository has no clone_url configured
+  - `{:error, {:clone_failed, code, output}}` - Git clone failed
   - `{:error, {:git_error, code, output}}` - Git command failed
   """
   @spec create_worktree(Ecto.UUID.t(), Ecto.UUID.t(), String.t() | nil) :: worktree_result()
   def create_worktree(board_id, task_id, custom_branch_name \\ nil) do
     with {:ok, repo} <- find_board_repository(board_id),
-         :ok <- validate_local_repo(repo),
+         {:ok, local_repo_path} <- ensure_local_clone(repo),
          {worktree_path, branch_name} <-
            build_worktree_paths(board_id, task_id, custom_branch_name),
          :ok <- ensure_parent_directory(worktree_path) do
-      create_or_return_existing_worktree(repo, worktree_path, branch_name)
+      create_or_return_existing_worktree(repo, local_repo_path, worktree_path, branch_name)
     end
   end
 
@@ -221,24 +235,56 @@ defmodule Viban.Kanban.Task.WorktreeManager do
     end
   end
 
-  defp validate_local_repo(%{local_path: nil, board_id: board_id}) do
-    Logger.warning("#{@log_prefix} No local_path configured for board #{board_id}")
-    {:error, :no_local_path}
+  defp ensure_local_clone(%{clone_url: nil, board_id: board_id}) do
+    Logger.warning("#{@log_prefix} No clone_url configured for board #{board_id}")
+    {:error, :no_clone_url}
   end
 
-  defp validate_local_repo(%{local_path: local_path, board_id: board_id}) do
+  defp ensure_local_clone(%{clone_url: clone_url, board_id: board_id} = repo) do
+    local_repo_path = managed_repo_path(board_id)
+    git_dir = Path.join(local_repo_path, ".git")
+
     cond do
-      not File.dir?(local_path) ->
-        Logger.warning("#{@log_prefix} Local path does not exist: #{local_path} (board #{board_id})")
+      File.dir?(git_dir) ->
+        Logger.debug("#{@log_prefix} Using existing managed clone at #{local_repo_path}")
+        {:ok, local_repo_path}
 
-        {:error, :local_path_not_found}
-
-      not File.dir?(Path.join(local_path, ".git")) ->
-        Logger.warning("#{@log_prefix} Not a git repository: #{local_path} (board #{board_id})")
-        {:error, :not_a_git_repo}
+      File.exists?(local_repo_path) ->
+        Logger.warning("#{@log_prefix} Removing incomplete clone at #{local_repo_path}")
+        File.rm_rf!(local_repo_path)
+        clone_repository(clone_url, local_repo_path, repo)
 
       true ->
-        :ok
+        clone_repository(clone_url, local_repo_path, repo)
+    end
+  end
+
+  defp managed_repo_path(board_id) do
+    Path.join(repos_base_path(), to_string(board_id))
+  end
+
+  defp clone_repository(clone_url, local_repo_path, repo) do
+    File.mkdir_p!(Path.dirname(local_repo_path))
+
+    Logger.info("#{@log_prefix} Cloning #{clone_url} to #{local_repo_path}")
+
+    args = ["clone", clone_url, local_repo_path]
+
+    case System.cmd("git", args, stderr_to_stdout: true) do
+      {_, 0} ->
+        Logger.info("#{@log_prefix} Successfully cloned repository to #{local_repo_path}")
+        {:ok, local_repo_path}
+
+      {output, code} ->
+        Logger.error("""
+        #{@log_prefix} Failed to clone repository (exit code #{code})
+          Clone URL: #{clone_url}
+          Board ID: #{repo.board_id}
+          Target path: #{local_repo_path}
+          Git output: #{String.trim(output)}
+        """)
+
+        {:error, {:clone_failed, code, output}}
     end
   end
 
@@ -265,23 +311,22 @@ defmodule Viban.Kanban.Task.WorktreeManager do
   # Private Functions - Worktree Creation
   # ---------------------------------------------------------------------------
 
-  defp create_or_return_existing_worktree(repo, worktree_path, branch_name) do
+  defp create_or_return_existing_worktree(repo, local_repo_path, worktree_path, branch_name) do
     if File.exists?(worktree_path) do
       Logger.info("#{@log_prefix} Worktree already exists at #{worktree_path}")
       {:ok, worktree_path, branch_name}
     else
-      create_git_worktree(repo, worktree_path, branch_name)
+      create_git_worktree(repo, local_repo_path, worktree_path, branch_name)
     end
   end
 
-  defp create_git_worktree(repo, worktree_path, branch_name) do
-    local_path = repo.local_path
+  defp create_git_worktree(repo, local_repo_path, worktree_path, branch_name) do
     default_branch = repo.default_branch || "main"
     remote_ref = "origin/#{default_branch}"
 
-    with :ok <- fetch_remote(local_path),
-         :ok <- verify_remote_ref(local_path, remote_ref) do
-      do_create_worktree(local_path, worktree_path, branch_name, remote_ref, repo)
+    with :ok <- fetch_remote(local_repo_path),
+         :ok <- verify_remote_ref(local_repo_path, remote_ref) do
+      do_create_worktree(local_repo_path, worktree_path, branch_name, remote_ref, repo)
     end
   end
 
@@ -386,20 +431,7 @@ defmodule Viban.Kanban.Task.WorktreeManager do
 
     case Enum.take(parts, -2) do
       [board_id_str, _task_id] ->
-        find_repo_by_board_id(board_id_str)
-
-      _ ->
-        :error
-    end
-  end
-
-  defp find_repo_by_board_id(board_id_str) do
-    case Repository.read() do
-      {:ok, repos} ->
-        case Enum.find(repos, fn r -> to_string(r.board_id) == board_id_str end) do
-          %{local_path: path} when not is_nil(path) -> {:ok, path}
-          _ -> :error
-        end
+        {:ok, managed_repo_path(board_id_str)}
 
       _ ->
         :error

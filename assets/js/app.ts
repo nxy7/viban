@@ -4,6 +4,7 @@ import { Socket } from "phoenix";
 import { LiveSocket } from "phoenix_live_view";
 import topbar from "../vendor/topbar";
 import { createApp, h, shallowRef, defineComponent } from "vue";
+import Sortable from "sortablejs";
 
 // Sound system for hook notifications
 const SOUND_FILES: Record<string, string> = {
@@ -171,6 +172,133 @@ const VueHook = {
   },
 };
 
+// Column reorder hook using SortableJS
+const ColumnReorderHook = {
+  mounted(this: any) {
+    const hook = this;
+    const el = this.el;
+
+    this.sortable = Sortable.create(el, {
+      animation: 150,
+      handle: ".drag-handle",
+      filter: "[data-system='true']",
+      preventOnFilter: false,
+      onMove(evt: any) {
+        // Prevent moving system columns
+        if (evt.dragged.dataset.system === "true") {
+          return false;
+        }
+        return true;
+      },
+      onEnd(evt: any) {
+        const columnId = evt.item.dataset.columnId;
+        const isSystem = evt.item.dataset.system === "true";
+
+        if (isSystem) {
+          return;
+        }
+
+        // Get all column elements and their positions
+        const columns = Array.from(el.children) as HTMLElement[];
+        const movedIndex = evt.newIndex;
+
+        // Find adjacent columns to calculate new position
+        const prevColumn = columns[movedIndex - 1];
+        const nextColumn = columns[movedIndex + 1];
+
+        const prevPos = prevColumn?.dataset.position || "";
+        const nextPos = nextColumn?.dataset.position || "";
+
+        // Calculate new position between adjacent columns
+        let newPosition: string;
+        if (!prevPos) {
+          // Moved to the beginning
+          newPosition = generatePositionBefore(nextPos || "a0");
+        } else if (!nextPos) {
+          // Moved to the end
+          newPosition = generatePositionAfter(prevPos);
+        } else {
+          // Moved between two columns
+          newPosition = generatePositionBetween(prevPos, nextPos);
+        }
+
+        // Store position data for server
+        hook.pushEvent("reorder_column", {
+          column_id: columnId,
+          new_position: newPosition,
+        });
+      },
+    });
+
+    // Store positions in data attributes for reference
+    this.updatePositionAttributes();
+  },
+
+  updated(this: any) {
+    this.updatePositionAttributes();
+  },
+
+  updatePositionAttributes(this: any) {
+    // Read position from server-rendered elements
+    const columns = this.el.querySelectorAll("[data-column-id]");
+    columns.forEach((col: HTMLElement, index: number) => {
+      // Position is not directly available, so we maintain order index
+      col.dataset.index = String(index);
+    });
+  },
+
+  destroyed(this: any) {
+    if (this.sortable) {
+      this.sortable.destroy();
+    }
+  },
+};
+
+// Position generation helpers
+function generatePositionBefore(position: string): string {
+  const firstChar = position.charAt(0);
+  if (firstChar > "a") {
+    return String.fromCharCode(firstChar.charCodeAt(0) - 1) + "5";
+  }
+  return "0" + position;
+}
+
+function generatePositionAfter(position: string): string {
+  const lastChar = position.charAt(position.length - 1);
+  if (lastChar >= "0" && lastChar <= "8") {
+    return (
+      position.slice(0, -1) + String.fromCharCode(lastChar.charCodeAt(0) + 1)
+    );
+  } else if (lastChar === "9") {
+    return position + "0";
+  } else if (lastChar >= "a" && lastChar <= "y") {
+    return (
+      position.slice(0, -1) + String.fromCharCode(lastChar.charCodeAt(0) + 1)
+    );
+  } else if (lastChar === "z") {
+    return position + "a";
+  }
+  return position + "0";
+}
+
+function generatePositionBetween(before: string, after: string): string {
+  const maxLen = Math.max(before.length, after.length);
+  const beforePadded = before.padEnd(maxLen, "0");
+  const afterPadded = after.padEnd(maxLen, "0");
+
+  let result = "";
+  for (let i = 0; i < maxLen; i++) {
+    const b = beforePadded.charCodeAt(i);
+    const a = afterPadded.charCodeAt(i);
+    result += String.fromCharCode(Math.floor((b + a) / 2));
+  }
+
+  if (result === before || result === after) {
+    return before + "5";
+  }
+  return result;
+}
+
 // Configure topbar
 topbar.config({ barColors: { 0: "#29d" }, shadowColor: "rgba(0, 0, 0, .3)" });
 
@@ -214,6 +342,7 @@ const liveSocket = new LiveSocket("/live", Socket, {
   params: { _csrf_token: csrfToken },
   hooks: {
     VueHook,
+    ColumnReorder: ColumnReorderHook,
   },
 });
 
