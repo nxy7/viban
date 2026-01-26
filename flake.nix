@@ -49,6 +49,7 @@
               pkgs.cacert
               pkgs.just
               pkgs.gnumake
+              pkgs.bun
             ];
 
             SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
