@@ -200,6 +200,7 @@ defmodule Viban.Kanban.SystemHooks.ExecuteAIHook do
   defp parse_executor_type(nil), do: @default_executor
   defp parse_executor_type("claude_code"), do: :claude_code
   defp parse_executor_type("gemini_cli"), do: :gemini_cli
+  defp parse_executor_type("jido_ai"), do: :jido_ai
   defp parse_executor_type(atom) when is_atom(atom), do: atom
   defp parse_executor_type(_), do: @default_executor
 

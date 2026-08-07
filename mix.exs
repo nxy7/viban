@@ -100,6 +100,15 @@ defmodule Viban.MixProject do
       {:ash_phoenix, "~> 2.0"},
       {:ash_ai, "~> 0.3"},
 
+      # Jido Agent Ecosystem
+      {:jido, "~> 2.1", override: true},
+      {:jido_action, "~> 2.1", override: true},
+      {:jido_signal, "~> 2.0", override: true},
+      {:ash_jido, github: "agentjido/ash_jido", branch: "main"},
+      {:jido_ai, "~> 2.0"},
+      {:req_llm, "~> 1.7"},
+      {:libgraph, "~> 0.16.1-mg", hex: :multigraph, override: true},
+
       # Utilities
       {:cors_plug, "~> 3.0"},
       {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},

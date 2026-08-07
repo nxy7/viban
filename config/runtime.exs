@@ -12,12 +12,16 @@ end
 # LLM API Keys (available in all environments)
 if api_key = System.get_env("ANTHROPIC_API_KEY") do
   config :viban, anthropic_api_key: api_key
-end
 
-# Future provider keys
-# if api_key = System.get_env("OPENAI_API_KEY") do
-#   config :viban, openai_api_key: api_key
-# end
+  config :req_llm,
+    anthropic_api_key: api_key
+
+  config :jido_ai,
+    model_aliases: %{
+      fast: "anthropic:claude-sonnet-4-5-20250929",
+      capable: "anthropic:claude-opus-4-6"
+    }
+end
 
 # Enable test endpoints when E2E_TEST=true (works in all environments)
 if System.get_env("E2E_TEST") == "true" do

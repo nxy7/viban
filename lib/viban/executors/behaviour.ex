@@ -36,7 +36,7 @@ defmodule Viban.Executors.Behaviour do
 
   @type capability :: :streaming | :interactive | :mcp_support | :follow_up
   @type executor_type ::
-          :claude_code | :gemini_cli | :codex | :opencode | :api_anthropic | :api_openai
+          :claude_code | :gemini_cli | :codex | :opencode | :jido_ai | :api_anthropic | :api_openai
   @type output_event ::
           {:stdout, binary()}
           | {:stderr, binary()}

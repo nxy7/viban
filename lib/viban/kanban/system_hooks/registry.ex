@@ -51,6 +51,17 @@ defmodule Viban.Kanban.SystemHooks.Registry do
     end
   end
 
+  @doc "Get all Jido Action modules corresponding to system hooks"
+  def jido_actions do
+    [
+      Viban.Jido.Actions.PlaySound,
+      Viban.Jido.Actions.MoveTask,
+      Viban.Jido.Actions.ExecuteAI,
+      Viban.Jido.Actions.AutoStart,
+      Viban.Jido.Actions.RefinePrompt
+    ]
+  end
+
   defp to_hook_map(module) do
     # Get default settings from module if defined, otherwise use defaults
     default_execute_once =

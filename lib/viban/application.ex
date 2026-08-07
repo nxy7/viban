@@ -92,7 +92,8 @@ defmodule Viban.Application do
       Viban.Kanban.PeriodicalTask.PeriodicalTaskScheduler,
       {Registry, keys: :unique, name: Viban.Kanban.ActorRegistry},
       {Registry, keys: :unique, name: Viban.Executors.RunnerRegistry},
-      {DynamicSupervisor, name: Viban.Kanban.Actors.BoardDynamicSupervisor, strategy: :one_for_one}
+      {DynamicSupervisor, name: Viban.Kanban.Actors.BoardDynamicSupervisor, strategy: :one_for_one},
+      Viban.Jido
     ]
   end
 

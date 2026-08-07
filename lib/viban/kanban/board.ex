@@ -9,7 +9,8 @@ defmodule Viban.Kanban.Board do
   use Ash.Resource,
     domain: Viban.Kanban,
     data_layer: AshSqlite.DataLayer,
-    notifiers: [Viban.Kanban.Board.BoardNotifier]
+    notifiers: [Viban.Kanban.Board.BoardNotifier],
+    extensions: [AshJido]
 
   alias Viban.Kanban.Board.Actions
   alias Viban.Kanban.Board.Changes
@@ -139,5 +140,11 @@ defmodule Viban.Kanban.Board do
     define :list_all
     define :get, action: :read, get_by: [:id]
     define :create_with_repository, args: [:name, :description, :user_id, :repo]
+  end
+
+  jido do
+    action :create, name: "create_board"
+    action :update, name: "update_board"
+    action :for_user, name: "list_boards_for_user"
   end
 end

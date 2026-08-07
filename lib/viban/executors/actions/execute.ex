@@ -12,6 +12,7 @@ defmodule Viban.Executors.Actions.Execute do
   use Ash.Resource.Actions.Implementation
 
   alias Ash.Error.Invalid
+  alias Viban.Executors.ApiRunner
   alias Viban.Executors.Registry
   alias Viban.Executors.Runner
   alias Viban.Kanban.Task
@@ -77,14 +78,32 @@ defmodule Viban.Executors.Actions.Execute do
   end
 
   defp start_runner(task_id, executor_type, prompt, working_directory, images, continue_session) do
-    case Runner.start(
-           task_id: task_id,
-           executor_type: executor_type,
-           prompt: prompt,
-           working_directory: working_directory,
-           images: images,
-           continue_session: continue_session
-         ) do
+    executor_module = Registry.get_by_type(executor_type)
+    executor_opts = executor_module.default_opts()
+
+    result =
+      case executor_module.build_command(prompt, executor_opts) do
+        {:api, config} ->
+          ApiRunner.start(
+            task_id: task_id,
+            executor_type: executor_type,
+            prompt: prompt,
+            working_directory: working_directory,
+            api_config: config
+          )
+
+        {_executable, _args} ->
+          Runner.start(
+            task_id: task_id,
+            executor_type: executor_type,
+            prompt: prompt,
+            working_directory: working_directory,
+            images: images,
+            continue_session: continue_session
+          )
+      end
+
+    case result do
       {:ok, pid} ->
         {:ok, pid}
 

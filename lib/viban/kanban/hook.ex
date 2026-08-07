@@ -5,7 +5,8 @@ defmodule Viban.Kanban.Hook do
 
   use Ash.Resource,
     domain: Viban.Kanban,
-    data_layer: AshSqlite.DataLayer
+    data_layer: AshSqlite.DataLayer,
+    extensions: [AshJido]
 
   alias Viban.Kanban.Hook.Validations
 
@@ -40,7 +41,7 @@ defmodule Viban.Kanban.Hook do
 
     attribute :agent_executor, :atom do
       public? true
-      constraints one_of: [:claude_code, :gemini_cli, :codex, :opencode, :cursor_agent]
+      constraints one_of: [:claude_code, :gemini_cli, :codex, :opencode, :cursor_agent, :jido_ai]
       default :claude_code
     end
 
@@ -146,5 +147,10 @@ defmodule Viban.Kanban.Hook do
     define :destroy
     define :get, action: :read, get_by: [:id]
     define :for_board, args: [:board_id]
+  end
+
+  jido do
+    action :create_agent_hook, name: "create_agent_hook"
+    action :for_board, name: "list_hooks_for_board"
   end
 end

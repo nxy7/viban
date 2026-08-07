@@ -6,7 +6,8 @@ defmodule Viban.Kanban.Task do
   use Ash.Resource,
     domain: Viban.Kanban,
     data_layer: AshSqlite.DataLayer,
-    notifiers: [Viban.Kanban.Task.TaskNotifier]
+    notifiers: [Viban.Kanban.Task.TaskNotifier],
+    extensions: [AshJido]
 
   alias Viban.Kanban.Task.Actions
   alias Viban.Kanban.Task.Changes, as: TaskChanges
@@ -599,5 +600,12 @@ defmodule Viban.Kanban.Task do
     define :for_column, args: [:column_id]
     define :queued
     define :subtasks, args: [:parent_task_id]
+  end
+
+  jido do
+    action :create, name: "create_task"
+    action :update, name: "update_task"
+    action :move, name: "move_task"
+    action :destroy, name: "destroy_task"
   end
 end

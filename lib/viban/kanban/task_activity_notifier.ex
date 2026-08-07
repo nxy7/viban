@@ -2,15 +2,18 @@ defmodule Viban.Kanban.TaskActivityNotifier do
   @moduledoc """
   Unified notifier for all task-related activity.
 
-  All task events broadcast to `task:{task_id}` topic.
-  This provides a single channel for the UI to subscribe to for real-time updates.
+  All task events broadcast to `task:{task_id}` topic via the Jido SignalBus.
+  The SignalBus maintains backward compatibility with existing PubSub tuple format.
 
   ## Event Types
 
   - `{:executor_message, payload}` - New executor output message
   - `{:executor_session_update, payload}` - Session status change
   - `{:hook_executed, payload}` - Hook execution status change
+  - `{:hook_effect, payload}` - Hook effect (e.g., play_sound)
   """
+
+  alias Viban.Jido.SignalBus
 
   require Logger
 
@@ -28,7 +31,7 @@ defmodule Viban.Kanban.TaskActivityNotifier do
       inserted_at: message.inserted_at
     }
 
-    broadcast(task_id, {:executor_message, payload})
+    SignalBus.emit_executor_message(task_id, payload)
   end
 
   @doc """
@@ -44,7 +47,7 @@ defmodule Viban.Kanban.TaskActivityNotifier do
       completed_at: Map.get(session, :completed_at)
     }
 
-    broadcast(task_id, {:executor_session_update, payload})
+    SignalBus.emit_executor_session_update(task_id, payload)
   end
 
   @doc """
@@ -68,7 +71,7 @@ defmodule Viban.Kanban.TaskActivityNotifier do
       effects: %{}
     }
 
-    broadcast(task_id, {:hook_executed, payload})
+    SignalBus.emit_hook_executed(task_id, payload)
   end
 
   @doc """
@@ -84,14 +87,6 @@ defmodule Viban.Kanban.TaskActivityNotifier do
       effects: effects
     }
 
-    broadcast(task_id, {:hook_effect, payload})
-  end
-
-  defp broadcast(task_id, message) do
-    topic = "task:#{task_id}"
-
-    Logger.debug("[TaskActivityNotifier] Broadcasting to #{topic}: #{inspect(elem(message, 0))}")
-
-    Phoenix.PubSub.broadcast(Viban.PubSub, topic, message)
+    SignalBus.emit_hook_effect(task_id, payload)
   end
 end

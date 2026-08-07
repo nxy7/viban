@@ -8,13 +8,12 @@ defmodule Viban.Executors.Registry do
 
   alias Viban.Executors.Implementations.ClaudeCode
   alias Viban.Executors.Implementations.GeminiCLI
+  alias Viban.Executors.Implementations.JidoAI
 
   @executors [
     ClaudeCode,
-    GeminiCLI
-    # Add more executors here as they're implemented:
-    # Codex,
-    # OpenCode,
+    GeminiCLI,
+    JidoAI
   ]
 
   @doc """

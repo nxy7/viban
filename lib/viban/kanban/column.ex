@@ -5,7 +5,8 @@ defmodule Viban.Kanban.Column do
 
   use Ash.Resource,
     domain: Viban.Kanban,
-    data_layer: AshSqlite.DataLayer
+    data_layer: AshSqlite.DataLayer,
+    extensions: [AshJido]
 
   alias Viban.Kanban.Column.Actions
   alias Viban.Kanban.Column.Changes
@@ -130,5 +131,12 @@ defmodule Viban.Kanban.Column do
     define :for_board, args: [:board_id]
     define :get, action: :read, get_by: [:id]
     define :delete_all_tasks, args: [:column_id]
+  end
+
+  jido do
+    action :create, name: "create_column"
+    action :update, name: "update_column"
+    action :reorder, name: "reorder_column"
+    action :for_board, name: "list_columns_for_board"
   end
 end
